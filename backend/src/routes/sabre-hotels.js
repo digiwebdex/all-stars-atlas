@@ -201,11 +201,11 @@ function resolveHotelEndpointCandidates(endpoint) {
   return [endpoint];
 }
 
-// Make API request — booking-only via REST. Hotel search/details use SOAP only.
+// Make API request — supports both SOAP fallback flows and REST CSL hotel endpoints.
 async function sabreRequest(config, endpoint, body, method = 'POST', timeoutMs = 30000) {
   const isHotelCslEndpoint = /\/get\/hotel/i.test(endpoint);
   if (isHotelCslEndpoint) {
-    throw new Error('Sabre Hotel REST CSL endpoints are disabled (SOAP strategy active)');
+    console.log(`[Sabre Hotels] REST CSL request enabled for ${endpoint}`);
   }
 
   const endpointCandidates = resolveHotelEndpointCandidates(endpoint);
@@ -314,21 +314,92 @@ async function searchHotels({ city, checkIn, checkOut, adults = 2, children = 0,
 
   try {
     const sabreSoap = getSabreSoap();
-    if (!sabreSoap.getHotelAvail) {
+    let hotels = [];
+
+    if (sabreSoap.getHotelAvail) {
+      console.log(`[Sabre Hotels] SOAP search: city=${cityCode}, ${checkIn} → ${checkOut}, ${adults}A+${children}C, ${rooms} rooms`);
+      hotels = await sabreSoap.getHotelAvail({
+        cityCode,
+        cityType,
+        cityName: city,
+        checkIn,
+        checkOut,
+        guests: totalGuests,
+        rooms,
+      });
+      console.log(`[Sabre Hotels] SOAP found ${hotels.length} hotels for ${city}`);
+    } else {
       console.warn('[Sabre Hotels] SOAP hotel search not available');
-      return [];
     }
 
-    console.log(`[Sabre Hotels] SOAP search: city=${cityCode}, ${checkIn} → ${checkOut}, ${adults}A+${children}C, ${rooms} rooms`);
-    let hotels = await sabreSoap.getHotelAvail({
-      cityCode,
-      cityType,
-      cityName: city,
-      checkIn,
-      checkOut,
-      guests: totalGuests,
-      rooms,
-    });
+    // Fallback from SOAP to REST CSL, based on Sabre documentation for GetHotelAvail.
+    if (hotels.length === 0) {
+      const config = await getSabreConfig();
+      if (config && checkIn && checkOut) {
+        const roomCount = Math.max(1, parseInt(rooms || 1, 10) || 1);
+        const adultsPerRoom = Math.max(1, Math.ceil((parseInt(adults || 1, 10) || 1) / roomCount));
+        const childrenPerRoom = Math.max(0, Math.ceil((parseInt(children || 0, 10) || 0) / roomCount));
+
+        const roomPayload = Array.from({ length: roomCount }, (_, idx) => ({
+          Index: idx + 1,
+          Adults: adultsPerRoom,
+          Children: childrenPerRoom,
+        }));
+
+        const requestBody = {
+          GetHotelAvailRQ: {
+            SearchCriteria: {
+              OffSet: 1,
+              PageSize: 50,
+              SortBy: 'TotalRate',
+              SortOrder: 'ASC',
+              GeoSearch: {
+                GeoRef: {
+                  Radius: 50,
+                  UOM: 'KM',
+                  RefPoint: {
+                    Value: cityCode,
+                    ValueContext: 'CODE',
+                    RefPointType: cityType,
+                  },
+                },
+              },
+              RateInfoRef: {
+                ConvertedRateInfoOnly: false,
+                CurrencyCode: 'USD',
+                BestOnly: '2',
+                PrepaidQualifier: 'IncludePrepaid',
+                StayDateRange: {
+                  StartDate: checkIn,
+                  EndDate: checkOut,
+                },
+                Rooms: { Room: roomPayload },
+                InfoSource: '100,110,112,113',
+              },
+              HotelPref: {
+                SabreRating: {
+                  Min: String(minStars ? parseInt(minStars, 10) : 1),
+                  Max: String(maxStars ? parseInt(maxStars, 10) : 5),
+                },
+              },
+              ImageRef: {
+                Type: 'MEDIUM',
+                LanguageCode: 'EN',
+              },
+            },
+          },
+        };
+
+        try {
+          console.log(`[Sabre Hotels] REST fallback search: city=${cityCode}, ${checkIn} → ${checkOut}`);
+          const restResponse = await sabreRequest(config, '/v2/get/hotelavail', requestBody, 'POST', 30000);
+          hotels = normalizeSearchResponse(restResponse, city, checkIn, checkOut);
+          console.log(`[Sabre Hotels] REST fallback found ${hotels.length} hotels for ${city}`);
+        } catch (restErr) {
+          console.error('[Sabre Hotels] REST fallback failed:', restErr.message);
+        }
+      }
+    }
 
     // Apply client-side filters
     if (minStars) hotels = hotels.filter(h => (h.starRating || 0) >= parseInt(minStars));
@@ -336,10 +407,9 @@ async function searchHotels({ city, checkIn, checkOut, adults = 2, children = 0,
     if (minRate) hotels = hotels.filter(h => (h.price || 0) >= parseFloat(minRate));
     if (maxRate) hotels = hotels.filter(h => (h.price || 0) <= parseFloat(maxRate));
 
-    console.log(`[Sabre Hotels] SOAP found ${hotels.length} hotels for ${city}`);
     return hotels;
   } catch (err) {
-    console.error('[Sabre Hotels] SOAP search failed:', err.message);
+    console.error('[Sabre Hotels] Hotel search failed:', err.message);
     return [];
   }
 }
