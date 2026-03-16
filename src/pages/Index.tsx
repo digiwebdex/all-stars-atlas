@@ -533,8 +533,7 @@ const Index = () => {
           </section>
         );
 
-      case 'routes': {
-        const today = new Date().toISOString().split('T')[0];
+      case 'routes':
         return (
           <section key="routes" className="py-10 sm:py-14 md:py-20 homepage-mesh-bg">
             <div className="container mx-auto px-4">
@@ -544,7 +543,7 @@ const Index = () => {
               </div>
               <div ref={routesFade.ref} className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 ${routesFade.className}`} style={{ transition: 'opacity 0.5s, transform 0.5s' }}>
                 {visibleRoutes.map((route, i) => (
-                  <Link key={i} to={`/flights?from=${route.fromCode}&to=${route.toCode}&depart=${today}&adults=1&cabin=economy`}>
+                  <Link key={i} to={`/flights?from=${route.fromCode}&to=${route.toCode}&depart=${todayDate}&date=${todayDate}&adults=1&children=0&infants=0&cabin=economy`}>
                     <div className="route-card group">
                       <div className="flex-1 min-w-0">
                         <div className="text-[13px] sm:text-[15px] font-bold">{route.from}</div>
