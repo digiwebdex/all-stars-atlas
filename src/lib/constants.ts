@@ -36,6 +36,7 @@ export const API_ENDPOINTS = {
   HOTELS_SEARCH: '/hotels/search',
   HOTELS_DETAILS: '/hotels',
   HOTELS_BOOK: '/hotels/book',
+  HOTELS_DEALS: '/hotels/deals',
 
   // Holidays
   HOLIDAYS_SEARCH: '/holidays/search',
