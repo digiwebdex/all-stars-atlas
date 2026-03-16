@@ -147,9 +147,38 @@ const Index = () => {
   const visibleDestinations = cms.destinations.filter(d => d.visible);
   const visibleIntl = cms.intlDestinations.filter(d => d.visible);
   const visibleAirlines = cms.airlines.filter(a => a.visible);
-  const visibleHotels = cms.hotels.filter(h => h.visible);
+  const cmsHotels = cms.hotels.filter(h => h.visible);
   const visiblePackages = cms.packages.filter(p => p.visible);
   const todayDate = useMemo(() => new Date().toISOString().split('T')[0], []);
+  const tomorrowDate = useMemo(() => new Date(Date.now() + 86400000).toISOString().split('T')[0], []);
+
+  // Live hotel deals from Sabre API
+  const { data: liveHotelDeals, isLoading: isHotelDealsLoading } = useQuery<{ success: boolean; deals: any[] }>({
+    queryKey: ['hotels', 'deals'],
+    queryFn: () => api.get('/hotels/deals'),
+    staleTime: 60 * 60 * 1000,
+    gcTime: 2 * 60 * 60 * 1000,
+    refetchInterval: 60 * 60 * 1000,
+    retry: 2,
+  });
+
+  const visibleHotels = useMemo(() => {
+    const deals = liveHotelDeals?.deals;
+    if (deals && deals.length > 0) {
+      return deals.slice(0, 8).map((h: any) => ({
+        name: h.name,
+        location: h.location || h.city || h.dealCity || '',
+        price: h.pricePerNight ? `৳${Math.round(h.pricePerNight).toLocaleString()}` : '—',
+        rating: h.starRating || h.stars || 4,
+        reviews: h.reviews || h.reviewCount || 0,
+        img: h.img || h.images?.[0] || 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=600&h=400&fit=crop',
+        visible: true,
+        id: h.id || h.sabreHotelCode,
+        source: h.source || 'sabre',
+      }));
+    }
+    return cmsHotels;
+  }, [liveHotelDeals, cmsHotels]);
   const visibleCmsRoutes = useMemo(() => cms.routes.filter(r => r.visible), [cms.routes]);
 
   // Live route prices — always from /api/flights/route-prices, no fallback
