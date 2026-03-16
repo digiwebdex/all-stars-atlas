@@ -1210,7 +1210,12 @@ function extractSoapDiagnostics(xml) {
     .match(/<(?:\w+:)?ApplicationResults[\s\S]*?<\/(?:\w+:)?ApplicationResults>/i)?.[0]
     ?.slice(0, 500) || '';
 
-  return { status, messages, xmlHint };
+  const hostCommand = xml
+    .match(/<(?:\w+:)?HostCommand(?:\s[^>]*)?>([\s\S]*?)<\/(?:\w+:)?HostCommand>/i)?.[1]
+    ?.replace(/\s+/g, ' ')
+    .trim() || null;
+
+  return { status, messages, xmlHint, hostCommand };
 }
 
 function firstMatchFloat(text, patterns) {
