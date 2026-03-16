@@ -1083,7 +1083,7 @@ async function getHotelAvail(params, _retried = false) {
       <eb:To><eb:PartyId>Sabre_API</eb:PartyId></eb:To>
       <eb:CPAId>${config.pcc}</eb:CPAId>
       <eb:ConversationId>${conversationId}</eb:ConversationId>
-      <eb:Service>OTA_HotelAvailLLSRQ</eb:Service>
+      <eb:Service eb:type="sabreXML">OTA_HotelAvailLLSRQ</eb:Service>
       <eb:Action>OTA_HotelAvailLLSRQ</eb:Action>
     </eb:MessageHeader>
     <wsse:Security xmlns:wsse="http://schemas.xmlsoap.org/ws/2002/12/secext">
