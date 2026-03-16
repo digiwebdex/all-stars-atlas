@@ -480,31 +480,36 @@ function normalizeSearchResponse(response, searchCity, checkIn, checkOut) {
 
 
 // ══════════════════════════════════════════════
-//  2. HOTEL DETAILS — Content + Rates
+//  2. HOTEL DETAILS — SOAP HotelPropertyDescriptionLLSRQ
 // ══════════════════════════════════════════════
 async function getHotelDetails(hotelCode, checkIn, checkOut, adults, rooms) {
-  const config = await getSabreConfig();
-  if (!config) return null;
+  try {
+    const sabreSoap = getSabreSoap();
+    if (!sabreSoap.getHotelPropertyDescription) {
+      console.warn('[Sabre Hotels] SOAP hotel details not available');
+      return null;
+    }
 
-  // Fetch content and rates in parallel
-  const [content, rates] = await Promise.allSettled([
-    getHotelContent(config, hotelCode),
-    getHotelRates(config, hotelCode, checkIn, checkOut, adults, rooms),
-  ]);
+    const result = await sabreSoap.getHotelPropertyDescription({
+      hotelCode,
+      checkIn,
+      checkOut,
+      guests: adults || 2,
+    });
 
-  const contentData = content.status === 'fulfilled' ? content.value : {};
-  const ratesData = rates.status === 'fulfilled' ? rates.value : [];
+    if (!result) return null;
 
-  if (!contentData.name && ratesData.length === 0) return null;
-
-  return {
-    ...contentData,
-    rooms: ratesData,
-    source: 'sabre',
-    sabreHotelCode: hotelCode,
-    checkIn,
-    checkOut,
-  };
+    return {
+      ...result,
+      source: 'sabre',
+      sabreHotelCode: hotelCode,
+      checkIn,
+      checkOut,
+    };
+  } catch (err) {
+    console.error('[Sabre Hotels] SOAP details failed:', err.message);
+    return null;
+  }
 }
 
 async function getHotelContent(config, hotelCode) {
