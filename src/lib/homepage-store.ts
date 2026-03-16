@@ -1,6 +1,10 @@
-// Reactive in-memory store for homepage content
-// Shared between CMSHomepage (admin editor) and Index (public homepage)
-// Persists to localStorage so edits survive page reloads
+// Reactive store for homepage content
+// Fetches from API first, falls back to defaults
+// Admin edits save to both API and localStorage cache
+
+import { useSyncExternalStore } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { api } from './api';
 
 const STORAGE_KEY = 'seventrip_homepage_cms';
 
@@ -129,10 +133,44 @@ const DEFAULT_CONTENT: HomepageContent = {
   ],
 };
 
-// Subscribers for reactive updates
+// ===== React Query-based hook (primary) =====
+// Fetches from API, falls back to defaults
+export function useHomepageContent(): HomepageContent {
+  const { data } = useQuery<HomepageContent>({
+    queryKey: ['cms', 'homepage'],
+    queryFn: async () => {
+      try {
+        const result = await api.get<HomepageContent>('/cms/homepage');
+        // Cache to localStorage for instant load next time
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(result)); } catch {}
+        return result;
+      } catch {
+        // Try localStorage cache
+        try {
+          const stored = localStorage.getItem(STORAGE_KEY);
+          if (stored) return JSON.parse(stored);
+        } catch {}
+        return DEFAULT_CONTENT;
+      }
+    },
+    staleTime: 2 * 60 * 1000, // 2 minutes
+    gcTime: 10 * 60 * 1000,
+    // Start with localStorage cache or defaults for instant render
+    initialData: () => {
+      try {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (stored) return JSON.parse(stored);
+      } catch {}
+      return DEFAULT_CONTENT;
+    },
+  });
+
+  return data ?? DEFAULT_CONTENT;
+}
+
+// ===== Legacy sync API (used by CMSHomepage admin editor) =====
 type Listener = () => void;
 const listeners = new Set<Listener>();
-
 let cachedContent: HomepageContent | null = null;
 
 export function getHomepageContent(): HomepageContent {
@@ -143,7 +181,7 @@ export function getHomepageContent(): HomepageContent {
       cachedContent = JSON.parse(stored);
       return cachedContent!;
     }
-  } catch { /* ignore */ }
+  } catch {}
   cachedContent = DEFAULT_CONTENT;
   return cachedContent;
 }
@@ -152,22 +190,13 @@ export function setHomepageContent(content: HomepageContent) {
   cachedContent = content;
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(content));
-  } catch { /* ignore */ }
+  } catch {}
+  // Also save to API (fire-and-forget)
+  api.put('/cms/homepage', content).catch(() => {});
   listeners.forEach(fn => fn());
 }
 
 export function subscribeHomepage(listener: Listener): () => void {
   listeners.add(listener);
   return () => listeners.delete(listener);
-}
-
-// React hook
-import { useSyncExternalStore } from 'react';
-
-export function useHomepageContent(): HomepageContent {
-  return useSyncExternalStore(
-    subscribeHomepage,
-    getHomepageContent,
-    getHomepageContent
-  );
 }
