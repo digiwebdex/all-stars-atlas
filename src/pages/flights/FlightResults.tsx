@@ -187,7 +187,7 @@ function getDisplayAvailableSeats(flight: any): number | null {
   return top !== null && top !== undefined ? Number(top) : null;
 }
 
-import { AIRPORT_COORDS } from "@/lib/airport-coords";
+
 
 function calcDistanceKm(from: string, to: string): number | null {
   const c1 = AIRPORT_COORDS[from], c2 = AIRPORT_COORDS[to];
