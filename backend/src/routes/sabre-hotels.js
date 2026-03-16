@@ -653,7 +653,7 @@ async function getHotelRates(config, hotelCode, checkIn, checkOut, adults, rooms
       }
     };
 
-    const response = await sabreRequest(config, '/v1.0.0/shop/hotels/rates', body, 'POST', 30000);
+    const response = await sabreRequest(config, '/v2/get/hoteldetails', body, 'POST', 30000);
     const rateInfos = response?.GetHotelRateInfoRS?.HotelRateInfos?.HotelRateInfo || [];
     const roomResults = [];
 
