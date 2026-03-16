@@ -1149,7 +1149,7 @@ async function getHotelAvail(params, _retried = false) {
         continue;
       }
 
-      if (diagnostics.status && diagnostics.status !== 'Complete') {
+      if (diagnostics.status) {
         console.warn(`[Sabre SOAP] Hotel search status (${attempt.label})=${diagnostics.status}`);
       }
       if (diagnostics.messages.length > 0) {
@@ -1167,6 +1167,9 @@ async function getHotelAvail(params, _retried = false) {
       }
       if (diagnostics.xmlHint) {
         console.warn(`[Sabre SOAP] Hotel search empty result hint (${attempt.label}): ${diagnostics.xmlHint}`);
+      }
+      if (diagnostics.rawPreview) {
+        console.warn(`[Sabre SOAP] Hotel search raw preview (${attempt.label}): ${diagnostics.rawPreview}`);
       }
     }
 
