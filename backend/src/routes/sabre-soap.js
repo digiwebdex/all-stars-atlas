@@ -1037,6 +1037,411 @@ async function exchangeBooking(params) {
   }
 }
 
+// ══════════════════════════════════════════════
+//  SOAP HOTEL SEARCH — OTA_HotelAvailLLSRQ v2.3.0
+// ══════════════════════════════════════════════
+
+/**
+ * Search hotels by city code using OTA_HotelAvailLLSRQ
+ * Uses session-based SOAP (same credentials as flights)
+ * @param {Object} params - { cityCode, checkIn (YYYY-MM-DD), checkOut (YYYY-MM-DD), guests, rooms }
+ * @returns {Array} list of hotel availability results
+ */
+async function getHotelAvail(params, _retried = false) {
+  const config = await getSabreConfig();
+  if (!config) return [];
+
+  let token, conversationId;
+  try {
+    ({ token, conversationId } = await createSession(config));
+  } catch (err) {
+    if (!_retried && isSoapSessionError(err.message)) {
+      await resetSoapSessionCacheWithClose(config);
+      return getHotelAvail(params, true);
+    }
+    console.error('[Sabre SOAP] Hotel session failed:', err.message);
+    return [];
+  }
+
+  const soapUrl = getSoapEndpoint(config);
+  const guestCount = parseInt(params.guests || params.adults || 2);
+
+  // TimeSpan uses MM-DD format for Sabre LLS
+  const startMD = params.checkIn ? params.checkIn.slice(5) : '';
+  const endMD = params.checkOut ? params.checkOut.slice(5) : '';
+
+  const envelope = `<?xml version="1.0" encoding="UTF-8"?>
+<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/"
+  xmlns:eb="http://www.ebxml.org/namespaces/messageHeader"
+  xmlns:xlink="http://www.w3.org/1999/xlink"
+  xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <SOAP-ENV:Header>
+    <eb:MessageHeader SOAP-ENV:mustUnderstand="1" eb:version="1.0">
+      <eb:From><eb:PartyId>Agency</eb:PartyId></eb:From>
+      <eb:To><eb:PartyId>Sabre_API</eb:PartyId></eb:To>
+      <eb:CPAId>${config.pcc}</eb:CPAId>
+      <eb:ConversationId>${conversationId}</eb:ConversationId>
+      <eb:Service>OTA_HotelAvailLLSRQ</eb:Service>
+      <eb:Action>OTA_HotelAvailLLSRQ</eb:Action>
+    </eb:MessageHeader>
+    <wsse:Security xmlns:wsse="http://schemas.xmlsoap.org/ws/2002/12/secext">
+      <wsse:BinarySecurityToken>${token}</wsse:BinarySecurityToken>
+    </wsse:Security>
+  </SOAP-ENV:Header>
+  <SOAP-ENV:Body>
+    <OTA_HotelAvailRQ Version="2.3.0" xmlns="http://webservices.sabre.com/sabreXML/2011/10"
+      xmlns:xs="http://www.w3.org/2001/XMLSchema"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+      <AvailRequestSegment>
+        <GuestCounts Count="${guestCount}"/>
+        <HotelSearchCriteria>
+          <Criterion>
+            <HotelRef HotelCityCode="${params.cityCode}"/>
+          </Criterion>
+        </HotelSearchCriteria>
+        <TimeSpan End="${endMD}" Start="${startMD}"/>
+      </AvailRequestSegment>
+    </OTA_HotelAvailRQ>
+  </SOAP-ENV:Body>
+</SOAP-ENV:Envelope>`;
+
+  try {
+    console.log(`[Sabre SOAP] Hotel search: ${params.cityCode}, ${params.checkIn} → ${params.checkOut}, ${guestCount} guests`);
+    const res = await fetch(soapUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/xml; charset=utf-8', 'SOAPAction': 'OTA_HotelAvailLLSRQ' },
+      body: envelope,
+      signal: AbortSignal.timeout(30000),
+    });
+
+    const xml = await res.text();
+    console.log(`[Sabre SOAP] Hotel search response length: ${xml.length}`);
+
+    // Check for SOAP fault
+    const faultMatch = xml.match(/faultstring>([^<]+)/);
+    if (faultMatch) {
+      if (!_retried && isSoapSessionError(faultMatch[1])) {
+        await resetSoapSessionCacheWithClose(config);
+        return getHotelAvail(params, true);
+      }
+      console.error(`[Sabre SOAP] Hotel search fault: ${faultMatch[1]}`);
+      return [];
+    }
+
+    // Parse hotel results from XML
+    return parseHotelAvailResponse(xml, params);
+  } catch (err) {
+    if (!_retried && isSoapSessionError(err.message)) {
+      await resetSoapSessionCacheWithClose(config);
+      return getHotelAvail(params, true);
+    }
+    console.error('[Sabre SOAP] Hotel search error:', err.message);
+    return [];
+  }
+}
+
+/**
+ * Parse OTA_HotelAvailRS XML into normalized hotel objects
+ */
+function parseHotelAvailResponse(xml, params) {
+  const hotels = [];
+  try {
+    // Extract all BasicPropertyInfo blocks
+    const propRegex = /<BasicPropertyInfo[^>]*>([\s\S]*?)<\/BasicPropertyInfo>/g;
+    const attrRegex = /<BasicPropertyInfo([^>]*)>/g;
+    
+    // Get all BasicPropertyInfo elements (including self-closing and with children)
+    const allProps = xml.match(/<BasicPropertyInfo[\s\S]*?(?:\/>|<\/BasicPropertyInfo>)/g) || [];
+
+    for (const propXml of allProps) {
+      // Extract attributes
+      const hotelCode = propXml.match(/HotelCode="([^"]+)"/)?.[1];
+      const hotelName = propXml.match(/HotelName="([^"]+)"/)?.[1];
+      const cityCode = propXml.match(/HotelCityCode="([^"]+)"/)?.[1];
+      const latitude = propXml.match(/Latitude="([^"]+)"/)?.[1];
+      const longitude = propXml.match(/Longitude="([^"]+)"/)?.[1];
+      const distance = propXml.match(/Distance="([^"]+)"/)?.[1];
+
+      if (!hotelCode || !hotelName) continue;
+
+      // Extract address
+      const addressLine = propXml.match(/<AddressLine>([^<]+)/)?.[1] || '';
+      const cityName = propXml.match(/<CityName>([^<]+)/)?.[1] || '';
+      const countryCode = propXml.match(/<CountryCode>([^<]+)/)?.[1] || '';
+      const postalCode = propXml.match(/<PostalCode>([^<]+)/)?.[1] || '';
+
+      // Extract rating/award
+      const sabreRating = propXml.match(/Rating="([^"]+)"/)?.[1];
+      const ratingProvider = propXml.match(/Provider="([^"]+)"/)?.[1];
+      const starRating = sabreRating ? parseInt(sabreRating) : 0;
+
+      // Extract rate range
+      const minRate = propXml.match(/Min="([^"]+)"/)?.[1];
+      const maxRate = propXml.match(/Max="([^"]+)"/)?.[1];
+      const currencyCode = propXml.match(/CurrencyCode="([^"]+)"/)?.[1] || 'USD';
+
+      // Extract property type info
+      const chainCode = propXml.match(/ChainCode="([^"]+)"/)?.[1] || '';
+      const brandCode = propXml.match(/BrandCode="([^"]+)"/)?.[1] || '';
+
+      const price = minRate ? parseFloat(minRate) : 0;
+      if (price <= 0) continue; // Skip hotels with no price
+
+      // Calculate nights
+      const nights = params.checkIn && params.checkOut
+        ? Math.max(1, Math.ceil((new Date(params.checkOut) - new Date(params.checkIn)) / 86400000))
+        : 1;
+
+      // Tags
+      const tags = [];
+      if (starRating >= 5) tags.push('Luxury');
+      else if (starRating >= 4) tags.push('Top Rated');
+
+      hotels.push({
+        id: `sabre-${hotelCode}`,
+        sabreHotelCode: hotelCode,
+        source: 'sabre',
+        name: hotelName,
+        city: cityName || params.cityCode || '',
+        country: countryCode,
+        address: addressLine,
+        latitude: latitude ? parseFloat(latitude) : null,
+        longitude: longitude ? parseFloat(longitude) : null,
+        starRating,
+        stars: starRating,
+        userRating: starRating > 0 ? starRating * 0.9 : null,
+        rating: starRating > 0 ? starRating * 0.9 : null,
+        reviewCount: 0,
+        reviews: 0,
+        pricePerNight: Math.round(price),
+        price: Math.round(price),
+        totalPrice: Math.round(price * nights),
+        originalPrice: maxRate ? Math.round(parseFloat(maxRate)) : null,
+        currency: currencyCode,
+        img: null,
+        images: [],
+        amenities: [],
+        description: '',
+        tags,
+        tag: tags[0] || null,
+        location: `${cityName || params.cityCode}, ${countryCode}`.replace(/, $/, ''),
+        cancelPolicy: null,
+        isFreeCancellation: false,
+        rateKey: null,
+        nights,
+        checkIn: params.checkIn,
+        checkOut: params.checkOut,
+        chainCode,
+        brandCode,
+        distance: distance ? parseFloat(distance) : null,
+      });
+    }
+
+    console.log(`[Sabre SOAP] Parsed ${hotels.length} hotels from OTA_HotelAvailRS`);
+  } catch (err) {
+    console.error('[Sabre SOAP] Hotel parse error:', err.message);
+  }
+  return hotels;
+}
+
+/**
+ * Get hotel property description (details) using HotelPropertyDescriptionLLSRQ
+ * @param {Object} params - { hotelCode, checkIn, checkOut, guests }
+ * @returns {Object|null} hotel details
+ */
+async function getHotelPropertyDescription(params, _retried = false) {
+  const config = await getSabreConfig();
+  if (!config) return null;
+
+  let token, conversationId;
+  try {
+    ({ token, conversationId } = await createSession(config));
+  } catch (err) {
+    if (!_retried && isSoapSessionError(err.message)) {
+      await resetSoapSessionCacheWithClose(config);
+      return getHotelPropertyDescription(params, true);
+    }
+    return null;
+  }
+
+  const soapUrl = getSoapEndpoint(config);
+  const guestCount = parseInt(params.guests || params.adults || 2);
+  const startMD = params.checkIn ? params.checkIn.slice(5) : '';
+  const endMD = params.checkOut ? params.checkOut.slice(5) : '';
+
+  const envelope = `<?xml version="1.0" encoding="UTF-8"?>
+<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/"
+  xmlns:eb="http://www.ebxml.org/namespaces/messageHeader"
+  xmlns:xlink="http://www.w3.org/1999/xlink"
+  xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <SOAP-ENV:Header>
+    <eb:MessageHeader SOAP-ENV:mustUnderstand="1" eb:version="1.0">
+      <eb:From><eb:PartyId>Agency</eb:PartyId></eb:From>
+      <eb:To><eb:PartyId>Sabre_API</eb:PartyId></eb:To>
+      <eb:CPAId>${config.pcc}</eb:CPAId>
+      <eb:ConversationId>${conversationId}</eb:ConversationId>
+      <eb:Service>HotelPropertyDescriptionLLSRQ</eb:Service>
+      <eb:Action>HotelPropertyDescriptionLLSRQ</eb:Action>
+    </eb:MessageHeader>
+    <wsse:Security xmlns:wsse="http://schemas.xmlsoap.org/ws/2002/12/secext">
+      <wsse:BinarySecurityToken>${token}</wsse:BinarySecurityToken>
+    </wsse:Security>
+  </SOAP-ENV:Header>
+  <SOAP-ENV:Body>
+    <HotelPropertyDescriptionRQ Version="2.3.0" xmlns="http://webservices.sabre.com/sabreXML/2011/10"
+      xmlns:xs="http://www.w3.org/2001/XMLSchema"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+      <AvailRequestSegment>
+        <GuestCounts Count="${guestCount}"/>
+        <HotelSearchCriteria>
+          <Criterion>
+            <HotelRef HotelCode="${params.hotelCode}"/>
+          </Criterion>
+        </HotelSearchCriteria>
+        <TimeSpan End="${endMD}" Start="${startMD}"/>
+      </AvailRequestSegment>
+    </HotelPropertyDescriptionRQ>
+  </SOAP-ENV:Body>
+</SOAP-ENV:Envelope>`;
+
+  try {
+    console.log(`[Sabre SOAP] Hotel details: code=${params.hotelCode}`);
+    const res = await fetch(soapUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/xml; charset=utf-8', 'SOAPAction': 'HotelPropertyDescriptionLLSRQ' },
+      body: envelope,
+      signal: AbortSignal.timeout(20000),
+    });
+
+    const xml = await res.text();
+    
+    const faultMatch = xml.match(/faultstring>([^<]+)/);
+    if (faultMatch) {
+      if (!_retried && isSoapSessionError(faultMatch[1])) {
+        await resetSoapSessionCacheWithClose(config);
+        return getHotelPropertyDescription(params, true);
+      }
+      console.error(`[Sabre SOAP] Hotel details fault: ${faultMatch[1]}`);
+      return null;
+    }
+
+    return parseHotelPropertyDescription(xml, params);
+  } catch (err) {
+    if (!_retried && isSoapSessionError(err.message)) {
+      await resetSoapSessionCacheWithClose(config);
+      return getHotelPropertyDescription(params, true);
+    }
+    console.error('[Sabre SOAP] Hotel details error:', err.message);
+    return null;
+  }
+}
+
+function parseHotelPropertyDescription(xml, params) {
+  try {
+    const hotelCode = xml.match(/HotelCode="([^"]+)"/)?.[1] || params.hotelCode;
+    const hotelName = xml.match(/HotelName="([^"]+)"/)?.[1] || '';
+    const addressLine = xml.match(/<AddressLine>([^<]+)/)?.[1] || '';
+    const cityName = xml.match(/<CityName>([^<]+)/)?.[1] || '';
+    const countryCode = xml.match(/<CountryCode>([^<]+)/)?.[1] || '';
+    const postalCode = xml.match(/<PostalCode>([^<]+)/)?.[1] || '';
+    const latitude = xml.match(/Latitude="([^"]+)"/)?.[1];
+    const longitude = xml.match(/Longitude="([^"]+)"/)?.[1];
+    const phone = xml.match(/<Phone[^>]*>([^<]+)/)?.[1] || '';
+    const fax = xml.match(/<Fax[^>]*>([^<]+)/)?.[1] || '';
+    const sabreRating = xml.match(/Rating="([^"]+)"/)?.[1];
+    const starRating = sabreRating ? parseInt(sabreRating) : 0;
+
+    // Extract description text
+    const descTexts = xml.match(/<Text>([^<]+)/g) || [];
+    const description = descTexts.map(t => t.replace('<Text>', '')).join(' ').trim();
+
+    // Extract amenities from PropertyOptionInfo or Text blocks
+    const amenities = [];
+    const amenityMatches = xml.match(/Ind="true"[^/]*\/>/g) || [];
+    // Also look for named amenities
+    if (xml.includes('POOL')) amenities.push('Swimming Pool');
+    if (xml.includes('FREE WIFI') || xml.includes('INTERNET')) amenities.push('Free WiFi');
+    if (xml.includes('RESTAURANT') || xml.includes('DINING')) amenities.push('Restaurant');
+    if (xml.includes('PARKING')) amenities.push('Parking');
+    if (xml.includes('GYM') || xml.includes('FITNESS')) amenities.push('Fitness Center');
+    if (xml.includes('SPA')) amenities.push('Spa');
+    if (xml.includes('ROOM SERVICE')) amenities.push('Room Service');
+    if (xml.includes('BREAKFAST')) amenities.push('Breakfast');
+    if (xml.includes('BAR') || xml.includes('LOUNGE')) amenities.push('Bar/Lounge');
+    if (xml.includes('AIRPORT')) amenities.push('Airport Shuttle');
+    if (xml.includes('LAUNDRY')) amenities.push('Laundry');
+    if (xml.includes('BUSINESS CENTER')) amenities.push('Business Center');
+
+    // Extract room rates
+    const rooms = [];
+    const rateBlocks = xml.match(/<RoomRate[\s\S]*?<\/RoomRate>/g) || [];
+    for (const block of rateBlocks) {
+      const roomType = block.match(/RoomType="([^"]+)"/)?.[1] || 'Standard';
+      const rateAmount = block.match(/Amount="([^"]+)"/)?.[1];
+      const rateCurrency = block.match(/CurrencyCode="([^"]+)"/)?.[1] || 'USD';
+      const rateDesc = block.match(/<Text>([^<]+)/)?.[1] || '';
+      const guaranteeRequired = block.includes('GuaranteeRequired="true"');
+      
+      if (rateAmount) {
+        const nights = params.checkIn && params.checkOut
+          ? Math.max(1, Math.ceil((new Date(params.checkOut) - new Date(params.checkIn)) / 86400000))
+          : 1;
+        const nightly = parseFloat(rateAmount);
+        rooms.push({
+          id: `room-${rooms.length + 1}`,
+          name: rateDesc || `${roomType} Room`,
+          type: roomType,
+          bedType: 'Double',
+          maxGuests: parseInt(params.guests || 2),
+          price: Math.round(nightly),
+          totalPrice: Math.round(nightly * nights),
+          nights,
+          currency: rateCurrency,
+          cancellationPolicy: 'Contact hotel for cancellation policy',
+          isRefundable: false,
+          mealPlan: null,
+          rateKey: null,
+          bookingKey: null,
+          amenities: [],
+          source: 'sabre',
+          guaranteeRequired,
+        });
+      }
+    }
+
+    rooms.sort((a, b) => a.price - b.price);
+
+    return {
+      id: `sabre-${hotelCode}`,
+      sabreHotelCode: hotelCode,
+      source: 'sabre',
+      name: hotelName,
+      city: cityName,
+      country: countryCode,
+      address: addressLine,
+      latitude: latitude ? parseFloat(latitude) : null,
+      longitude: longitude ? parseFloat(longitude) : null,
+      starRating,
+      stars: starRating,
+      userRating: starRating > 0 ? starRating * 0.9 : null,
+      rating: starRating > 0 ? starRating * 0.9 : null,
+      reviewCount: 0,
+      reviews: 0,
+      images: [],
+      amenities,
+      description,
+      policies: [],
+      checkInTime: '15:00',
+      checkOutTime: '11:00',
+      contactInfo: { phone, fax },
+      rooms,
+    };
+  } catch (err) {
+    console.error('[Sabre SOAP] Hotel property parse error:', err.message);
+    return null;
+  }
+}
+
 module.exports = {
   createSession,
   closeSession,
@@ -1044,8 +1449,9 @@ module.exports = {
   getAncillaryOffers,
   cancelPnrViaSoap,
   clearSoapSessionCache,
-  // Section 20: Fare Rules
   getStructuredFareRules,
-  // Section 22: Exchange
   exchangeBooking,
+  // Hotel SOAP
+  getHotelAvail,
+  getHotelPropertyDescription,
 };
