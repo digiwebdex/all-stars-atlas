@@ -428,8 +428,8 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 echo ""
 
 # Check PM2 logs for Sabre Hotel errors (REST + SOAP)
-echo "📋 Recent Sabre Hotel logs (last 120 lines):"
+echo "📋 Recent Sabre Hotel logs (last 200 lines):"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-pm2 logs seventrip-api --lines 120 --nostream 2>/dev/null | grep -E '\[(Sabre Hotels|Sabre SOAP)\]' | tail -40
+pm2 logs seventrip-api --lines 200 --nostream 2>/dev/null | grep -E '\[(Sabre Hotels|Sabre SOAP)\]' | tail -80
 echo ""
-echo "Done! Run 'pm2 logs seventrip-api --lines 300 --nostream | grep -E \"\\[(Sabre Hotels|Sabre SOAP)\\]\"' for full debug output."
+echo "Done! Run 'pm2 logs seventrip-api --lines 400 --nostream | grep -E \"\\[(Sabre Hotels|Sabre SOAP)\\]\"' for full debug output."
