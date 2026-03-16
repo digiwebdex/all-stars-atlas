@@ -201,8 +201,13 @@ function resolveHotelEndpointCandidates(endpoint) {
   return [endpoint];
 }
 
-// Make API request — tries versioned endpoint candidates + hotel/platform domains
+// Make API request — booking-only via REST. Hotel search/details use SOAP only.
 async function sabreRequest(config, endpoint, body, method = 'POST', timeoutMs = 30000) {
+  const isHotelCslEndpoint = /\/get\/hotel/i.test(endpoint);
+  if (isHotelCslEndpoint) {
+    throw new Error('Sabre Hotel REST CSL endpoints are disabled (SOAP strategy active)');
+  }
+
   const endpointCandidates = resolveHotelEndpointCandidates(endpoint);
   const isBookingEndpoint = endpoint.includes('passenger/records') || endpoint.includes('trip/orders');
 
@@ -512,73 +517,41 @@ async function getHotelDetails(hotelCode, checkIn, checkOut, adults, rooms) {
   }
 }
 
-async function getHotelContent(config, hotelCode) {
+async function getHotelContent(_config, hotelCode, checkIn, checkOut, adults) {
   try {
-    const body = {
-      GetHotelContentRQ: {
-        POS: { Source: { PseudoCityCode: config.pcc } },
-        SearchCriteria: {
-          HotelRefs: { HotelRef: [{ HotelCode: hotelCode }] }
-        }
-      }
-    };
+    const sabreSoap = getSabreSoap();
+    if (!sabreSoap.getHotelPropertyDescription) return {};
 
-    const response = await sabreRequest(config, '/v2/get/hoteldetails', body, 'POST', 20000);
-    const hotelContent = response?.GetHotelContentRS?.HotelContentInfos?.HotelContentInfo?.[0] || {};
-    const info = hotelContent.HotelInfo || {};
-    const media = hotelContent.HotelMediaInfo || {};
-    const desc = hotelContent.HotelDescriptiveInfo || {};
+    const details = await sabreSoap.getHotelPropertyDescription({
+      hotelCode,
+      checkIn,
+      checkOut,
+      guests: adults || 2,
+    });
 
-    // Extract all images
-    const images = [];
-    const mediaItems = media.MediaItems?.MediaItem || media.Images?.Image || media.Medias?.Media || [];
-    const mediaList = Array.isArray(mediaItems) ? mediaItems : [mediaItems];
-    for (const img of mediaList) {
-      const url = img?.Url || img?.URL || img?.ImageURL;
-      if (url) images.push(url);
-    }
-
-    // Extract amenities
-    const amenities = [];
-    const facilities = desc.Facilities?.Facility || desc.HotelAmenities?.HotelAmenity || [];
-    const facilityList = Array.isArray(facilities) ? facilities : [facilities];
-    for (const f of facilityList) {
-      const name = f?.Description || f?.Name || f?.FacilityName;
-      if (name) amenities.push(name);
-    }
-
-    // Extract policies
-    const policies = [];
-    const policyData = desc.Policies?.Policy || desc.HotelPolicies?.Policy || [];
-    const policyList = Array.isArray(policyData) ? policyData : [policyData];
-    for (const p of policyList) {
-      const text = p?.Description || p?.Text || p?.PolicyText;
-      if (text) policies.push(text);
-    }
-
-    // Check-in/out times
-    const checkInTime = desc.CheckInTime || info.CheckInTime || '15:00';
-    const checkOutTime = desc.CheckOutTime || info.CheckOutTime || '11:00';
+    if (!details) return {};
 
     return {
-      id: `sabre-${hotelCode}`,
-      name: info.HotelName || '',
-      city: info.LocationInfo?.City || '',
-      country: info.LocationInfo?.CountryName || '',
-      address: info.LocationInfo?.Address?.AddressLine1 || '',
-      latitude: parseFloat(info.LocationInfo?.Latitude || 0) || null,
-      longitude: parseFloat(info.LocationInfo?.Longitude || 0) || null,
-      starRating: parseInt(info.SabreRating || info.HotelRating || 0),
-      stars: parseInt(info.SabreRating || info.HotelRating || 0),
-      images: images.length > 0 ? images : [],
-      amenities,
-      description: desc.LongDescription || desc.ShortDescription || info.HotelDescription || '',
-      policies,
-      checkInTime,
-      checkOutTime,
-      contactInfo: info.ContactInfo || {},
-      rating: parseFloat(info.TripAdvisorRating || info.SabreRating || 0) || null,
-      reviews: parseInt(info.TripAdvisorReviewCount || 0),
+      id: details.id || `sabre-${hotelCode}`,
+      name: details.name || '',
+      city: details.city || '',
+      country: details.country || '',
+      address: details.address || '',
+      latitude: details.latitude ?? null,
+      longitude: details.longitude ?? null,
+      starRating: details.starRating || 0,
+      stars: details.stars || details.starRating || 0,
+      images: Array.isArray(details.images) ? details.images : [],
+      amenities: Array.isArray(details.amenities) ? details.amenities : [],
+      description: details.description || '',
+      policies: Array.isArray(details.policies) ? details.policies : [],
+      checkInTime: details.checkInTime || '15:00',
+      checkOutTime: details.checkOutTime || '11:00',
+      contactInfo: details.contactInfo || {},
+      rating: details.rating || null,
+      reviews: details.reviews || 0,
+      source: 'sabre',
+      sabreHotelCode: hotelCode,
     };
   } catch (err) {
     console.error(`[Sabre Hotels] Content fetch failed for ${hotelCode}:`, err.message);
@@ -586,111 +559,21 @@ async function getHotelContent(config, hotelCode) {
   }
 }
 
-async function getHotelRates(config, hotelCode, checkIn, checkOut, adults, rooms) {
+async function getHotelRates(_config, hotelCode, checkIn, checkOut, adults, rooms) {
   try {
-    const ci = checkIn || new Date(Date.now() + 86400000).toISOString().split('T')[0];
-    const co = checkOut || new Date(Date.now() + 2 * 86400000).toISOString().split('T')[0];
-    const nights = Math.max(1, Math.ceil((new Date(co) - new Date(ci)) / 86400000));
+    const sabreSoap = getSabreSoap();
+    if (!sabreSoap.getHotelPropertyDescription) return [];
 
-    const roomCount = parseInt(rooms || 1);
-    const adultsPerRoom = Math.max(1, Math.floor(parseInt(adults || 2) / roomCount));
-    const roomSpecs = [];
-    for (let i = 0; i < roomCount; i++) {
-      roomSpecs.push({ RoomIndex: i + 1, Adults: adultsPerRoom });
-    }
+    const details = await sabreSoap.getHotelPropertyDescription({
+      hotelCode,
+      checkIn,
+      checkOut,
+      guests: adults || 2,
+      rooms,
+    });
 
-    const body = {
-      GetHotelRateInfoRQ: {
-        POS: { Source: { PseudoCityCode: config.pcc } },
-        SearchCriteria: {
-          HotelRefs: { HotelRef: [{ HotelCode: hotelCode }] },
-          RateInfoRef: {
-            CurrencyCode: 'USD',
-            BestOnly: '10',
-            PrepaidQualifier: 'IncludePrepaid',
-            StayDateRange: { StartDate: ci, EndDate: co },
-            Rooms: roomSpecs,
-            InfoSource: '100,110,112,113'
-          }
-        }
-      }
-    };
-
-    const response = await sabreRequest(config, '/v2/get/hoteldetails', body, 'POST', 30000);
-    const rateInfos = response?.GetHotelRateInfoRS?.HotelRateInfos?.HotelRateInfo || [];
-    const roomResults = [];
-
-    const rateList = Array.isArray(rateInfos) ? rateInfos : [rateInfos];
-    for (const rateInfo of rateList) {
-      const rates = rateInfo?.Rates?.Rate || rateInfo?.HotelRateInfo?.Rates?.Rate || [];
-      const rateArr = Array.isArray(rates) ? rates : [rates];
-
-      for (const rate of rateArr) {
-        if (!rate) continue;
-
-        const avgNightly = parseFloat(rate.AverageNightlyRate || rate.AverageNightlyRateBeforeTax || 0);
-        const amount = parseFloat(rate.Amount || rate.AmountBeforeTax || 0);
-        const totalAmount = parseFloat(rate.TotalAmount || rate.TotalAmountBeforeTax || 0);
-
-        let nightly = avgNightly || amount || 0;
-        let total = totalAmount || (nightly * nights);
-
-        if (nightly === 0 && total > 0) {
-          nightly = Math.round(total / nights);
-        }
-
-        if (nightly === 0) continue;
-
-        // Determine cancellation
-        const cancelDesc = rate.CancelPolicy?.Description || rate.GuaranteeInfo?.Description || '';
-        const isRefundable = cancelDesc.toLowerCase().includes('free cancel') 
-          || cancelDesc.toLowerCase().includes('refundable')
-          || rate.RateQualifier === 'REF';
-
-        // Room description
-        const roomDesc = rate.RoomDescription || rate.RateDescription || rate.RoomTypeDescription || '';
-        const roomType = rate.RoomType || rate.RoomTypeCode || 'Standard';
-        const bedType = rate.BedType || rate.BedTypeDescription || '';
-
-        // Meal plan
-        const mealPlan = rate.MealPlan || rate.MealPlanDescription || null;
-
-        // Room amenities
-        const roomAmenities = [];
-        if (rate.RoomAmenities) {
-          const ra = Array.isArray(rate.RoomAmenities) ? rate.RoomAmenities : [rate.RoomAmenities];
-          for (const a of ra) {
-            const name = a?.Description || a?.Name || a;
-            if (typeof name === 'string') roomAmenities.push(name);
-          }
-        }
-
-        roomResults.push({
-          id: rate.RateKey || `room-${roomResults.length + 1}`,
-          name: roomDesc || `${roomType} Room`,
-          type: roomType,
-          bedType: bedType || 'Double',
-          maxGuests: parseInt(rate.MaxOccupancy || rate.MaxGuests || adultsPerRoom),
-          price: Math.round(nightly),
-          totalPrice: Math.round(total),
-          nights,
-          currency: rate.CurrencyCode || 'USD',
-          cancellationPolicy: cancelDesc || 'Non-refundable',
-          isRefundable,
-          mealPlan,
-          rateKey: rate.RateKey || null,
-          bookingKey: rate.BookingKey || null,
-          amenities: roomAmenities,
-          source: 'sabre',
-          availableRooms: parseInt(rate.AvailableRooms || 0) || null,
-          guaranteeRequired: !!rate.GuaranteeInfo?.GuaranteeRequired,
-          paymentDeadline: rate.CancelPolicy?.Deadline || null,
-        });
-      }
-    }
-
-    // Sort by price ascending
-    roomResults.sort((a, b) => a.price - b.price);
+    const roomResults = Array.isArray(details?.rooms) ? details.rooms : [];
+    roomResults.sort((a, b) => (a.price || 0) - (b.price || 0));
     return roomResults;
   } catch (err) {
     console.error(`[Sabre Hotels] Rates fetch failed for ${hotelCode}:`, err.message);

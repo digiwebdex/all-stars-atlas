@@ -427,9 +427,9 @@ echo -e "  Total: $TOTAL | ${GREEN}Pass: $PASS${NC} | ${RED}Fail: $FAIL${NC} | $
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 
-# Check PM2 logs for Sabre Hotel errors
-echo "📋 Recent Sabre Hotel logs (last 100 lines):"
+# Check PM2 logs for Sabre Hotel errors (REST + SOAP)
+echo "📋 Recent Sabre Hotel logs (last 120 lines):"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-pm2 logs seventrip-api --lines 100 --nostream 2>/dev/null | grep -E '\[Sabre Hotels\]' | tail -30
+pm2 logs seventrip-api --lines 120 --nostream 2>/dev/null | grep -E '\[(Sabre Hotels|Sabre SOAP)\]' | tail -40
 echo ""
-echo "Done! Run 'pm2 logs seventrip-api --lines 200 | grep \"Sabre Hotels\"' for full debug output."
+echo "Done! Run 'pm2 logs seventrip-api --lines 300 --nostream | grep -E \"\\[(Sabre Hotels|Sabre SOAP)\\]\"' for full debug output."
