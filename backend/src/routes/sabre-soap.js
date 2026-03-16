@@ -1149,7 +1149,7 @@ async function getHotelAvail(params, _retried = false) {
         continue;
       }
 
-      if (diagnostics.status && diagnostics.status !== 'Complete') {
+      if (diagnostics.status) {
         console.warn(`[Sabre SOAP] Hotel search status (${attempt.label})=${diagnostics.status}`);
       }
       if (diagnostics.messages.length > 0) {
@@ -1167,6 +1167,9 @@ async function getHotelAvail(params, _retried = false) {
       }
       if (diagnostics.xmlHint) {
         console.warn(`[Sabre SOAP] Hotel search empty result hint (${attempt.label}): ${diagnostics.xmlHint}`);
+      }
+      if (diagnostics.rawPreview) {
+        console.warn(`[Sabre SOAP] Hotel search raw preview (${attempt.label}): ${diagnostics.rawPreview}`);
       }
     }
 
@@ -1194,28 +1197,50 @@ function escapeXml(value = '') {
 }
 
 function extractSoapDiagnostics(xml) {
-  const status = xml.match(/ApplicationResults[^>]*status="([^"]+)"/i)?.[1] || null;
-  const messageMatches = [
+  const compactXml = String(xml || '').replace(/\s+/g, ' ').trim();
+
+  const status =
+    xml.match(/<(?:\w+:)?ApplicationResults[^>]*\bstatus="([^"]+)"/i)?.[1]
+    || xml.match(/<(?:\w+:)?ApplicationResults[^>]*\bStatus="([^"]+)"/i)?.[1]
+    || null;
+
+  const textMessageMatches = [
     ...xml.matchAll(/<(?:\w+:)?Message(?:\s[^>]*)?>([\s\S]*?)<\/(?:\w+:)?Message>/gi),
-    ...xml.matchAll(/ShortText="([^"]+)"/gi),
-    ...xml.matchAll(/ErrorCode="([^"]+)"/gi),
-  ];
-  const messages = [...new Set(messageMatches
-    .map(m => (m?.[1] || '').replace(/\s+/g, ' ').trim())
+    ...xml.matchAll(/<(?:\w+:)?Error(?:\s[^>]*)?>([\s\S]*?)<\/(?:\w+:)?Error>/gi),
+    ...xml.matchAll(/<(?:\w+:)?Warning(?:\s[^>]*)?>([\s\S]*?)<\/(?:\w+:)?Warning>/gi),
+    ...xml.matchAll(/<(?:\w+:)?Diagnostic(?:\s[^>]*)?>([\s\S]*?)<\/(?:\w+:)?Diagnostic>/gi),
+  ].map(m => m?.[1] || '');
+
+  const attrMessageMatches = [
+    ...xml.matchAll(/\bShortText="([^"]+)"/gi),
+    ...xml.matchAll(/\bErrorCode="([^"]+)"/gi),
+    ...xml.matchAll(/\bCode="([^"]+)"/gi),
+    ...xml.matchAll(/\bMessage="([^"]+)"/gi),
+    ...xml.matchAll(/\bType="([^"]+)"/gi),
+  ].map(m => m?.[1] || '');
+
+  const messages = [...new Set([
+    ...textMessageMatches,
+    ...attrMessageMatches,
+  ]
+    .map(s => s.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim())
     .filter(Boolean))]
-    .slice(0, 6);
+    .slice(0, 8);
 
-  const xmlHint = xml
-    .replace(/\s+/g, ' ')
-    .match(/<(?:\w+:)?ApplicationResults[\s\S]*?<\/(?:\w+:)?ApplicationResults>/i)?.[0]
-    ?.slice(0, 500) || '';
+  const xmlHint =
+    compactXml.match(/<(?:\w+:)?ApplicationResults[\s\S]*?<\/(?:\w+:)?ApplicationResults>/i)?.[0]?.slice(0, 700)
+    || compactXml.match(/<(?:\w+:)?Errors?[\s\S]*?<\/(?:\w+:)?Errors?>/i)?.[0]?.slice(0, 700)
+    || compactXml.match(/<(?:\w+:)?Warnings?[\s\S]*?<\/(?:\w+:)?Warnings?>/i)?.[0]?.slice(0, 700)
+    || '';
 
-  const hostCommand = xml
-    .match(/<(?:\w+:)?HostCommand(?:\s[^>]*)?>([\s\S]*?)<\/(?:\w+:)?HostCommand>/i)?.[1]
-    ?.replace(/\s+/g, ' ')
-    .trim() || null;
+  const hostCommand =
+    xml.match(/<(?:\w+:)?HostCommand(?:\s[^>]*)?>([\s\S]*?)<\/(?:\w+:)?HostCommand>/i)?.[1]?.replace(/\s+/g, ' ').trim()
+    || xml.match(/\bHostCommand="([^"]+)"/i)?.[1]
+    || null;
 
-  return { status, messages, xmlHint, hostCommand };
+  const rawPreview = compactXml.slice(0, 700);
+
+  return { status, messages, xmlHint, hostCommand, rawPreview };
 }
 
 function firstMatchFloat(text, patterns) {
@@ -1234,9 +1259,18 @@ function firstMatchFloat(text, patterns) {
 function parseHotelAvailResponse(xml, params) {
   const hotels = [];
   try {
-    const availBlocks = [...xml.matchAll(/<(?:\w+:)?HotelAvailInfo\b[\s\S]*?<\/(?:\w+:)?HotelAvailInfo>/gi)].map(m => m[0]);
-    const roomStayBlocks = [...xml.matchAll(/<(?:\w+:)?RoomStay\b[\s\S]*?<\/(?:\w+:)?RoomStay>/gi)].map(m => m[0]);
-    const fallbackBlocks = [...xml.matchAll(/<(?:\w+:)?BasicPropertyInfo\b[\s\S]*?(?:\/>|<\/(?:\w+:)?BasicPropertyInfo>)/gi)].map(m => m[0]);
+    const availBlocks = [
+      ...[...xml.matchAll(/<(?:\w+:)?HotelAvailInfo\b[\s\S]*?<\/(?:\w+:)?HotelAvailInfo>/gi)].map(m => m[0]),
+      ...[...xml.matchAll(/<(?:\w+:)?HotelAvailInfo\b[^>]*\/>/gi)].map(m => m[0]),
+    ];
+    const roomStayBlocks = [
+      ...[...xml.matchAll(/<(?:\w+:)?RoomStay\b[\s\S]*?<\/(?:\w+:)?RoomStay>/gi)].map(m => m[0]),
+      ...[...xml.matchAll(/<(?:\w+:)?RoomStay\b[^>]*\/>/gi)].map(m => m[0]),
+    ];
+    const fallbackBlocks = [
+      ...[...xml.matchAll(/<(?:\w+:)?BasicPropertyInfo\b[\s\S]*?(?:\/>|<\/(?:\w+:)?BasicPropertyInfo>)/gi)].map(m => m[0]),
+      ...[...xml.matchAll(/<(?:\w+:)?HotelRef\b[\s\S]*?(?:\/>|<\/(?:\w+:)?HotelRef>)/gi)].map(m => m[0]),
+    ];
     const blocks = availBlocks.length > 0 ? availBlocks : (roomStayBlocks.length > 0 ? roomStayBlocks : fallbackBlocks);
 
     const nights = params.checkIn && params.checkOut
@@ -1249,8 +1283,9 @@ function parseHotelAvailResponse(xml, params) {
       const tagText = (src, tag) => src.match(new RegExp(`<(?:\\w+:)?${tag}>([^<]+)<\\/(?:\\w+:)?${tag}>`, 'i'))?.[1]?.trim() || '';
 
       const hotelCode = attr(propertyXml, 'HotelCode') || tagText(block, 'HotelCode');
-      const hotelName = attr(propertyXml, 'HotelName') || tagText(block, 'HotelName');
-      if (!hotelCode || !hotelName) continue;
+      const hotelName = attr(propertyXml, 'HotelName') || tagText(block, 'HotelName') || tagText(block, 'PropertyName') || tagText(block, 'Name');
+      if (!hotelCode) continue;
+      const resolvedHotelName = hotelName || `Hotel ${hotelCode}`;
 
       const cityCode = attr(propertyXml, 'HotelCityCode') || tagText(block, 'HotelCityCode') || params.cityCode || '';
       const latitude = attr(propertyXml, 'Latitude') || tagText(block, 'Latitude');
@@ -1296,7 +1331,7 @@ function parseHotelAvailResponse(xml, params) {
         id: `sabre-${hotelCode}`,
         sabreHotelCode: hotelCode,
         source: 'sabre',
-        name: hotelName,
+        name: resolvedHotelName,
         city: cityName || cityCode,
         country: countryCode,
         address: addressLine,
