@@ -503,6 +503,7 @@ const Index = () => {
             </div>
           </section>
         );
+      }
 
       case 'testimonials':
         return (
