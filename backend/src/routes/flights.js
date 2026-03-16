@@ -2107,4 +2107,91 @@ router.post('/cancel', authenticate, async (req, res) => {
   }
 });
 
+// ── Live route prices for homepage ──
+// Searches cheapest fare across all providers for predefined domestic routes
+// Results cached for 2 hours to avoid hammering GDS APIs
+const DOMESTIC_ROUTES = [
+  { from: 'Dhaka', fromCode: 'DAC', to: "Cox's Bazar", toCode: 'CXB' },
+  { from: 'Dhaka', fromCode: 'DAC', to: 'Jashore', toCode: 'JSR' },
+  { from: 'Dhaka', fromCode: 'DAC', to: 'Chattogram', toCode: 'CGP' },
+  { from: 'Dhaka', fromCode: 'DAC', to: 'Sylhet', toCode: 'ZYL' },
+  { from: 'Dhaka', fromCode: 'DAC', to: 'Barisal', toCode: 'BZL' },
+  { from: 'Dhaka', fromCode: 'DAC', to: 'Saidpur', toCode: 'SPD' },
+];
+
+let routePriceCache = { data: null, expiry: 0 };
+const ROUTE_CACHE_TTL = 2 * 60 * 60 * 1000; // 2 hours
+
+router.get('/route-prices', async (req, res) => {
+  try {
+    // Return cached if still valid
+    if (routePriceCache.data && Date.now() < routePriceCache.expiry) {
+      return res.json({ success: true, routes: routePriceCache.data, cached: true });
+    }
+
+    // Search date: 7 days from now (to get realistic upcoming fares)
+    const searchDate = new Date();
+    searchDate.setDate(searchDate.getDate() + 7);
+    const dateStr = searchDate.toISOString().split('T')[0];
+
+    console.log(`[Route Prices] Fetching live prices for ${DOMESTIC_ROUTES.length} routes on ${dateStr}`);
+
+    const results = await Promise.allSettled(
+      DOMESTIC_ROUTES.map(async (route) => {
+        const params = {
+          origin: route.fromCode,
+          destination: route.toCode,
+          departDate: dateStr,
+          adults: 1,
+          children: 0,
+          infants: 0,
+          cabinClass: 'economy',
+        };
+
+        // Search TTI + BDFare + Sabre in parallel (domestic routes)
+        const [tti, bdf, sabre] = await Promise.allSettled([
+          ttiSearch(params).catch(() => []),
+          bdfSearch(params).catch(() => []),
+          sabreSearch(params).catch(() => []),
+        ]);
+
+        let allFlights = [];
+        for (const r of [tti, bdf, sabre]) {
+          if (r.status === 'fulfilled') allFlights.push(...(r.value || []));
+        }
+
+        // Find cheapest price
+        let cheapest = null;
+        for (const f of allFlights) {
+          const price = f.price || f.totalPrice || f.fareDetails?.totalPrice || 0;
+          if (price > 0 && (!cheapest || price < cheapest)) {
+            cheapest = price;
+          }
+        }
+
+        return {
+          ...route,
+          price: cheapest ? `৳${Math.round(cheapest).toLocaleString('en-IN')}` : null,
+          priceRaw: cheapest || null,
+          flightCount: allFlights.length,
+        };
+      })
+    );
+
+    const routes = results.map((r, i) => {
+      if (r.status === 'fulfilled') return r.value;
+      return { ...DOMESTIC_ROUTES[i], price: null, priceRaw: null, flightCount: 0 };
+    });
+
+    // Cache results
+    routePriceCache = { data: routes, expiry: Date.now() + ROUTE_CACHE_TTL };
+
+    console.log(`[Route Prices] Done:`, routes.map(r => `${r.fromCode}→${r.toCode}: ${r.price || 'N/A'}`).join(', '));
+    res.json({ success: true, routes, cached: false });
+  } catch (err) {
+    console.error('[Route Prices] Error:', err);
+    res.status(500).json({ message: 'Something went wrong' });
+  }
+});
+
 module.exports = router;
