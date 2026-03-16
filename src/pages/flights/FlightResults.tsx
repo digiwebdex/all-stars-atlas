@@ -2139,11 +2139,11 @@ const MultiCityFlightCard = ({
                       <p className={`text-[10px] font-bold ${seg.stops === 0 ? "text-foreground" : "text-warning"}`}>
                         {seg.stops === 0 ? "Non-Stop" : `${seg.stops} Stop${seg.stops > 1 ? "s" : ""}`}
                       </p>
-                      {calcDistanceKm(seg.origin, seg.destination) && (
+                      {(() => { const d = calcRouteDistance(seg); return d ? (
                         <span className="text-[9px] text-muted-foreground flex items-center gap-0.5">
-                          <MapPin className="w-2.5 h-2.5" /> {calcDistanceKm(seg.origin, seg.destination)?.toLocaleString()} Km
+                          <MapPin className="w-2.5 h-2.5" /> {d.toLocaleString()} Km
                         </span>
-                      )}
+                      ) : null; })()}
                     </div>
                     <div className="text-center shrink-0">
                       <p className="text-lg sm:text-xl font-black leading-tight flight-time">{formatTime(seg.arrivalTime)}</p>
