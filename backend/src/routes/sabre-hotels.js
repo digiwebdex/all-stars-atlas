@@ -298,111 +298,35 @@ function resolveCity(city) {
 
 
 // ══════════════════════════════════════════════
-//  1. HOTEL SEARCH — GetHotelAvail (v2 with fallback strategies)
+//  1. HOTEL SEARCH — SOAP OTA_HotelAvailLLSRQ (uses existing PCC credentials)
 // ══════════════════════════════════════════════
 async function searchHotels({ city, checkIn, checkOut, adults = 2, children = 0, rooms = 1, minRate, maxRate, minStars, maxStars }) {
-  const config = await getSabreConfig();
-  if (!config) { console.warn('[Sabre Hotels] No config, skipping search'); return []; }
-
   const resolved = resolveCity(city);
   if (!resolved) { console.warn(`[Sabre Hotels] Could not resolve city: ${city}`); return []; }
 
-  const { code: cityCode, type: refPointType } = resolved;
-
-  // Build room specifications for multi-room
-  const roomCount = parseInt(rooms) || 1;
-  const adultsPerRoom = Math.max(1, Math.floor(parseInt(adults) / roomCount));
-  const childrenPerRoom = Math.floor(parseInt(children || 0) / roomCount);
-  const roomSpecs = [];
-  for (let i = 0; i < roomCount; i++) {
-    const room = { RoomIndex: i + 1, Adults: adultsPerRoom };
-    if (childrenPerRoom > 0) room.Children = childrenPerRoom;
-    roomSpecs.push(room);
-  }
-
-  const requestBody = {
-    GetHotelAvailRQ: {
-      POS: {
-        Source: { PseudoCityCode: config.pcc }
-      },
-      SearchCriteria: {
-        OffSet: 1,
-        SortBy: 'TotalRate',
-        SortOrder: 'ASC',
-        PageSize: 100,
-        TierLabels: false,
-        GeoSearch: {
-          GeoRef: {
-            Radius: 50,
-            UOM: 'KM',
-            RefPoint: { Value: cityCode, ValueContext: 'CODE', RefPointType: refPointType }
-          }
-        },
-        RateInfoRef: {
-          CurrencyCode: 'USD',
-          BestOnly: '4',
-          PrepaidQualifier: 'IncludePrepaid',
-          StayDateRange: {
-            StartDate: checkIn,
-            EndDate: checkOut
-          },
-          Rooms: roomSpecs,
-          InfoSource: '100,110,112,113'
-        },
-        ImageRef: {
-          Type: 'MEDIUM',
-          LanguageCode: 'EN'
-        },
-        HotelPref: {}
-      }
-    }
-  };
-
-  // Star rating filter
-  if (minStars || maxStars) {
-    requestBody.GetHotelAvailRQ.SearchCriteria.HotelPref.HotelRating = [];
-    const minS = parseInt(minStars || 1);
-    const maxS = parseInt(maxStars || 5);
-    for (let s = minS; s <= maxS; s++) {
-      requestBody.GetHotelAvailRQ.SearchCriteria.HotelPref.HotelRating.push({ Rating: s });
-    }
-  }
-
-  // Price filter
-  if (minRate || maxRate) {
-    requestBody.GetHotelAvailRQ.SearchCriteria.RateInfoRef.RateRange = {
-      Min: parseFloat(minRate || 0),
-      Max: parseFloat(maxRate || 50000),
-      CurrencyCode: 'USD'
-    };
-  }
+  const { code: cityCode } = resolved;
+  const totalGuests = parseInt(adults) + parseInt(children || 0);
 
   try {
-    console.log(`[Sabre Hotels] Searching: city=${cityCode}(type=${refPointType}), ${checkIn} → ${checkOut}, ${adults}A+${children}C, ${rooms} rooms`);
-    const response = await sabreRequest(config, '/v2/get/hotelavail', requestBody, 'POST', 60000);
-    
-    const hotels = normalizeSearchResponse(response, city, checkIn, checkOut);
-    console.log(`[Sabre Hotels] Found ${hotels.length} hotels for ${city}`);
-    
-    // If 0 results with airport code, retry with city code type
-    if (hotels.length === 0 && refPointType === '1') {
-      console.log(`[Sabre Hotels] Retrying with RefPointType=6 (city) for ${cityCode}`);
-      requestBody.GetHotelAvailRQ.SearchCriteria.GeoSearch.GeoRef.RefPoint.RefPointType = '6';
-      try {
-        const retryResponse = await sabreRequest(config, '/v2/get/hotelavail', requestBody, 'POST', 60000);
-        const retryHotels = normalizeSearchResponse(retryResponse, city, checkIn, checkOut);
-        if (retryHotels.length > 0) {
-          console.log(`[Sabre Hotels] Retry found ${retryHotels.length} hotels`);
-          return retryHotels;
-        }
-      } catch (retryErr) {
-        console.error('[Sabre Hotels] Retry also failed:', retryErr.message);
-      }
+    const sabreSoap = getSabreSoap();
+    if (!sabreSoap.getHotelAvail) {
+      console.warn('[Sabre Hotels] SOAP hotel search not available');
+      return [];
     }
-    
+
+    console.log(`[Sabre Hotels] SOAP search: city=${cityCode}, ${checkIn} → ${checkOut}, ${adults}A+${children}C, ${rooms} rooms`);
+    let hotels = await sabreSoap.getHotelAvail({ cityCode, checkIn, checkOut, guests: totalGuests, rooms });
+
+    // Apply client-side filters
+    if (minStars) hotels = hotels.filter(h => (h.starRating || 0) >= parseInt(minStars));
+    if (maxStars) hotels = hotels.filter(h => (h.starRating || 0) <= parseInt(maxStars));
+    if (minRate) hotels = hotels.filter(h => (h.price || 0) >= parseFloat(minRate));
+    if (maxRate) hotels = hotels.filter(h => (h.price || 0) <= parseFloat(maxRate));
+
+    console.log(`[Sabre Hotels] SOAP found ${hotels.length} hotels for ${city}`);
     return hotels;
   } catch (err) {
-    console.error('[Sabre Hotels] Search failed:', err.message);
+    console.error('[Sabre Hotels] SOAP search failed:', err.message);
     return [];
   }
 }
