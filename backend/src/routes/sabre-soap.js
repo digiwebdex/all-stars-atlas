@@ -1252,11 +1252,11 @@ function parseHotelAvailResponse(xml, params) {
       const hotelName = attr(propertyXml, 'HotelName') || tagText(block, 'HotelName');
       if (!hotelCode || !hotelName) continue;
 
-      const cityCode = attr(propertyXml, 'HotelCityCode') || params.cityCode || '';
-      const latitude = attr(propertyXml, 'Latitude');
-      const longitude = attr(propertyXml, 'Longitude');
-      const distance = attr(propertyXml, 'Distance');
-      const chainCode = attr(propertyXml, 'ChainCode');
+      const cityCode = attr(propertyXml, 'HotelCityCode') || tagText(block, 'HotelCityCode') || params.cityCode || '';
+      const latitude = attr(propertyXml, 'Latitude') || tagText(block, 'Latitude');
+      const longitude = attr(propertyXml, 'Longitude') || tagText(block, 'Longitude');
+      const distance = attr(propertyXml, 'Distance') || tagText(block, 'Distance');
+      const chainCode = attr(propertyXml, 'ChainCode') || tagText(block, 'ChainCode');
       const brandCode = attr(propertyXml, 'BrandCode');
 
       const addressLine = tagText(block, 'AddressLine');
