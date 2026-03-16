@@ -355,7 +355,7 @@ async function searchHotels({ city, checkIn, checkOut, adults = 2, children = 0,
       console.log(`[Sabre Hotels] Retrying with RefPointType=6 (city) for ${cityCode}`);
       requestBody.GetHotelAvailRQ.SearchCriteria.GeoSearch.GeoRef.RefPoint.RefPointType = '6';
       try {
-        const retryResponse = await sabreRequest(config, '/v2.0.0/shop/hotels', requestBody, 'POST', 60000);
+        const retryResponse = await sabreRequest(config, '/v2/get/hotelavail', requestBody, 'POST', 60000);
         const retryHotels = normalizeSearchResponse(retryResponse, city, checkIn, checkOut);
         if (retryHotels.length > 0) {
           console.log(`[Sabre Hotels] Retry found ${retryHotels.length} hotels`);
