@@ -1459,12 +1459,16 @@ async function getHotelPropertyDescription(params, _retried = false) {
   xmlns:xsd="http://www.w3.org/2001/XMLSchema">
   <SOAP-ENV:Header>
     <eb:MessageHeader SOAP-ENV:mustUnderstand="1" eb:version="1.0">
-      <eb:From><eb:PartyId>Agency</eb:PartyId></eb:From>
-      <eb:To><eb:PartyId>Sabre_API</eb:PartyId></eb:To>
+      <eb:From><eb:PartyId eb:type="URI">Agency</eb:PartyId></eb:From>
+      <eb:To><eb:PartyId eb:type="URI">Sabre_API</eb:PartyId></eb:To>
       <eb:CPAId>${config.pcc}</eb:CPAId>
       <eb:ConversationId>${conversationId}</eb:ConversationId>
       <eb:Service eb:type="sabreXML">${actionVariant.service}</eb:Service>
       <eb:Action>${actionVariant.action}</eb:Action>
+      <eb:MessageData>
+        <eb:MessageId>${Date.now()}.${Math.random().toString(36).slice(2, 10)}</eb:MessageId>
+        <eb:Timestamp>${new Date().toISOString().replace('Z', '')}</eb:Timestamp>
+      </eb:MessageData>
     </eb:MessageHeader>
     <wsse:Security xmlns:wsse="http://schemas.xmlsoap.org/ws/2002/12/secext">
       <wsse:BinarySecurityToken>${token}</wsse:BinarySecurityToken>
