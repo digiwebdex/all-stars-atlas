@@ -1,12 +1,15 @@
 /**
  * Sabre Hotel API Integration — Enterprise Grade
- * Uses same OAuth/credentials as sabre-flights.js (system_settings → api_sabre)
+ * Uses Content Services for Lodging (CSL) on havail.sabre.com
+ * NOTE: Sabre CSL hotel APIs use a DIFFERENT domain than flight APIs:
+ *   - Flights: api.platform.sabre.com
+ *   - Hotels (CSL): api.havail.sabre.com (prod) / api-crt.cert.havail.sabre.com (cert)
  * 
- * Sabre REST API Endpoints:
- *   POST /v5/shop/hotels           — GetHotelAvail v5 (search by geo/city/airport)
- *   POST /v1.0.0/shop/hotels/content   — Hotel content (images, descriptions, amenities)
- *   POST /v1.0.0/shop/hotels/rates     — Detailed rate plans per hotel
- *   POST /v2.4.0/passenger/records?mode=create — PNR creation for hotel booking
+ * CSL REST API Endpoints:
+ *   POST /v2/get/hotelavail        — GetHotelAvail v2 (search by geo/city/airport)
+ *   POST /v2/get/hoteldetails      — Hotel details (images, descriptions, amenities, rates)
+ *   POST /v2/hotel/pricecheck      — Price verification before booking
+ *   POST /v2.4.0/passenger/records?mode=create — PNR creation (on platform.sabre.com)
  */
 
 const db = require('../config/db');
@@ -28,9 +31,15 @@ async function getSabreConfig() {
     const isProd = cfg.environment === 'production' || cfg.environment === 'prod'
       || (!cfg.environment && (cfg.prod_url || cfg.prod_basic_auth || cfg.prodPassword));
 
-    const baseUrl = isProd
+    // Flight/booking API base (platform.sabre.com)
+    const platformUrl = isProd
       ? (cfg.prod_url || 'https://api.platform.sabre.com')
       : (cfg.sandbox_url || 'https://api.cert.platform.sabre.com');
+
+    // Hotel CSL API base (havail.sabre.com) — DIFFERENT DOMAIN
+    const hotelUrl = isProd
+      ? 'https://api.havail.sabre.com'
+      : 'https://api-crt.cert.havail.sabre.com';
 
     const pick = (...vals) => vals.find(v => typeof v === 'string' && v.trim().length > 0)?.trim() || '';
 
@@ -52,7 +61,8 @@ async function getSabreConfig() {
     if (!epr || !agencyPassword) return null;
 
     _configCache = {
-      baseUrl: baseUrl.replace(/\/$/, ''),
+      baseUrl: platformUrl.replace(/\/$/, ''),
+      hotelUrl: hotelUrl.replace(/\/$/, ''),
       clientId, clientSecret, basicAuth,
       pcc: cfg.pcc || cfg.scCode || '',
       epr, agencyPassword,
@@ -68,19 +78,26 @@ async function getSabreConfig() {
 
 function clearSabreHotelConfigCache() { _configCache = null; _configCacheTime = 0; }
 
-// ── OAuth (shared pattern with sabre-flights) ──
-let tokenCache = { token: null, expiresAt: 0 };
+// ── OAuth — get token from BOTH domains (CSL uses havail domain for auth too) ──
+let hotelTokenCache = { token: null, expiresAt: 0 };
+let platformTokenCache = { token: null, expiresAt: 0 };
 
-async function getAccessToken(config) {
-  if (tokenCache.token && Date.now() < tokenCache.expiresAt - 60000) return tokenCache.token;
+async function getAccessToken(config, domain = 'hotel') {
+  const cache = domain === 'hotel' ? hotelTokenCache : platformTokenCache;
+  if (cache.token && Date.now() < cache.expiresAt - 60000) return cache.token;
+  
+  const authBaseUrl = domain === 'hotel' ? config.hotelUrl : config.baseUrl;
+  
   try {
     const credentials = config.basicAuth
       ? config.basicAuth
       : Buffer.from(`${config.clientId}:${config.clientSecret}`).toString('base64');
-    const username = `${config.epr}-${config.pcc}-AA`;
-    const body = `grant_type=password&username=${encodeURIComponent(username)}&password=${encodeURIComponent(config.agencyPassword)}`;
 
-    const res = await fetch(`${config.baseUrl}/v3/auth/token`, {
+    // CSL uses client_credentials grant (simpler than flight's password grant)
+    const body = `grant_type=client_credentials`;
+
+    console.log(`[Sabre Hotels] Auth → ${authBaseUrl}/v2/auth/token (${domain})`);
+    const res = await fetch(`${authBaseUrl}/v2/auth/token`, {
       method: 'POST',
       headers: { 'Authorization': `Basic ${credentials}`, 'Content-Type': 'application/x-www-form-urlencoded' },
       body,
@@ -88,41 +105,118 @@ async function getAccessToken(config) {
     });
     if (!res.ok) {
       const errText = await res.text().catch(() => '');
-      console.error(`[Sabre Hotels] Auth failed ${res.status}: ${errText.slice(0, 300)}`);
-      return null;
+      console.error(`[Sabre Hotels] Auth failed ${authBaseUrl} ${res.status}: ${errText.slice(0, 300)}`);
+      // Fallback: try password grant like flights
+      return await getAccessTokenPasswordGrant(config, domain);
     }
     const data = await res.json();
     if (data.access_token) {
-      tokenCache = { token: data.access_token, expiresAt: Date.now() + (data.expires_in || 604800) * 1000 };
-      return tokenCache.token;
+      const newCache = { token: data.access_token, expiresAt: Date.now() + (data.expires_in || 604800) * 1000 };
+      if (domain === 'hotel') hotelTokenCache = newCache;
+      else platformTokenCache = newCache;
+      console.log(`[Sabre Hotels] Auth success (${domain})`);
+      return newCache.token;
     }
+    return await getAccessTokenPasswordGrant(config, domain);
+  } catch (err) {
+    console.error(`[Sabre Hotels] Auth error (${domain}):`, err.message);
+    return await getAccessTokenPasswordGrant(config, domain);
+  }
+}
+
+// Fallback: password grant (same as flights use)
+async function getAccessTokenPasswordGrant(config, domain = 'hotel') {
+  const authBaseUrl = domain === 'hotel' ? config.hotelUrl : config.baseUrl;
+  try {
+    const credentials = config.basicAuth
+      ? config.basicAuth
+      : Buffer.from(`${config.clientId}:${config.clientSecret}`).toString('base64');
+    const username = `${config.epr}-${config.pcc}-AA`;
+    const body = `grant_type=password&username=${encodeURIComponent(username)}&password=${encodeURIComponent(config.agencyPassword)}`;
+
+    // Try /v3/auth/token first (platform style), then /v2/auth/token
+    for (const authPath of ['/v3/auth/token', '/v2/auth/token', '/v1/auth/token']) {
+      try {
+        console.log(`[Sabre Hotels] Auth fallback → ${authBaseUrl}${authPath}`);
+        const res = await fetch(`${authBaseUrl}${authPath}`, {
+          method: 'POST',
+          headers: { 'Authorization': `Basic ${credentials}`, 'Content-Type': 'application/x-www-form-urlencoded' },
+          body,
+          signal: AbortSignal.timeout(10000),
+        });
+        if (!res.ok) continue;
+        const data = await res.json();
+        if (data.access_token) {
+          const newCache = { token: data.access_token, expiresAt: Date.now() + (data.expires_in || 604800) * 1000 };
+          if (domain === 'hotel') hotelTokenCache = newCache;
+          else platformTokenCache = newCache;
+          console.log(`[Sabre Hotels] Auth fallback success (${domain} via ${authPath})`);
+          return newCache.token;
+        }
+      } catch { continue; }
+    }
+    
+    // Last resort: use platform token for hotel calls (some Sabre setups share tokens)
+    if (domain === 'hotel' && platformTokenCache.token && Date.now() < platformTokenCache.expiresAt) {
+      console.log(`[Sabre Hotels] Using platform token for hotel API`);
+      return platformTokenCache.token;
+    }
+    
+    console.error(`[Sabre Hotels] All auth attempts failed for ${domain}`);
     return null;
   } catch (err) {
-    console.error('[Sabre Hotels] Auth error:', err.message);
+    console.error(`[Sabre Hotels] Auth password grant error:`, err.message);
     return null;
   }
 }
 
+// Make API request — tries hotel domain first, falls back to platform domain
 async function sabreRequest(config, endpoint, body, method = 'POST', timeoutMs = 30000) {
-  const token = await getAccessToken(config);
-  if (!token) throw new Error('Sabre authentication failed');
-
-  const url = `${config.baseUrl}${endpoint}`;
-  const opts = {
-    method,
-    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json', 'Accept': 'application/json' },
-    signal: AbortSignal.timeout(timeoutMs),
-  };
-  if (body && method !== 'GET') opts.body = JSON.stringify(body);
-
-  console.log(`[Sabre Hotels] → ${method} ${endpoint}`);
-  const res = await fetch(url, opts);
-  if (!res.ok) {
-    const errText = await res.text().catch(() => '');
-    console.error(`[Sabre Hotels] API error ${endpoint}: ${res.status} ${errText.slice(0, 800)}`);
-    throw new Error(`Sabre Hotels API ${res.status}: ${errText.slice(0, 300)}`);
+  // Determine which domain to use based on endpoint
+  const isBookingEndpoint = endpoint.includes('passenger/records') || endpoint.includes('trip/orders');
+  
+  // Try multiple URL strategies
+  const strategies = [];
+  
+  if (isBookingEndpoint) {
+    // Booking always goes to platform.sabre.com
+    strategies.push({ baseUrl: config.baseUrl, domain: 'platform', path: endpoint });
+  } else {
+    // Hotel search/details — try havail domain with CSL paths, then platform domain
+    strategies.push({ baseUrl: config.hotelUrl, domain: 'hotel', path: endpoint });
+    // Also try platform domain with same path
+    strategies.push({ baseUrl: config.baseUrl, domain: 'platform', path: endpoint });
   }
-  return res.json();
+
+  for (const strategy of strategies) {
+    try {
+      const token = await getAccessToken(config, strategy.domain);
+      if (!token) continue;
+
+      const url = `${strategy.baseUrl}${strategy.path}`;
+      const opts = {
+        method,
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        signal: AbortSignal.timeout(timeoutMs),
+      };
+      if (body && method !== 'GET') opts.body = JSON.stringify(body);
+
+      console.log(`[Sabre Hotels] → ${method} ${url}`);
+      const res = await fetch(url, opts);
+      if (!res.ok) {
+        const errText = await res.text().catch(() => '');
+        console.warn(`[Sabre Hotels] ${strategy.domain} ${strategy.path}: ${res.status} ${errText.slice(0, 200)}`);
+        continue; // Try next strategy
+      }
+      console.log(`[Sabre Hotels] ✓ Success via ${strategy.domain}`);
+      return res.json();
+    } catch (err) {
+      console.warn(`[Sabre Hotels] ${strategy.domain} ${strategy.path} failed: ${err.message}`);
+      continue;
+    }
+  }
+
+  throw new Error(`Sabre Hotels API: all strategies failed for ${endpoint}`);
 }
 
 // ── City/Airport code resolution ──
@@ -251,7 +345,7 @@ async function searchHotels({ city, checkIn, checkOut, adults = 2, children = 0,
 
   try {
     console.log(`[Sabre Hotels] Searching: city=${cityCode}(type=${refPointType}), ${checkIn} → ${checkOut}, ${adults}A+${children}C, ${rooms} rooms`);
-    const response = await sabreRequest(config, '/v2.0.0/shop/hotels', requestBody, 'POST', 60000);
+    const response = await sabreRequest(config, '/v2/get/hotelavail', requestBody, 'POST', 60000);
     
     const hotels = normalizeSearchResponse(response, city, checkIn, checkOut);
     console.log(`[Sabre Hotels] Found ${hotels.length} hotels for ${city}`);
@@ -261,7 +355,7 @@ async function searchHotels({ city, checkIn, checkOut, adults = 2, children = 0,
       console.log(`[Sabre Hotels] Retrying with RefPointType=6 (city) for ${cityCode}`);
       requestBody.GetHotelAvailRQ.SearchCriteria.GeoSearch.GeoRef.RefPoint.RefPointType = '6';
       try {
-        const retryResponse = await sabreRequest(config, '/v2.0.0/shop/hotels', requestBody, 'POST', 60000);
+        const retryResponse = await sabreRequest(config, '/v2/get/hotelavail', requestBody, 'POST', 60000);
         const retryHotels = normalizeSearchResponse(retryResponse, city, checkIn, checkOut);
         if (retryHotels.length > 0) {
           console.log(`[Sabre Hotels] Retry found ${retryHotels.length} hotels`);
@@ -466,7 +560,7 @@ async function getHotelContent(config, hotelCode) {
       }
     };
 
-    const response = await sabreRequest(config, '/v1.0.0/shop/hotels/content', body, 'POST', 20000);
+    const response = await sabreRequest(config, '/v2/get/hoteldetails', body, 'POST', 20000);
     const hotelContent = response?.GetHotelContentRS?.HotelContentInfos?.HotelContentInfo?.[0] || {};
     const info = hotelContent.HotelInfo || {};
     const media = hotelContent.HotelMediaInfo || {};
@@ -559,7 +653,7 @@ async function getHotelRates(config, hotelCode, checkIn, checkOut, adults, rooms
       }
     };
 
-    const response = await sabreRequest(config, '/v1.0.0/shop/hotels/rates', body, 'POST', 30000);
+    const response = await sabreRequest(config, '/v2/get/hoteldetails', body, 'POST', 30000);
     const rateInfos = response?.GetHotelRateInfoRS?.HotelRateInfos?.HotelRateInfo || [];
     const roomResults = [];
 
