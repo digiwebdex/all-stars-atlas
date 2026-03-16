@@ -1083,7 +1083,7 @@ async function getHotelAvail(params, _retried = false) {
       <eb:To><eb:PartyId>Sabre_API</eb:PartyId></eb:To>
       <eb:CPAId>${config.pcc}</eb:CPAId>
       <eb:ConversationId>${conversationId}</eb:ConversationId>
-      <eb:Service>OTA_HotelAvailLLSRQ</eb:Service>
+      <eb:Service eb:type="sabreXML">OTA_HotelAvailLLSRQ</eb:Service>
       <eb:Action>OTA_HotelAvailLLSRQ</eb:Action>
     </eb:MessageHeader>
     <wsse:Security xmlns:wsse="http://schemas.xmlsoap.org/ws/2002/12/secext">
@@ -1139,7 +1139,9 @@ async function getHotelAvail(params, _retried = false) {
       lastDiagnostics = diagnostics;
       console.log(`[Sabre SOAP] Hotel search response length (${attempt.label}): ${xml.length}`);
       if (xml.length < 3000) {
-        console.log(`[Sabre SOAP] Hotel FULL XML (${attempt.label}): ${xml}`);
+        try { require('fs').writeFileSync('/tmp/sabre-hotel-response.xml', xml); } catch {}
+        console.log(`[Sabre SOAP] Hotel FULL XML (${attempt.label}) written to /tmp/sabre-hotel-response.xml`);
+        console.log(`[Sabre SOAP] Hotel XML preview (${attempt.label}): ${xml.replace(/\n/g, ' ').slice(0, 500)}`);
       }
 
       const faultMatch = xml.match(/faultstring>([^<]+)/i);
@@ -1413,7 +1415,7 @@ async function getHotelPropertyDescription(params, _retried = false) {
       <eb:To><eb:PartyId>Sabre_API</eb:PartyId></eb:To>
       <eb:CPAId>${config.pcc}</eb:CPAId>
       <eb:ConversationId>${conversationId}</eb:ConversationId>
-      <eb:Service>HotelPropertyDescriptionLLSRQ</eb:Service>
+      <eb:Service eb:type="sabreXML">HotelPropertyDescriptionLLSRQ</eb:Service>
       <eb:Action>HotelPropertyDescriptionLLSRQ</eb:Action>
     </eb:MessageHeader>
     <wsse:Security xmlns:wsse="http://schemas.xmlsoap.org/ws/2002/12/secext">
