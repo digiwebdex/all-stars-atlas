@@ -1,19 +1,26 @@
 /**
- * Sabre Hotel API Integration — Enterprise Grade
- * Uses Content Services for Lodging (CSL) on havail.sabre.com
- * NOTE: Sabre CSL hotel APIs use a DIFFERENT domain than flight APIs:
- *   - Flights: api.platform.sabre.com
- *   - Hotels (CSL): api.havail.sabre.com (prod) / api-crt.cert.havail.sabre.com (cert)
- * 
- * CSL REST API Endpoints:
- *   POST /v2/get/hotelavail        — GetHotelAvail v2 (search by geo/city/airport)
- *   POST /v2/get/hoteldetails      — Hotel details (images, descriptions, amenities, rates)
- *   POST /v2/hotel/pricecheck      — Price verification before booking
- *   POST /v2.4.0/passenger/records?mode=create — PNR creation (on platform.sabre.com)
+ * Sabre Hotel API Integration — SOAP-based (OTA_HotelAvailLLSRQ)
+ * Uses session-based SOAP on webservices.platform.sabre.com (same as flights)
+ * NOTE: CSL REST APIs (havail.sabre.com) require separate activation/credentials.
+ *       This implementation uses the LLS SOAP APIs that work with existing PCC credentials.
+ *
+ * SOAP Services:
+ *   OTA_HotelAvailLLSRQ v2.3.0           — Search hotels by city code
+ *   HotelPropertyDescriptionLLSRQ v2.3.0  — Hotel details + room rates
+ *   CreatePassengerNameRecordRQ v2.4.0     — PNR creation (REST, on platform.sabre.com)
  */
 
 const db = require('../config/db');
 const { safeJsonParse } = require('../utils/json');
+
+// Import SOAP hotel functions
+let _sabreSoap = null;
+function getSabreSoap() {
+  if (!_sabreSoap) {
+    try { _sabreSoap = require('./sabre-soap'); } catch { _sabreSoap = {}; }
+  }
+  return _sabreSoap;
+}
 
 // ── Reuse Sabre auth from sabre-flights (shared token cache) ──
 let _configCache = null;
