@@ -1,12 +1,12 @@
 /**
- * Sabre Hotel API Integration
+ * Sabre Hotel API Integration — Enterprise Grade
  * Uses same OAuth/credentials as sabre-flights.js (system_settings → api_sabre)
  * 
- * Endpoints used:
- *   POST /v2.0.0/shop/hotels           — GetHotelAvail (search by geo/city)
+ * Sabre REST API Endpoints:
+ *   POST /v5/shop/hotels           — GetHotelAvail v5 (search by geo/city/airport)
  *   POST /v1.0.0/shop/hotels/content   — Hotel content (images, descriptions, amenities)
  *   POST /v1.0.0/shop/hotels/rates     — Detailed rate plans per hotel
- *   POST /v3.0.0/book/hotels           — EnhancedHotelBook (create reservation)
+ *   POST /v2.4.0/passenger/records?mode=create — PNR creation for hotel booking
  */
 
 const db = require('../config/db');
@@ -86,7 +86,11 @@ async function getAccessToken(config) {
       body,
       signal: AbortSignal.timeout(15000),
     });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      const errText = await res.text().catch(() => '');
+      console.error(`[Sabre Hotels] Auth failed ${res.status}: ${errText.slice(0, 300)}`);
+      return null;
+    }
     const data = await res.json();
     if (data.access_token) {
       tokenCache = { token: data.access_token, expiresAt: Date.now() + (data.expires_in || 604800) * 1000 };
@@ -111,45 +115,82 @@ async function sabreRequest(config, endpoint, body, method = 'POST', timeoutMs =
   };
   if (body && method !== 'GET') opts.body = JSON.stringify(body);
 
+  console.log(`[Sabre Hotels] → ${method} ${endpoint}`);
   const res = await fetch(url, opts);
   if (!res.ok) {
     const errText = await res.text().catch(() => '');
-    console.error(`[Sabre Hotels] API error on ${endpoint}: ${res.status} ${errText.slice(0, 500)}`);
+    console.error(`[Sabre Hotels] API error ${endpoint}: ${res.status} ${errText.slice(0, 800)}`);
     throw new Error(`Sabre Hotels API ${res.status}: ${errText.slice(0, 300)}`);
   }
   return res.json();
 }
 
-// ── IATA city codes for BD destinations ──
-const CITY_TO_IATA = {
-  'dhaka': 'DAC', 'chittagong': 'CGP', 'chattogram': 'CGP', 'sylhet': 'ZYL',
-  'coxs bazar': 'CXB', "cox's bazar": 'CXB', 'rajshahi': 'RJH', 'jessore': 'JSR',
-  'barishal': 'BZL', 'barisal': 'BZL', 'saidpur': 'SPD',
+// ── City/Airport code resolution ──
+// Sabre Hotel GeoSearch uses IATA airport codes (RefPointType=6 for city, 1 for airport)
+const CITY_TO_CODES = {
+  // Bangladesh
+  'dhaka': { code: 'DAC', type: '1' }, 'chittagong': { code: 'CGP', type: '1' }, 'chattogram': { code: 'CGP', type: '1' },
+  'sylhet': { code: 'ZYL', type: '1' }, 'coxs bazar': { code: 'CXB', type: '1' }, "cox's bazar": { code: 'CXB', type: '1' },
+  'rajshahi': { code: 'RJH', type: '1' }, 'jessore': { code: 'JSR', type: '1' },
+  'barishal': { code: 'BZL', type: '1' }, 'barisal': { code: 'BZL', type: '1' }, 'saidpur': { code: 'SPD', type: '1' },
   // International popular
-  'dubai': 'DXB', 'bangkok': 'BKK', 'singapore': 'SIN', 'kuala lumpur': 'KUL',
-  'kolkata': 'CCU', 'delhi': 'DEL', 'mumbai': 'BOM', 'london': 'LON',
-  'new york': 'NYC', 'istanbul': 'IST', 'jeddah': 'JED', 'riyadh': 'RUH',
-  'doha': 'DOH', 'muscat': 'MCT', 'male': 'MLE', 'kathmandu': 'KTM',
-  'tokyo': 'TYO', 'hong kong': 'HKG', 'phuket': 'HKT', 'bali': 'DPS',
+  'dubai': { code: 'DXB', type: '1' }, 'abu dhabi': { code: 'AUH', type: '1' },
+  'bangkok': { code: 'BKK', type: '1' }, 'pattaya': { code: 'UTP', type: '1' },
+  'singapore': { code: 'SIN', type: '1' },
+  'kuala lumpur': { code: 'KUL', type: '1' }, 'penang': { code: 'PEN', type: '1' },
+  'kolkata': { code: 'CCU', type: '1' }, 'delhi': { code: 'DEL', type: '1' }, 'new delhi': { code: 'DEL', type: '1' },
+  'mumbai': { code: 'BOM', type: '1' }, 'goa': { code: 'GOI', type: '1' }, 'chennai': { code: 'MAA', type: '1' },
+  'london': { code: 'LON', type: '6' }, 'new york': { code: 'NYC', type: '6' }, 'los angeles': { code: 'LAX', type: '1' },
+  'istanbul': { code: 'IST', type: '1' }, 'jeddah': { code: 'JED', type: '1' }, 'riyadh': { code: 'RUH', type: '1' },
+  'medina': { code: 'MED', type: '1' }, 'makkah': { code: 'JED', type: '1' }, 'mecca': { code: 'JED', type: '1' },
+  'doha': { code: 'DOH', type: '1' }, 'muscat': { code: 'MCT', type: '1' },
+  'male': { code: 'MLE', type: '1' }, 'maldives': { code: 'MLE', type: '1' },
+  'kathmandu': { code: 'KTM', type: '1' },
+  'tokyo': { code: 'TYO', type: '6' }, 'osaka': { code: 'KIX', type: '1' },
+  'hong kong': { code: 'HKG', type: '1' }, 'seoul': { code: 'ICN', type: '1' },
+  'phuket': { code: 'HKT', type: '1' }, 'bali': { code: 'DPS', type: '1' },
+  'paris': { code: 'PAR', type: '6' }, 'rome': { code: 'ROM', type: '6' },
+  'cairo': { code: 'CAI', type: '1' }, 'nairobi': { code: 'NBO', type: '1' },
+  'sydney': { code: 'SYD', type: '1' }, 'melbourne': { code: 'MEL', type: '1' },
+  'toronto': { code: 'YYZ', type: '1' }, 'vancouver': { code: 'YVR', type: '1' },
 };
 
 function resolveCity(city) {
   if (!city) return null;
-  const cleaned = city.trim().toLowerCase();
-  return CITY_TO_IATA[cleaned] || (cleaned.length === 3 ? cleaned.toUpperCase() : null);
+  const cleaned = city.trim().toLowerCase().replace(/['']/g, "'");
+  if (CITY_TO_CODES[cleaned]) return CITY_TO_CODES[cleaned];
+  // Try partial match
+  for (const [key, val] of Object.entries(CITY_TO_CODES)) {
+    if (cleaned.includes(key) || key.includes(cleaned)) return val;
+  }
+  // If 3-letter code directly
+  if (cleaned.length === 3) return { code: cleaned.toUpperCase(), type: '1' };
+  return null;
 }
 
+
 // ══════════════════════════════════════════════
-//  1. HOTEL SEARCH — GetHotelAvail v2
+//  1. HOTEL SEARCH — GetHotelAvail (v2 with fallback strategies)
 // ══════════════════════════════════════════════
-async function searchHotels({ city, checkIn, checkOut, adults = 1, children = 0, rooms = 1, minRate, maxRate, minStars, maxStars }) {
+async function searchHotels({ city, checkIn, checkOut, adults = 2, children = 0, rooms = 1, minRate, maxRate, minStars, maxStars }) {
   const config = await getSabreConfig();
   if (!config) { console.warn('[Sabre Hotels] No config, skipping search'); return []; }
 
-  const cityCode = resolveCity(city);
-  if (!cityCode) { console.warn(`[Sabre Hotels] Could not resolve city: ${city}`); return []; }
+  const resolved = resolveCity(city);
+  if (!resolved) { console.warn(`[Sabre Hotels] Could not resolve city: ${city}`); return []; }
 
-  const guestCount = parseInt(adults) + parseInt(children || 0);
+  const { code: cityCode, type: refPointType } = resolved;
+
+  // Build room specifications for multi-room
+  const roomCount = parseInt(rooms) || 1;
+  const adultsPerRoom = Math.max(1, Math.floor(parseInt(adults) / roomCount));
+  const childrenPerRoom = Math.floor(parseInt(children || 0) / roomCount);
+  const roomSpecs = [];
+  for (let i = 0; i < roomCount; i++) {
+    const room = { RoomIndex: i + 1, Adults: adultsPerRoom };
+    if (childrenPerRoom > 0) room.Children = childrenPerRoom;
+    roomSpecs.push(room);
+  }
 
   const requestBody = {
     GetHotelAvailRQ: {
@@ -160,36 +201,36 @@ async function searchHotels({ city, checkIn, checkOut, adults = 1, children = 0,
         OffSet: 1,
         SortBy: 'TotalRate',
         SortOrder: 'ASC',
-        PageSize: 50,
+        PageSize: 100,
         TierLabels: false,
         GeoSearch: {
           GeoRef: {
             Radius: 50,
             UOM: 'KM',
-            RefPoint: { Value: cityCode, ValueContext: 'CODE', RefPointType: '6' } // 6 = City
+            RefPoint: { Value: cityCode, ValueContext: 'CODE', RefPointType: refPointType }
           }
         },
         RateInfoRef: {
-          CurrencyCode: 'BDT',
-          BestOnly: '2',
+          CurrencyCode: 'USD',
+          BestOnly: '4',
           PrepaidQualifier: 'IncludePrepaid',
           StayDateRange: {
             StartDate: checkIn,
             EndDate: checkOut
           },
-          Rooms: [{
-            RoomIndex: 1,
-            Adults: parseInt(adults),
-            Children: parseInt(children || 0)
-          }],
+          Rooms: roomSpecs,
           InfoSource: '100,110,112,113'
+        },
+        ImageRef: {
+          Type: 'MEDIUM',
+          LanguageCode: 'EN'
         },
         HotelPref: {}
       }
     }
   };
 
-  // Optional filters
+  // Star rating filter
   if (minStars || maxStars) {
     requestBody.GetHotelAvailRQ.SearchCriteria.HotelPref.HotelRating = [];
     const minS = parseInt(minStars || 1);
@@ -199,83 +240,186 @@ async function searchHotels({ city, checkIn, checkOut, adults = 1, children = 0,
     }
   }
 
+  // Price filter
   if (minRate || maxRate) {
     requestBody.GetHotelAvailRQ.SearchCriteria.RateInfoRef.RateRange = {
       Min: parseFloat(minRate || 0),
-      Max: parseFloat(maxRate || 999999),
-      CurrencyCode: 'BDT'
+      Max: parseFloat(maxRate || 50000),
+      CurrencyCode: 'USD'
     };
   }
 
   try {
-    console.log(`[Sabre Hotels] Searching: city=${cityCode}, ${checkIn} → ${checkOut}, ${adults} adults, ${rooms} rooms`);
-    const response = await sabreRequest(config, '/v2.0.0/shop/hotels', requestBody, 'POST', 45000);
-    return normalizeSearchResponse(response, city);
+    console.log(`[Sabre Hotels] Searching: city=${cityCode}(type=${refPointType}), ${checkIn} → ${checkOut}, ${adults}A+${children}C, ${rooms} rooms`);
+    const response = await sabreRequest(config, '/v2.0.0/shop/hotels', requestBody, 'POST', 60000);
+    
+    const hotels = normalizeSearchResponse(response, city, checkIn, checkOut);
+    console.log(`[Sabre Hotels] Found ${hotels.length} hotels for ${city}`);
+    
+    // If 0 results with airport code, retry with city code type
+    if (hotels.length === 0 && refPointType === '1') {
+      console.log(`[Sabre Hotels] Retrying with RefPointType=6 (city) for ${cityCode}`);
+      requestBody.GetHotelAvailRQ.SearchCriteria.GeoSearch.GeoRef.RefPoint.RefPointType = '6';
+      try {
+        const retryResponse = await sabreRequest(config, '/v2.0.0/shop/hotels', requestBody, 'POST', 60000);
+        const retryHotels = normalizeSearchResponse(retryResponse, city, checkIn, checkOut);
+        if (retryHotels.length > 0) {
+          console.log(`[Sabre Hotels] Retry found ${retryHotels.length} hotels`);
+          return retryHotels;
+        }
+      } catch (retryErr) {
+        console.error('[Sabre Hotels] Retry also failed:', retryErr.message);
+      }
+    }
+    
+    return hotels;
   } catch (err) {
     console.error('[Sabre Hotels] Search failed:', err.message);
     return [];
   }
 }
 
-function normalizeSearchResponse(response, searchCity) {
+function normalizeSearchResponse(response, searchCity, checkIn, checkOut) {
   const hotels = [];
   try {
     const avail = response?.GetHotelAvailRS;
+    if (!avail) {
+      console.warn('[Sabre Hotels] No GetHotelAvailRS in response. Keys:', Object.keys(response || {}));
+      return [];
+    }
+    
     const hotelAvail = avail?.HotelAvailInfos?.HotelAvailInfo || [];
+    if (!Array.isArray(hotelAvail)) {
+      console.warn('[Sabre Hotels] HotelAvailInfo is not array:', typeof hotelAvail);
+      return [];
+    }
+
+    // Calculate nights for total price
+    const nights = checkIn && checkOut ? Math.max(1, Math.ceil((new Date(checkOut) - new Date(checkIn)) / 86400000)) : 1;
 
     for (const h of hotelAvail) {
       const info = h.HotelInfo || {};
       const rateInfo = h.HotelRateInfo || {};
       const rates = rateInfo.Rates?.Rate || [];
-      const lowestRate = rates[0];
+      const lowestRate = Array.isArray(rates) ? rates[0] : rates;
 
-      const amenityCodes = (info.PropertyOptionInfo || {});
+      // Extract amenities from PropertyOptionInfo
+      const opts = info.PropertyOptionInfo || {};
       const amenities = [];
-      if (amenityCodes.Wifi === 'true' || amenityCodes.FreeWifi === 'true') amenities.push('wifi');
-      if (amenityCodes.Pool === 'true' || amenityCodes.IndoorPool === 'true' || amenityCodes.OutdoorPool === 'true') amenities.push('pool');
-      if (amenityCodes.Restaurant === 'true') amenities.push('restaurant');
-      if (amenityCodes.Parking === 'true' || amenityCodes.FreeParking === 'true') amenities.push('parking');
-      if (amenityCodes.Gym === 'true' || amenityCodes.FitnessCenter === 'true') amenities.push('gym');
-      if (amenityCodes.Spa === 'true') amenities.push('spa');
-      if (amenityCodes.AirConditioning === 'true') amenities.push('ac');
-      if (amenityCodes.BreakfastBuffet === 'true' || amenityCodes.FreeBreakfast === 'true') amenities.push('breakfast');
+      if (opts.Wifi === 'true' || opts.FreeWifi === 'true') amenities.push('Free WiFi');
+      if (opts.Pool === 'true' || opts.IndoorPool === 'true' || opts.OutdoorPool === 'true') amenities.push('Swimming Pool');
+      if (opts.Restaurant === 'true') amenities.push('Restaurant');
+      if (opts.Parking === 'true' || opts.FreeParking === 'true') amenities.push('Parking');
+      if (opts.FreeParking === 'true') amenities.push('Free Parking');
+      if (opts.Gym === 'true' || opts.FitnessCenter === 'true') amenities.push('Fitness Center');
+      if (opts.Spa === 'true') amenities.push('Spa');
+      if (opts.AirConditioning === 'true') amenities.push('Air Conditioning');
+      if (opts.BreakfastBuffet === 'true' || opts.FreeBreakfast === 'true') amenities.push('Breakfast Included');
+      if (opts.BusinessCenter === 'true') amenities.push('Business Center');
+      if (opts.RoomService === 'true') amenities.push('Room Service');
+      if (opts.LaundryService === 'true') amenities.push('Laundry');
+      if (opts.PetsAllowed === 'true') amenities.push('Pet Friendly');
+      if (opts.AirportShuttle === 'true') amenities.push('Airport Shuttle');
+      if (opts.Bar === 'true' || opts.Lounge === 'true') amenities.push('Bar/Lounge');
+      if (opts.MeetingRooms === 'true') amenities.push('Meeting Rooms');
 
-      const pricePerNight = lowestRate
-        ? parseFloat(lowestRate.Amount || lowestRate.AverageNightlyRate || 0)
-        : null;
+      // Price extraction — Sabre returns various rate formats
+      let pricePerNight = null;
+      let totalPrice = null;
+      let currencyCode = 'USD';
+
+      if (lowestRate) {
+        const avgNightly = parseFloat(lowestRate.AverageNightlyRate || lowestRate.AverageNightlyRateBeforeTax || 0);
+        const amount = parseFloat(lowestRate.Amount || lowestRate.AmountBeforeTax || 0);
+        currencyCode = lowestRate.CurrencyCode || 'USD';
+
+        if (avgNightly > 0) {
+          pricePerNight = avgNightly;
+          totalPrice = avgNightly * nights;
+        } else if (amount > 0) {
+          // Amount might be total or nightly depending on context
+          if (amount > 500 && nights > 1) {
+            totalPrice = amount;
+            pricePerNight = Math.round(amount / nights);
+          } else {
+            pricePerNight = amount;
+            totalPrice = amount * nights;
+          }
+        }
+      }
+
+      // Skip hotels without price
+      if (!pricePerNight) continue;
+
+      // Image handling — Sabre returns ImageURL or HotelImageUrl
+      const imageUrl = info.ImageURL || info.HotelImageUrl || null;
+      const images = imageUrl ? [imageUrl] : [];
+
+      // Location info
+      const locInfo = info.LocationInfo || {};
+      const address = locInfo.Address?.AddressLine1 || locInfo.Address?.AddressLine || '';
+      const hotelCity = locInfo.City || searchCity || '';
+      const country = locInfo.CountryName || locInfo.Country || '';
+
+      // Star/rating
+      const sabreRating = parseInt(info.SabreRating || info.HotelRating || info.PropertyRating || 0);
+      const tripAdvisorRating = parseFloat(info.TripAdvisorRating || 0);
+      const tripAdvisorReviews = parseInt(info.TripAdvisorReviewCount || 0);
+
+      // Cancellation policy from rate
+      const cancelPolicy = lowestRate?.RateDescription || lowestRate?.GuaranteeInfo?.Description || null;
+      const isFreeCancellation = cancelPolicy?.toLowerCase()?.includes('free cancel') 
+        || cancelPolicy?.toLowerCase()?.includes('refundable')
+        || lowestRate?.RateQualifier === 'REF';
+
+      // Tags
+      const tags = [];
+      if (sabreRating >= 5) tags.push('Luxury');
+      else if (sabreRating >= 4) tags.push('Top Rated');
+      if (isFreeCancellation) tags.push('Free Cancellation');
+      if (amenities.includes('Breakfast Included')) tags.push('Breakfast Included');
+
+      const hotelCode = info.HotelCode || info.SabreHotelCode;
 
       hotels.push({
-        id: `sabre-${info.HotelCode || info.SabreHotelCode || Math.random().toString(36).slice(2)}`,
-        sabreHotelCode: info.HotelCode || info.SabreHotelCode,
+        id: `sabre-${hotelCode || Math.random().toString(36).slice(2, 10)}`,
+        sabreHotelCode: hotelCode,
         source: 'sabre',
         name: info.HotelName || 'Hotel',
-        city: searchCity || info.LocationInfo?.City || '',
-        country: info.LocationInfo?.CountryName || info.LocationInfo?.Country || '',
-        address: info.LocationInfo?.Address?.AddressLine1 || '',
-        latitude: parseFloat(info.LocationInfo?.Latitude || 0) || null,
-        longitude: parseFloat(info.LocationInfo?.Longitude || 0) || null,
-        starRating: parseInt(info.SabreRating || info.HotelRating || 0),
-        userRating: parseFloat(info.TripAdvisorRating || info.SabreRating || 0) || null,
-        reviewCount: parseInt(info.TripAdvisorReviewCount || 0) || null,
-        pricePerNight,
-        price: pricePerNight,
+        city: hotelCity,
+        country,
+        address,
+        latitude: parseFloat(locInfo.Latitude || 0) || null,
+        longitude: parseFloat(locInfo.Longitude || 0) || null,
+        starRating: sabreRating,
+        stars: sabreRating,
+        userRating: tripAdvisorRating || (sabreRating > 0 ? sabreRating * 0.9 : null),
+        rating: tripAdvisorRating || (sabreRating > 0 ? sabreRating * 0.9 : null),
+        reviewCount: tripAdvisorReviews,
+        reviews: tripAdvisorReviews,
+        pricePerNight: Math.round(pricePerNight),
+        price: Math.round(pricePerNight),
+        totalPrice: Math.round(totalPrice),
         originalPrice: null,
-        currency: lowestRate?.CurrencyCode || 'BDT',
-        img: info.ImageURL || info.HotelImageUrl || `https://images.unsplash.com/photo-1566073771259-6a8506099945?w=600&h=400&fit=crop`,
-        images: info.ImageURL ? [info.ImageURL] : [],
+        currency: currencyCode,
+        img: imageUrl || null,
+        images,
         amenities,
         description: info.HotelDescription || '',
-        tag: info.SabreRating >= 4 ? 'Top Rated' : null,
-        stars: parseInt(info.SabreRating || info.HotelRating || 0),
-        rating: parseFloat(info.TripAdvisorRating || info.SabreRating || 0) || null,
-        reviews: parseInt(info.TripAdvisorReviewCount || 0) || 0,
-        location: `${searchCity || info.LocationInfo?.City || ''}, ${info.LocationInfo?.CountryName || ''}`.replace(/, $/, ''),
-        cancelPolicy: lowestRate?.RateDescription || null,
+        tags,
+        tag: tags[0] || null,
+        location: `${hotelCity}, ${country}`.replace(/, $/, ''),
+        cancelPolicy,
+        isFreeCancellation: !!isFreeCancellation,
         rateKey: lowestRate?.RateKey || null,
+        nights,
+        checkIn,
+        checkOut,
+        roomsAvailable: lowestRate?.AvailableRooms || null,
       });
     }
   } catch (err) {
-    console.error('[Sabre Hotels] Response normalization error:', err.message);
+    console.error('[Sabre Hotels] Response normalization error:', err.message, err.stack);
   }
 
   console.log(`[Sabre Hotels] Normalized ${hotels.length} hotels from response`);
@@ -286,24 +430,28 @@ function normalizeSearchResponse(response, searchCity) {
 // ══════════════════════════════════════════════
 //  2. HOTEL DETAILS — Content + Rates
 // ══════════════════════════════════════════════
-async function getHotelDetails(hotelCode) {
+async function getHotelDetails(hotelCode, checkIn, checkOut, adults, rooms) {
   const config = await getSabreConfig();
   if (!config) return null;
 
   // Fetch content and rates in parallel
   const [content, rates] = await Promise.allSettled([
     getHotelContent(config, hotelCode),
-    getHotelRates(config, hotelCode),
+    getHotelRates(config, hotelCode, checkIn, checkOut, adults, rooms),
   ]);
 
   const contentData = content.status === 'fulfilled' ? content.value : {};
   const ratesData = rates.status === 'fulfilled' ? rates.value : [];
+
+  if (!contentData.name && ratesData.length === 0) return null;
 
   return {
     ...contentData,
     rooms: ratesData,
     source: 'sabre',
     sabreHotelCode: hotelCode,
+    checkIn,
+    checkOut,
   };
 }
 
@@ -324,17 +472,36 @@ async function getHotelContent(config, hotelCode) {
     const media = hotelContent.HotelMediaInfo || {};
     const desc = hotelContent.HotelDescriptiveInfo || {};
 
+    // Extract all images
     const images = [];
-    const mediaItems = media.MediaItems?.MediaItem || media.Images?.Image || [];
-    for (const img of (Array.isArray(mediaItems) ? mediaItems : [mediaItems])) {
-      if (img?.Url || img?.URL) images.push(img.Url || img.URL);
+    const mediaItems = media.MediaItems?.MediaItem || media.Images?.Image || media.Medias?.Media || [];
+    const mediaList = Array.isArray(mediaItems) ? mediaItems : [mediaItems];
+    for (const img of mediaList) {
+      const url = img?.Url || img?.URL || img?.ImageURL;
+      if (url) images.push(url);
     }
 
+    // Extract amenities
     const amenities = [];
     const facilities = desc.Facilities?.Facility || desc.HotelAmenities?.HotelAmenity || [];
-    for (const f of (Array.isArray(facilities) ? facilities : [facilities])) {
-      if (f?.Description || f?.Name) amenities.push((f.Description || f.Name).toLowerCase());
+    const facilityList = Array.isArray(facilities) ? facilities : [facilities];
+    for (const f of facilityList) {
+      const name = f?.Description || f?.Name || f?.FacilityName;
+      if (name) amenities.push(name);
     }
+
+    // Extract policies
+    const policies = [];
+    const policyData = desc.Policies?.Policy || desc.HotelPolicies?.Policy || [];
+    const policyList = Array.isArray(policyData) ? policyData : [policyData];
+    for (const p of policyList) {
+      const text = p?.Description || p?.Text || p?.PolicyText;
+      if (text) policies.push(text);
+    }
+
+    // Check-in/out times
+    const checkInTime = desc.CheckInTime || info.CheckInTime || '15:00';
+    const checkOutTime = desc.CheckOutTime || info.CheckOutTime || '11:00';
 
     return {
       id: `sabre-${hotelCode}`,
@@ -345,11 +512,16 @@ async function getHotelContent(config, hotelCode) {
       latitude: parseFloat(info.LocationInfo?.Latitude || 0) || null,
       longitude: parseFloat(info.LocationInfo?.Longitude || 0) || null,
       starRating: parseInt(info.SabreRating || info.HotelRating || 0),
-      images: images.length > 0 ? images : [`https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800&h=600&fit=crop`],
+      stars: parseInt(info.SabreRating || info.HotelRating || 0),
+      images: images.length > 0 ? images : [],
       amenities,
       description: desc.LongDescription || desc.ShortDescription || info.HotelDescription || '',
-      policies: desc.Policies || {},
+      policies,
+      checkInTime,
+      checkOutTime,
       contactInfo: info.ContactInfo || {},
+      rating: parseFloat(info.TripAdvisorRating || info.SabreRating || 0) || null,
+      reviews: parseInt(info.TripAdvisorReviewCount || 0),
     };
   } catch (err) {
     console.error(`[Sabre Hotels] Content fetch failed for ${hotelCode}:`, err.message);
@@ -357,11 +529,18 @@ async function getHotelContent(config, hotelCode) {
   }
 }
 
-async function getHotelRates(config, hotelCode, checkIn, checkOut) {
+async function getHotelRates(config, hotelCode, checkIn, checkOut, adults, rooms) {
   try {
-    // Default to tomorrow → day after if not specified
     const ci = checkIn || new Date(Date.now() + 86400000).toISOString().split('T')[0];
     const co = checkOut || new Date(Date.now() + 2 * 86400000).toISOString().split('T')[0];
+    const nights = Math.max(1, Math.ceil((new Date(co) - new Date(ci)) / 86400000));
+
+    const roomCount = parseInt(rooms || 1);
+    const adultsPerRoom = Math.max(1, Math.floor(parseInt(adults || 2) / roomCount));
+    const roomSpecs = [];
+    for (let i = 0; i < roomCount; i++) {
+      roomSpecs.push({ RoomIndex: i + 1, Adults: adultsPerRoom });
+    }
 
     const body = {
       GetHotelRateInfoRQ: {
@@ -369,41 +548,93 @@ async function getHotelRates(config, hotelCode, checkIn, checkOut) {
         SearchCriteria: {
           HotelRefs: { HotelRef: [{ HotelCode: hotelCode }] },
           RateInfoRef: {
-            CurrencyCode: 'BDT',
+            CurrencyCode: 'USD',
+            BestOnly: '10',
+            PrepaidQualifier: 'IncludePrepaid',
             StayDateRange: { StartDate: ci, EndDate: co },
-            Rooms: [{ RoomIndex: 1, Adults: 2 }],
+            Rooms: roomSpecs,
             InfoSource: '100,110,112,113'
           }
         }
       }
     };
 
-    const response = await sabreRequest(config, '/v1.0.0/shop/hotels/rates', body, 'POST', 20000);
+    const response = await sabreRequest(config, '/v1.0.0/shop/hotels/rates', body, 'POST', 30000);
     const rateInfos = response?.GetHotelRateInfoRS?.HotelRateInfos?.HotelRateInfo || [];
-    const rooms = [];
+    const roomResults = [];
 
-    for (const rateInfo of (Array.isArray(rateInfos) ? rateInfos : [rateInfos])) {
+    const rateList = Array.isArray(rateInfos) ? rateInfos : [rateInfos];
+    for (const rateInfo of rateList) {
       const rates = rateInfo?.Rates?.Rate || rateInfo?.HotelRateInfo?.Rates?.Rate || [];
-      for (const rate of (Array.isArray(rates) ? rates : [rates])) {
-        rooms.push({
-          id: rate.RateKey || `room-${rooms.length + 1}`,
-          name: rate.RoomDescription || rate.RateDescription || `Room ${rooms.length + 1}`,
-          type: rate.RoomType || 'Standard',
-          bedType: rate.BedType || 'Double',
-          maxGuests: parseInt(rate.MaxOccupancy || 2),
-          price: parseFloat(rate.Amount || rate.AverageNightlyRate || 0),
-          totalPrice: parseFloat(rate.TotalAmount || rate.Amount || 0),
-          currency: rate.CurrencyCode || 'BDT',
-          cancellationPolicy: rate.CancelPolicy?.Description || rate.GuaranteeInfo?.Description || 'Non-refundable',
-          mealPlan: rate.MealPlan || null,
+      const rateArr = Array.isArray(rates) ? rates : [rates];
+
+      for (const rate of rateArr) {
+        if (!rate) continue;
+
+        const avgNightly = parseFloat(rate.AverageNightlyRate || rate.AverageNightlyRateBeforeTax || 0);
+        const amount = parseFloat(rate.Amount || rate.AmountBeforeTax || 0);
+        const totalAmount = parseFloat(rate.TotalAmount || rate.TotalAmountBeforeTax || 0);
+
+        let nightly = avgNightly || amount || 0;
+        let total = totalAmount || (nightly * nights);
+
+        if (nightly === 0 && total > 0) {
+          nightly = Math.round(total / nights);
+        }
+
+        if (nightly === 0) continue;
+
+        // Determine cancellation
+        const cancelDesc = rate.CancelPolicy?.Description || rate.GuaranteeInfo?.Description || '';
+        const isRefundable = cancelDesc.toLowerCase().includes('free cancel') 
+          || cancelDesc.toLowerCase().includes('refundable')
+          || rate.RateQualifier === 'REF';
+
+        // Room description
+        const roomDesc = rate.RoomDescription || rate.RateDescription || rate.RoomTypeDescription || '';
+        const roomType = rate.RoomType || rate.RoomTypeCode || 'Standard';
+        const bedType = rate.BedType || rate.BedTypeDescription || '';
+
+        // Meal plan
+        const mealPlan = rate.MealPlan || rate.MealPlanDescription || null;
+
+        // Room amenities
+        const roomAmenities = [];
+        if (rate.RoomAmenities) {
+          const ra = Array.isArray(rate.RoomAmenities) ? rate.RoomAmenities : [rate.RoomAmenities];
+          for (const a of ra) {
+            const name = a?.Description || a?.Name || a;
+            if (typeof name === 'string') roomAmenities.push(name);
+          }
+        }
+
+        roomResults.push({
+          id: rate.RateKey || `room-${roomResults.length + 1}`,
+          name: roomDesc || `${roomType} Room`,
+          type: roomType,
+          bedType: bedType || 'Double',
+          maxGuests: parseInt(rate.MaxOccupancy || rate.MaxGuests || adultsPerRoom),
+          price: Math.round(nightly),
+          totalPrice: Math.round(total),
+          nights,
+          currency: rate.CurrencyCode || 'USD',
+          cancellationPolicy: cancelDesc || 'Non-refundable',
+          isRefundable,
+          mealPlan,
           rateKey: rate.RateKey || null,
-          amenities: rate.RoomAmenities ? (Array.isArray(rate.RoomAmenities) ? rate.RoomAmenities.map(a => a.Description || a) : []) : [],
+          bookingKey: rate.BookingKey || null,
+          amenities: roomAmenities,
           source: 'sabre',
+          availableRooms: parseInt(rate.AvailableRooms || 0) || null,
+          guaranteeRequired: !!rate.GuaranteeInfo?.GuaranteeRequired,
+          paymentDeadline: rate.CancelPolicy?.Deadline || null,
         });
       }
     }
 
-    return rooms;
+    // Sort by price ascending
+    roomResults.sort((a, b) => a.price - b.price);
+    return roomResults;
   } catch (err) {
     console.error(`[Sabre Hotels] Rates fetch failed for ${hotelCode}:`, err.message);
     return [];
@@ -412,9 +643,9 @@ async function getHotelRates(config, hotelCode, checkIn, checkOut) {
 
 
 // ══════════════════════════════════════════════
-//  3. HOTEL BOOKING — EnhancedHotelBook v3
+//  3. HOTEL BOOKING — CreatePNR with Hotel segment
 // ══════════════════════════════════════════════
-async function bookHotel({ hotelCode, rateKey, checkIn, checkOut, rooms, guests, contactInfo, paymentInfo }) {
+async function bookHotel({ hotelCode, rateKey, bookingKey, checkIn, checkOut, rooms, guests, contactInfo, paymentInfo }) {
   const config = await getSabreConfig();
   if (!config) throw new Error('Sabre not configured');
 
@@ -439,7 +670,7 @@ async function bookHotel({ hotelCode, rateKey, checkIn, checkOut, rooms, guests,
           Email: [{ Address: contactInfo?.email || primaryGuest.email || '', Type: 'TO' }]
         },
         AgencyInfo: {
-          Ticketing: { TicketType: '7TAW' } // 7 day time limit
+          Ticketing: { TicketType: '7TAW' }
         }
       },
       HotelBook: {
@@ -447,14 +678,14 @@ async function bookHotel({ hotelCode, rateKey, checkIn, checkOut, rooms, guests,
           BasicHotelInfo: {
             HotelCode: hotelCode,
           },
-          Guarantee: {
-            PaymentCard: paymentInfo ? {
+          Guarantee: paymentInfo ? {
+            PaymentCard: {
               CardCode: paymentInfo.cardType || 'VI',
               CardNumber: paymentInfo.cardNumber,
               ExpirationDate: paymentInfo.expiry,
               CardHolderName: paymentInfo.cardHolder || `${primaryGuest.firstName} ${primaryGuest.lastName}`.toUpperCase(),
-            } : undefined,
-          },
+            },
+          } : undefined,
           GuestCounts: {
             GuestCount: [{ Count: parseInt(rooms?.[0]?.adults || 2) }]
           },
@@ -462,6 +693,7 @@ async function bookHotel({ hotelCode, rateKey, checkIn, checkOut, rooms, guests,
             Start: checkIn,
             End: checkOut,
           },
+          BookingKey: bookingKey || undefined,
           RoomRateDescription: rateKey ? { Text: [rateKey] } : undefined,
         }]
       },
@@ -477,7 +709,7 @@ async function bookHotel({ hotelCode, rateKey, checkIn, checkOut, rooms, guests,
     console.log(`[Sabre Hotels] Booking hotel ${hotelCode}: ${checkIn} → ${checkOut}`);
     const response = await sabreRequest(config, '/v2.4.0/passenger/records?mode=create', body, 'POST', 45000);
     
-    // Extract PNR
+    // Extract PNR from multiple possible paths
     const pnr = response?.CreatePassengerNameRecordRS?.ItineraryRef?.ID
       || response?.CreatePassengerNameRecordRS?.TravelItineraryReadRS?.TravelItinerary?.ItineraryRef?.ID;
     const confNumber = response?.CreatePassengerNameRecordRS?.HotelBook?.HotelSegment?.[0]?.ConfirmationNumber;
@@ -503,11 +735,13 @@ let hotelDealsCache = { data: null, expiry: 0 };
 
 const POPULAR_DESTINATIONS = [
   { city: "Cox's Bazar", cityCode: 'CXB' },
-  { city: 'Dhaka', cityCode: 'DAC' },
-  { city: 'Sylhet', cityCode: 'ZYL' },
-  { city: 'Chittagong', cityCode: 'CGP' },
   { city: 'Dubai', cityCode: 'DXB' },
   { city: 'Bangkok', cityCode: 'BKK' },
+  { city: 'Singapore', cityCode: 'SIN' },
+  { city: 'Kuala Lumpur', cityCode: 'KUL' },
+  { city: 'Istanbul', cityCode: 'IST' },
+  { city: 'Maldives', cityCode: 'MLE' },
+  { city: 'Kolkata', cityCode: 'CCU' },
 ];
 
 async function getTopHotelDeals() {
@@ -519,25 +753,24 @@ async function getTopHotelDeals() {
   if (!config) return [];
 
   const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
-  const dayAfter = new Date(Date.now() + 2 * 86400000).toISOString().split('T')[0];
+  const dayAfterTomorrow = new Date(Date.now() + 3 * 86400000).toISOString().split('T')[0];
 
   const results = [];
 
-  // Search each destination in parallel
   const searches = POPULAR_DESTINATIONS.map(async (dest) => {
     try {
       const hotels = await searchHotels({
         city: dest.city,
         checkIn: tomorrow,
-        checkOut: dayAfter,
+        checkOut: dayAfterTomorrow,
         adults: 2,
         rooms: 1,
       });
-      // Take cheapest hotel from each destination
       if (hotels.length > 0) {
-        const sorted = hotels.sort((a, b) => (a.pricePerNight || 99999) - (b.pricePerNight || 99999));
-        // Return top 2 from each city
-        return sorted.slice(0, 2).map(h => ({
+        const sorted = hotels
+          .filter(h => h.pricePerNight > 0)
+          .sort((a, b) => (a.pricePerNight || 99999) - (b.pricePerNight || 99999));
+        return sorted.slice(0, 3).map(h => ({
           ...h,
           dealCity: dest.city,
           dealCityCode: dest.cityCode,
@@ -562,18 +795,15 @@ async function getTopHotelDeals() {
 
 // Background refresh every hour
 function scheduleHotelDealsRefresh() {
-  // Initial fetch after 10 seconds
   setTimeout(() => {
     getTopHotelDeals().catch(err => console.error('[Sabre Hotels] Initial deals fetch error:', err.message));
-  }, 10000);
+  }, 15000);
 
-  // Then every hour
   setInterval(() => {
     getTopHotelDeals().catch(err => console.error('[Sabre Hotels] Deals refresh error:', err.message));
   }, 3600000);
 }
 
-// Start background refresh
 scheduleHotelDealsRefresh();
 
 
