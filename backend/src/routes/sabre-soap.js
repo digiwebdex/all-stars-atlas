@@ -1138,6 +1138,9 @@ async function getHotelAvail(params, _retried = false) {
       const diagnostics = extractSoapDiagnostics(xml);
       lastDiagnostics = diagnostics;
       console.log(`[Sabre SOAP] Hotel search response length (${attempt.label}): ${xml.length}`);
+      if (xml.length < 3000) {
+        console.log(`[Sabre SOAP] Hotel FULL XML (${attempt.label}): ${xml}`);
+      }
 
       const faultMatch = xml.match(/faultstring>([^<]+)/i);
       if (faultMatch) {

@@ -10,11 +10,11 @@ PASS=0; FAIL=0; SKIP=0; TOTAL=0
 GREEN='\033[0;32m'; RED='\033[0;31m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC='\033[0m'
 RESULTS=()
 
-# Dates
-TOMORROW=$(date -d "+1 day" +%Y-%m-%d 2>/dev/null || date -v+1d +%Y-%m-%d)
-DAY3=$(date -d "+3 days" +%Y-%m-%d 2>/dev/null || date -v+3d +%Y-%m-%d)
-DAY7=$(date -d "+7 days" +%Y-%m-%d 2>/dev/null || date -v+7d +%Y-%m-%d)
-DAY10=$(date -d "+10 days" +%Y-%m-%d 2>/dev/null || date -v+10d +%Y-%m-%d)
+# Dates — use 7+ days in the future for reliable Sabre availability
+TOMORROW=$(date -d "+7 days" +%Y-%m-%d 2>/dev/null || date -v+7d +%Y-%m-%d)
+DAY3=$(date -d "+10 days" +%Y-%m-%d 2>/dev/null || date -v+10d +%Y-%m-%d)
+DAY7=$(date -d "+14 days" +%Y-%m-%d 2>/dev/null || date -v+14d +%Y-%m-%d)
+DAY10=$(date -d "+17 days" +%Y-%m-%d 2>/dev/null || date -v+17d +%Y-%m-%d)
 
 log_pass() { ((PASS++)); ((TOTAL++)); RESULTS+=("${GREEN}✅ PASS${NC} — $1"); echo -e "${GREEN}✅ PASS${NC} — $1"; }
 log_fail() { ((FAIL++)); ((TOTAL++)); RESULTS+=("${RED}❌ FAIL${NC} — $1"); echo -e "${RED}❌ FAIL${NC} — $1"; }
