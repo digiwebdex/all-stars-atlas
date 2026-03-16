@@ -51,6 +51,7 @@ async function getSabreConfig() {
       : pick(cfg.cert_client_secret, cfg.clientSecret, cfg.sandbox_client_secret, cfg.prod_client_secret);
 
     const basicAuth = isProd ? pick(cfg.prod_basic_auth) : pick(cfg.cert_basic_auth);
+    const appId = pick(cfg.appId, cfg.app_id, cfg.prod_client_id, cfg.cert_client_id, cfg.clientId);
 
     if (!clientId || !clientSecret) return null;
 
@@ -63,7 +64,7 @@ async function getSabreConfig() {
     _configCache = {
       baseUrl: platformUrl.replace(/\/$/, ''),
       hotelUrl: hotelUrl.replace(/\/$/, ''),
-      clientId, clientSecret, basicAuth,
+      clientId, clientSecret, basicAuth, appId,
       pcc: cfg.pcc || cfg.scCode || '',
       epr, agencyPassword,
       environment: isProd ? 'production' : (cfg.environment || 'cert'),
