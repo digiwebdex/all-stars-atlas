@@ -171,53 +171,79 @@ async function getAccessTokenPasswordGrant(config, domain = 'hotel') {
   }
 }
 
-// Make API request — tries hotel domain first, falls back to platform domain
+const HOTEL_AVAIL_ENDPOINTS = [
+  '/v4.1.0/get/hotelavail',
+  '/v4.0.0/get/hotelavail',
+  '/v3.0.0/get/hotelavail',
+  '/v2.1.0/get/hotelavail',
+  '/v2.0.0/get/hotelavail',
+  '/v2/get/hotelavail',
+];
+
+const HOTEL_DETAILS_ENDPOINTS = [
+  '/v4.1.0/get/hoteldetails',
+  '/v4.0.0/get/hoteldetails',
+  '/v2.1.0/get/hoteldetails',
+  '/v1.1.0/get/hoteldetails',
+  '/v2/get/hoteldetails',
+];
+
+function resolveHotelEndpointCandidates(endpoint) {
+  if (endpoint === '/v2/get/hotelavail') return HOTEL_AVAIL_ENDPOINTS;
+  if (endpoint === '/v2/get/hoteldetails') return HOTEL_DETAILS_ENDPOINTS;
+  return [endpoint];
+}
+
+// Make API request — tries versioned endpoint candidates + hotel/platform domains
 async function sabreRequest(config, endpoint, body, method = 'POST', timeoutMs = 30000) {
-  // Determine which domain to use based on endpoint
+  const endpointCandidates = resolveHotelEndpointCandidates(endpoint);
   const isBookingEndpoint = endpoint.includes('passenger/records') || endpoint.includes('trip/orders');
-  
-  // Try multiple URL strategies
-  const strategies = [];
-  
-  if (isBookingEndpoint) {
-    // Booking always goes to platform.sabre.com
-    strategies.push({ baseUrl: config.baseUrl, domain: 'platform', path: endpoint });
-  } else {
-    // Hotel search/details — try havail domain with CSL paths, then platform domain
-    strategies.push({ baseUrl: config.hotelUrl, domain: 'hotel', path: endpoint });
-    // Also try platform domain with same path
-    strategies.push({ baseUrl: config.baseUrl, domain: 'platform', path: endpoint });
-  }
 
-  for (const strategy of strategies) {
-    try {
-      const token = await getAccessToken(config, strategy.domain);
-      if (!token) continue;
+  for (const endpointPath of endpointCandidates) {
+    const strategies = isBookingEndpoint
+      ? [{ baseUrl: config.baseUrl, domain: 'platform', path: endpointPath }]
+      : [
+          { baseUrl: config.hotelUrl, domain: 'hotel', path: endpointPath },
+          { baseUrl: config.baseUrl, domain: 'platform', path: endpointPath },
+        ];
 
-      const url = `${strategy.baseUrl}${strategy.path}`;
-      const opts = {
-        method,
-        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json', 'Accept': 'application/json' },
-        signal: AbortSignal.timeout(timeoutMs),
-      };
-      if (body && method !== 'GET') opts.body = JSON.stringify(body);
+    for (const strategy of strategies) {
+      try {
+        const token = await getAccessToken(config, strategy.domain);
+        if (!token) continue;
 
-      console.log(`[Sabre Hotels] → ${method} ${url}`);
-      const res = await fetch(url, opts);
-      if (!res.ok) {
-        const errText = await res.text().catch(() => '');
-        console.warn(`[Sabre Hotels] ${strategy.domain} ${strategy.path}: ${res.status} ${errText.slice(0, 200)}`);
-        continue; // Try next strategy
+        const url = `${strategy.baseUrl}${strategy.path}`;
+        const headers = {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        };
+        if (config.appId) headers['Application-ID'] = config.appId;
+
+        const opts = {
+          method,
+          headers,
+          signal: AbortSignal.timeout(timeoutMs),
+        };
+        if (body && method !== 'GET') opts.body = JSON.stringify(body);
+
+        console.log(`[Sabre Hotels] → ${method} ${url}`);
+        const res = await fetch(url, opts);
+        if (!res.ok) {
+          const errText = await res.text().catch(() => '');
+          console.warn(`[Sabre Hotels] ${strategy.domain} ${strategy.path}: ${res.status} ${errText.slice(0, 220)}`);
+          continue;
+        }
+
+        console.log(`[Sabre Hotels] ✓ Success via ${strategy.domain} ${strategy.path}`);
+        return res.json();
+      } catch (err) {
+        console.warn(`[Sabre Hotels] ${strategy.domain} ${strategy.path} failed: ${err.message}`);
       }
-      console.log(`[Sabre Hotels] ✓ Success via ${strategy.domain}`);
-      return res.json();
-    } catch (err) {
-      console.warn(`[Sabre Hotels] ${strategy.domain} ${strategy.path} failed: ${err.message}`);
-      continue;
     }
   }
 
-  throw new Error(`Sabre Hotels API: all strategies failed for ${endpoint}`);
+  throw new Error(`Sabre Hotels API: all strategies failed for ${endpoint} (tried ${endpointCandidates.join(', ')})`);
 }
 
 // ── City/Airport code resolution ──
