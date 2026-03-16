@@ -152,6 +152,8 @@ const HotelResults = () => {
                         <div className={`relative overflow-hidden ${view === "list" ? "sm:w-72 h-48 sm:h-auto" : "aspect-[16/10]"}`}>
                           <img src={hotel.img} alt={hotel.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
                           {hotel.tag && <Badge className="absolute top-3 left-3 bg-secondary text-secondary-foreground text-[10px] font-bold shadow-lg">{hotel.tag}</Badge>}
+                          {hotel.source === 'sabre' && <Badge className="absolute bottom-3 left-3 bg-primary text-primary-foreground text-[9px] font-bold shadow-lg">Sabre GDS</Badge>}
+                          {hotel.source === 'hotelbeds' && <Badge className="absolute bottom-3 left-3 bg-accent text-accent-foreground text-[9px] font-bold shadow-lg">HotelBeds</Badge>}
                           <button className="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/80 backdrop-blur-sm flex items-center justify-center hover:bg-white transition-colors" onClick={(e) => {
                             e.preventDefault(); e.stopPropagation();
                             const added = toggleWishlistItem(String(hotel.id));
