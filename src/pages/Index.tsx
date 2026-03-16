@@ -434,8 +434,8 @@ const Index = () => {
                 </Link>
               </div>
               <div ref={hotelsFade.ref} className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 ${hotelsFade.className}`} style={{ transition: 'opacity 0.5s, transform 0.5s' }}>
-                {visibleHotels.map((hotel, i) => (
-                  <Link key={i} to={`/hotels/${i + 1}`} className="block">
+              {visibleHotels.map((hotel, i) => (
+                  <Link key={hotel.id || i} to={hotel.id ? `/hotels/${hotel.id}` : `/hotels?destination=${encodeURIComponent(hotel.location || hotel.name)}&checkIn=${tomorrowDate}&checkOut=${new Date(Date.now() + 2 * 86400000).toISOString().split('T')[0]}&adults=2`} className="block">
                     <div className="premium-card group">
                       <div className="aspect-[16/10] overflow-hidden relative">
                         <img src={hotel.img} alt={hotel.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" decoding="async" />
