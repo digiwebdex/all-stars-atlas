@@ -309,7 +309,7 @@ async function searchHotels({ city, checkIn, checkOut, adults = 2, children = 0,
   const resolved = resolveCity(city);
   if (!resolved) { console.warn(`[Sabre Hotels] Could not resolve city: ${city}`); return []; }
 
-  const { code: cityCode } = resolved;
+  const { code: cityCode, type: cityType } = resolved;
   const totalGuests = parseInt(adults) + parseInt(children || 0);
 
   try {
@@ -320,7 +320,15 @@ async function searchHotels({ city, checkIn, checkOut, adults = 2, children = 0,
     }
 
     console.log(`[Sabre Hotels] SOAP search: city=${cityCode}, ${checkIn} → ${checkOut}, ${adults}A+${children}C, ${rooms} rooms`);
-    let hotels = await sabreSoap.getHotelAvail({ cityCode, checkIn, checkOut, guests: totalGuests, rooms });
+    let hotels = await sabreSoap.getHotelAvail({
+      cityCode,
+      cityType,
+      cityName: city,
+      checkIn,
+      checkOut,
+      guests: totalGuests,
+      rooms,
+    });
 
     // Apply client-side filters
     if (minStars) hotels = hotels.filter(h => (h.starRating || 0) >= parseInt(minStars));
