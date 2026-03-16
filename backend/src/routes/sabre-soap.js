@@ -1259,9 +1259,18 @@ function firstMatchFloat(text, patterns) {
 function parseHotelAvailResponse(xml, params) {
   const hotels = [];
   try {
-    const availBlocks = [...xml.matchAll(/<(?:\w+:)?HotelAvailInfo\b[\s\S]*?<\/(?:\w+:)?HotelAvailInfo>/gi)].map(m => m[0]);
-    const roomStayBlocks = [...xml.matchAll(/<(?:\w+:)?RoomStay\b[\s\S]*?<\/(?:\w+:)?RoomStay>/gi)].map(m => m[0]);
-    const fallbackBlocks = [...xml.matchAll(/<(?:\w+:)?BasicPropertyInfo\b[\s\S]*?(?:\/>|<\/(?:\w+:)?BasicPropertyInfo>)/gi)].map(m => m[0]);
+    const availBlocks = [
+      ...[...xml.matchAll(/<(?:\w+:)?HotelAvailInfo\b[\s\S]*?<\/(?:\w+:)?HotelAvailInfo>/gi)].map(m => m[0]),
+      ...[...xml.matchAll(/<(?:\w+:)?HotelAvailInfo\b[^>]*\/>/gi)].map(m => m[0]),
+    ];
+    const roomStayBlocks = [
+      ...[...xml.matchAll(/<(?:\w+:)?RoomStay\b[\s\S]*?<\/(?:\w+:)?RoomStay>/gi)].map(m => m[0]),
+      ...[...xml.matchAll(/<(?:\w+:)?RoomStay\b[^>]*\/>/gi)].map(m => m[0]),
+    ];
+    const fallbackBlocks = [
+      ...[...xml.matchAll(/<(?:\w+:)?BasicPropertyInfo\b[\s\S]*?(?:\/>|<\/(?:\w+:)?BasicPropertyInfo>)/gi)].map(m => m[0]),
+      ...[...xml.matchAll(/<(?:\w+:)?HotelRef\b[\s\S]*?(?:\/>|<\/(?:\w+:)?HotelRef>)/gi)].map(m => m[0]),
+    ];
     const blocks = availBlocks.length > 0 ? availBlocks : (roomStayBlocks.length > 0 ? roomStayBlocks : fallbackBlocks);
 
     const nights = params.checkIn && params.checkOut
@@ -1274,8 +1283,9 @@ function parseHotelAvailResponse(xml, params) {
       const tagText = (src, tag) => src.match(new RegExp(`<(?:\\w+:)?${tag}>([^<]+)<\\/(?:\\w+:)?${tag}>`, 'i'))?.[1]?.trim() || '';
 
       const hotelCode = attr(propertyXml, 'HotelCode') || tagText(block, 'HotelCode');
-      const hotelName = attr(propertyXml, 'HotelName') || tagText(block, 'HotelName');
-      if (!hotelCode || !hotelName) continue;
+      const hotelName = attr(propertyXml, 'HotelName') || tagText(block, 'HotelName') || tagText(block, 'PropertyName') || tagText(block, 'Name');
+      if (!hotelCode) continue;
+      const resolvedHotelName = hotelName || `Hotel ${hotelCode}`;
 
       const cityCode = attr(propertyXml, 'HotelCityCode') || tagText(block, 'HotelCityCode') || params.cityCode || '';
       const latitude = attr(propertyXml, 'Latitude') || tagText(block, 'Latitude');
