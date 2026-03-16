@@ -163,18 +163,16 @@ const Index = () => {
   });
 
   const visibleRoutes = useMemo(() => {
-    if (!liveRoutes?.routes?.length) {
-      return visibleCmsRoutes.map((route) => ({
-        ...route,
-        price: isLiveRoutesLoading ? '...' : route.price,
-      }));
-    }
-    const priceMap = new Map(
-      liveRoutes.routes.map((r) => [`${r.fromCode}-${r.toCode}`, r.price])
-    );
+    const priceMap = liveRoutes?.routes?.length
+      ? new Map(liveRoutes.routes.map((r) => [`${r.fromCode}-${r.toCode}`, r.price]))
+      : null;
     return visibleCmsRoutes.map((route) => ({
       ...route,
-      price: priceMap.get(`${route.fromCode}-${route.toCode}`) ?? route.price,
+      price: isLiveRoutesLoading
+        ? '...'
+        : priceMap
+          ? (priceMap.get(`${route.fromCode}-${route.toCode}`) || '—')
+          : '—',
     }));
   }, [visibleCmsRoutes, liveRoutes, isLiveRoutesLoading]);
 
