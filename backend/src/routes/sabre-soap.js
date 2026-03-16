@@ -1331,7 +1331,7 @@ function parseHotelAvailResponse(xml, params) {
         id: `sabre-${hotelCode}`,
         sabreHotelCode: hotelCode,
         source: 'sabre',
-        name: hotelName,
+        name: resolvedHotelName,
         city: cityName || cityCode,
         country: countryCode,
         address: addressLine,
