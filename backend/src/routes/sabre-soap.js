@@ -1448,7 +1448,7 @@ async function getHotelPropertyDescription(params, _retried = false) {
   const startMD = params.checkIn ? params.checkIn.slice(5) : '';
   const endMD = params.checkOut ? params.checkOut.slice(5) : '';
 
-  const envelope = `<?xml version="1.0" encoding="UTF-8"?>
+  const buildEnvelope = (actionVariant) => `<?xml version="1.0" encoding="UTF-8"?>
 <SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/"
   xmlns:eb="http://www.ebxml.org/namespaces/messageHeader"
   xmlns:xlink="http://www.w3.org/1999/xlink"
@@ -1459,8 +1459,8 @@ async function getHotelPropertyDescription(params, _retried = false) {
       <eb:To><eb:PartyId>Sabre_API</eb:PartyId></eb:To>
       <eb:CPAId>${config.pcc}</eb:CPAId>
       <eb:ConversationId>${conversationId}</eb:ConversationId>
-      <eb:Service eb:type="sabreXML">HotelPropertyDescriptionLLSRQ</eb:Service>
-      <eb:Action>HotelPropertyDescriptionLLSRQ</eb:Action>
+      <eb:Service eb:type="sabreXML">${actionVariant.service}</eb:Service>
+      <eb:Action>${actionVariant.action}</eb:Action>
     </eb:MessageHeader>
     <wsse:Security xmlns:wsse="http://schemas.xmlsoap.org/ws/2002/12/secext">
       <wsse:BinarySecurityToken>${token}</wsse:BinarySecurityToken>
@@ -1485,26 +1485,40 @@ async function getHotelPropertyDescription(params, _retried = false) {
 
   try {
     console.log(`[Sabre SOAP] Hotel details: code=${params.hotelCode}`);
-    const res = await fetch(soapUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/xml; charset=utf-8', 'SOAPAction': 'HotelPropertyDescriptionLLSRQ' },
-      body: envelope,
-      signal: AbortSignal.timeout(20000),
-    });
 
-    const xml = await res.text();
-    
-    const faultMatch = xml.match(/faultstring>([^<]+)/);
-    if (faultMatch) {
-      if (!_retried && isSoapSessionError(faultMatch[1])) {
-        await resetSoapSessionCacheWithClose(config);
-        return getHotelPropertyDescription(params, true);
+    for (const actionVariant of HOTEL_DETAILS_ACTION_VARIANTS) {
+      const res = await fetch(soapUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/xml; charset=utf-8', 'SOAPAction': actionVariant.soapAction },
+        body: buildEnvelope(actionVariant),
+        signal: AbortSignal.timeout(20000),
+      });
+
+      const xml = await res.text();
+      const faultMsg = xml.match(/faultstring>([^<]+)/i)?.[1] || '';
+      if (faultMsg) {
+        if (!_retried && isSoapSessionError(faultMsg)) {
+          await resetSoapSessionCacheWithClose(config);
+          return getHotelPropertyDescription(params, true);
+        }
+
+        if (isInvalidEbxmlAction(faultMsg)) {
+          console.warn(`[Sabre SOAP] Hotel details invalid action (${actionVariant.label}): ${faultMsg}`);
+          continue;
+        }
+
+        console.error(`[Sabre SOAP] Hotel details fault (${actionVariant.label}): ${faultMsg}`);
+        continue;
       }
-      console.error(`[Sabre SOAP] Hotel details fault: ${faultMatch[1]}`);
-      return null;
+
+      const parsed = parseHotelPropertyDescription(xml, params);
+      if (parsed) {
+        return parsed;
+      }
     }
 
-    return parseHotelPropertyDescription(xml, params);
+    console.warn('[Sabre SOAP] Hotel details failed across all action variants; this usually indicates Hotel LLS entitlement is missing for current PCC.');
+    return null;
   } catch (err) {
     if (!_retried && isSoapSessionError(err.message)) {
       await resetSoapSessionCacheWithClose(config);
