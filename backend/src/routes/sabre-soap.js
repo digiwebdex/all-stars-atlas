@@ -1235,8 +1235,9 @@ function parseHotelAvailResponse(xml, params) {
   const hotels = [];
   try {
     const availBlocks = [...xml.matchAll(/<(?:\w+:)?HotelAvailInfo\b[\s\S]*?<\/(?:\w+:)?HotelAvailInfo>/gi)].map(m => m[0]);
+    const roomStayBlocks = [...xml.matchAll(/<(?:\w+:)?RoomStay\b[\s\S]*?<\/(?:\w+:)?RoomStay>/gi)].map(m => m[0]);
     const fallbackBlocks = [...xml.matchAll(/<(?:\w+:)?BasicPropertyInfo\b[\s\S]*?(?:\/>|<\/(?:\w+:)?BasicPropertyInfo>)/gi)].map(m => m[0]);
-    const blocks = availBlocks.length > 0 ? availBlocks : fallbackBlocks;
+    const blocks = availBlocks.length > 0 ? availBlocks : (roomStayBlocks.length > 0 ? roomStayBlocks : fallbackBlocks);
 
     const nights = params.checkIn && params.checkOut
       ? Math.max(1, Math.ceil((new Date(params.checkOut) - new Date(params.checkIn)) / 86400000))
@@ -1247,8 +1248,8 @@ function parseHotelAvailResponse(xml, params) {
       const attr = (src, name) => src.match(new RegExp(`\\b${name}="([^"]+)"`, 'i'))?.[1] || '';
       const tagText = (src, tag) => src.match(new RegExp(`<(?:\\w+:)?${tag}>([^<]+)<\\/(?:\\w+:)?${tag}>`, 'i'))?.[1]?.trim() || '';
 
-      const hotelCode = attr(propertyXml, 'HotelCode');
-      const hotelName = attr(propertyXml, 'HotelName');
+      const hotelCode = attr(propertyXml, 'HotelCode') || tagText(block, 'HotelCode');
+      const hotelName = attr(propertyXml, 'HotelName') || tagText(block, 'HotelName');
       if (!hotelCode || !hotelName) continue;
 
       const cityCode = attr(propertyXml, 'HotelCityCode') || params.cityCode || '';
