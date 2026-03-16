@@ -2361,7 +2361,7 @@ const FlightCard = ({
   const stopsLabel = stops === 0 ? "Non-Stop" : `${stops} Stop${stops > 1 ? "s" : ""}`;
   const cabinDisplay = cabin && bookingClass ? `${cabin} - ${bookingClass}` : cabin || bookingClass || "";
   const fareDetailsCount = Array.isArray(flight.fareDetails) ? flight.fareDetails.length : 0;
-  const distanceKm = calcDistanceKm(fromCode, toCode);
+  const distanceKm = calcRouteDistance(flight);
   const [showPriceBreakdown, setShowPriceBreakdown] = useState(false);
 
   return (
