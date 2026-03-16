@@ -2129,10 +2129,8 @@ router.get('/route-prices', async (req, res) => {
       return res.json({ success: true, routes: routePriceCache.data, cached: true });
     }
 
-    // Search date: 7 days from now (to get realistic upcoming fares)
-    const searchDate = new Date();
-    searchDate.setDate(searchDate.getDate() + 7);
-    const dateStr = searchDate.toISOString().split('T')[0];
+    // Search date: today's date for current prices
+    const dateStr = new Date().toISOString().split('T')[0];
 
     console.log(`[Route Prices] Fetching live prices for ${DOMESTIC_ROUTES.length} routes on ${dateStr}`);
 
