@@ -1197,28 +1197,50 @@ function escapeXml(value = '') {
 }
 
 function extractSoapDiagnostics(xml) {
-  const status = xml.match(/ApplicationResults[^>]*status="([^"]+)"/i)?.[1] || null;
-  const messageMatches = [
+  const compactXml = String(xml || '').replace(/\s+/g, ' ').trim();
+
+  const status =
+    xml.match(/<(?:\w+:)?ApplicationResults[^>]*\bstatus="([^"]+)"/i)?.[1]
+    || xml.match(/<(?:\w+:)?ApplicationResults[^>]*\bStatus="([^"]+)"/i)?.[1]
+    || null;
+
+  const textMessageMatches = [
     ...xml.matchAll(/<(?:\w+:)?Message(?:\s[^>]*)?>([\s\S]*?)<\/(?:\w+:)?Message>/gi),
-    ...xml.matchAll(/ShortText="([^"]+)"/gi),
-    ...xml.matchAll(/ErrorCode="([^"]+)"/gi),
-  ];
-  const messages = [...new Set(messageMatches
-    .map(m => (m?.[1] || '').replace(/\s+/g, ' ').trim())
+    ...xml.matchAll(/<(?:\w+:)?Error(?:\s[^>]*)?>([\s\S]*?)<\/(?:\w+:)?Error>/gi),
+    ...xml.matchAll(/<(?:\w+:)?Warning(?:\s[^>]*)?>([\s\S]*?)<\/(?:\w+:)?Warning>/gi),
+    ...xml.matchAll(/<(?:\w+:)?Diagnostic(?:\s[^>]*)?>([\s\S]*?)<\/(?:\w+:)?Diagnostic>/gi),
+  ].map(m => m?.[1] || '');
+
+  const attrMessageMatches = [
+    ...xml.matchAll(/\bShortText="([^"]+)"/gi),
+    ...xml.matchAll(/\bErrorCode="([^"]+)"/gi),
+    ...xml.matchAll(/\bCode="([^"]+)"/gi),
+    ...xml.matchAll(/\bMessage="([^"]+)"/gi),
+    ...xml.matchAll(/\bType="([^"]+)"/gi),
+  ].map(m => m?.[1] || '');
+
+  const messages = [...new Set([
+    ...textMessageMatches,
+    ...attrMessageMatches,
+  ]
+    .map(s => s.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim())
     .filter(Boolean))]
-    .slice(0, 6);
+    .slice(0, 8);
 
-  const xmlHint = xml
-    .replace(/\s+/g, ' ')
-    .match(/<(?:\w+:)?ApplicationResults[\s\S]*?<\/(?:\w+:)?ApplicationResults>/i)?.[0]
-    ?.slice(0, 500) || '';
+  const xmlHint =
+    compactXml.match(/<(?:\w+:)?ApplicationResults[\s\S]*?<\/(?:\w+:)?ApplicationResults>/i)?.[0]?.slice(0, 700)
+    || compactXml.match(/<(?:\w+:)?Errors?[\s\S]*?<\/(?:\w+:)?Errors?>/i)?.[0]?.slice(0, 700)
+    || compactXml.match(/<(?:\w+:)?Warnings?[\s\S]*?<\/(?:\w+:)?Warnings?>/i)?.[0]?.slice(0, 700)
+    || '';
 
-  const hostCommand = xml
-    .match(/<(?:\w+:)?HostCommand(?:\s[^>]*)?>([\s\S]*?)<\/(?:\w+:)?HostCommand>/i)?.[1]
-    ?.replace(/\s+/g, ' ')
-    .trim() || null;
+  const hostCommand =
+    xml.match(/<(?:\w+:)?HostCommand(?:\s[^>]*)?>([\s\S]*?)<\/(?:\w+:)?HostCommand>/i)?.[1]?.replace(/\s+/g, ' ').trim()
+    || xml.match(/\bHostCommand="([^"]+)"/i)?.[1]
+    || null;
 
-  return { status, messages, xmlHint, hostCommand };
+  const rawPreview = compactXml.slice(0, 700);
+
+  return { status, messages, xmlHint, hostCommand, rawPreview };
 }
 
 function firstMatchFloat(text, patterns) {
