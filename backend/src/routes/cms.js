@@ -338,4 +338,30 @@ adminRouter.delete('/email-templates/:id', async (req, res) => {
   } catch (err) { console.error(err); res.status(500).json({ message: 'Something went wrong', status: 500 }); }
 });
 
+// ====== HOMEPAGE CONTENT ======
+// Public: GET /cms/homepage — returns homepage JSON from system_settings
+router.get('/homepage', async (req, res) => {
+  try {
+    const [rows] = await db.query("SELECT setting_value FROM system_settings WHERE setting_key = 'homepage_content'");
+    if (rows.length === 0) return res.status(404).json({ message: 'No homepage content configured', status: 404 });
+    const content = JSON.parse(rows[0].setting_value || '{}');
+    res.json(content);
+  } catch (err) { console.error('[CMS] homepage GET error:', err); res.status(500).json({ message: 'Something went wrong', status: 500 }); }
+});
+
+// Admin: PUT /cms/homepage — save homepage content to system_settings
+adminRouter.put('/homepage', async (req, res) => {
+  try {
+    const content = JSON.stringify(req.body);
+    const [existing] = await db.query("SELECT id FROM system_settings WHERE setting_key = 'homepage_content'");
+    if (existing.length > 0) {
+      await db.query("UPDATE system_settings SET setting_value = ? WHERE setting_key = 'homepage_content'", [content]);
+    } else {
+      const id = uuidv4();
+      await db.query("INSERT INTO system_settings (id, setting_key, setting_value, category) VALUES (?, 'homepage_content', ?, 'cms')", [id, content]);
+    }
+    res.json(req.body);
+  } catch (err) { console.error('[CMS] homepage PUT error:', err); res.status(500).json({ message: 'Something went wrong', status: 500 }); }
+});
+
 module.exports = { publicRouter: router, adminRouter };
