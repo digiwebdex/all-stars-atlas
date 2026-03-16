@@ -120,7 +120,7 @@ class ApiClient {
       response = await fetch(url, { ...fetchOptions, headers });
     } catch (networkErr: any) {
       throw {
-        message: `Cannot reach server (${this.baseUrl}). Please check your internet connection or try again later.`,
+        message: `Cannot reach server (${this.getRequestBaseUrl()}). Please check your internet connection or try again later.`,
         status: 0,
         code: 'NETWORK_ERROR',
       } as ApiError & { code: string };
