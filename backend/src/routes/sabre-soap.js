@@ -1415,7 +1415,7 @@ async function getHotelPropertyDescription(params, _retried = false) {
       <eb:To><eb:PartyId>Sabre_API</eb:PartyId></eb:To>
       <eb:CPAId>${config.pcc}</eb:CPAId>
       <eb:ConversationId>${conversationId}</eb:ConversationId>
-      <eb:Service>HotelPropertyDescriptionLLSRQ</eb:Service>
+      <eb:Service eb:type="sabreXML">HotelPropertyDescriptionLLSRQ</eb:Service>
       <eb:Action>HotelPropertyDescriptionLLSRQ</eb:Action>
     </eb:MessageHeader>
     <wsse:Security xmlns:wsse="http://schemas.xmlsoap.org/ws/2002/12/secext">
