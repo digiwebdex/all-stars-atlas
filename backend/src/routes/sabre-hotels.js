@@ -201,8 +201,13 @@ function resolveHotelEndpointCandidates(endpoint) {
   return [endpoint];
 }
 
-// Make API request — tries versioned endpoint candidates + hotel/platform domains
+// Make API request — booking-only via REST. Hotel search/details use SOAP only.
 async function sabreRequest(config, endpoint, body, method = 'POST', timeoutMs = 30000) {
+  const isHotelCslEndpoint = /\/get\/hotel/i.test(endpoint);
+  if (isHotelCslEndpoint) {
+    throw new Error('Sabre Hotel REST CSL endpoints are disabled (SOAP strategy active)');
+  }
+
   const endpointCandidates = resolveHotelEndpointCandidates(endpoint);
   const isBookingEndpoint = endpoint.includes('passenger/records') || endpoint.includes('trip/orders');
 
