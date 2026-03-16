@@ -560,7 +560,7 @@ async function getHotelContent(config, hotelCode) {
       }
     };
 
-    const response = await sabreRequest(config, '/v1.0.0/shop/hotels/content', body, 'POST', 20000);
+    const response = await sabreRequest(config, '/v2/get/hoteldetails', body, 'POST', 20000);
     const hotelContent = response?.GetHotelContentRS?.HotelContentInfos?.HotelContentInfo?.[0] || {};
     const info = hotelContent.HotelInfo || {};
     const media = hotelContent.HotelMediaInfo || {};
