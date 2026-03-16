@@ -17,6 +17,28 @@ class ApiClient {
     this.baseUrl = config.apiBaseUrl;
   }
 
+  private normalizeBaseUrl(value: string): string {
+    return value.replace(/\/+$/, '');
+  }
+
+  private isAbsoluteUrl(value: string): boolean {
+    return /^https?:\/\//i.test(value);
+  }
+
+  private getRequestBaseUrl(): string {
+    const configured = this.normalizeBaseUrl(this.baseUrl);
+
+    if (this.isAbsoluteUrl(configured)) {
+      return configured;
+    }
+
+    if (typeof window !== 'undefined') {
+      return this.normalizeBaseUrl(new URL(configured, window.location.origin).toString());
+    }
+
+    return `http://localhost:3001${configured.startsWith('/') ? configured : `/${configured}`}`;
+  }
+
   private getToken(): string | null {
     return localStorage.getItem('auth_token');
   }
@@ -43,7 +65,7 @@ class ApiClient {
     if (!refreshToken) return false;
 
     try {
-      const response = await fetch(`${this.baseUrl}/auth/refresh`, {
+      const response = await fetch(this.buildUrl('/auth/refresh'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ refreshToken }),
@@ -64,7 +86,10 @@ class ApiClient {
   }
 
   private buildUrl(endpoint: string, params?: Record<string, string | number | boolean | undefined>): string {
-    const url = new URL(`${this.baseUrl}${endpoint}`);
+    const base = this.getRequestBaseUrl();
+    const normalizedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+    const url = new URL(`${base}${normalizedEndpoint}`);
+
     if (params) {
       Object.entries(params).forEach(([key, value]) => {
         if (value !== undefined) {
@@ -72,6 +97,7 @@ class ApiClient {
         }
       });
     }
+
     return url.toString();
   }
 
