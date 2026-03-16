@@ -194,7 +194,7 @@ class ApiClient {
       headers['Authorization'] = `Bearer ${token}`;
     }
     // Don't set Content-Type — browser will set multipart/form-data with boundary
-    const response = await fetch(`${this.baseUrl}${endpoint}`, {
+    const response = await fetch(this.buildUrl(endpoint), {
       method: 'POST',
       headers,
       body: formData,

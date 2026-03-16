@@ -1,5 +1,32 @@
+const LOCAL_API_BASE_URL = 'http://localhost:3001/api';
+
+const normalizeBaseUrl = (value: string) => value.replace(/\/+$/, '');
+
+const resolveApiBaseUrl = (): string => {
+  const envBaseUrl = (import.meta.env.VITE_API_BASE_URL || '').trim();
+
+  if (typeof window === 'undefined') {
+    return envBaseUrl ? normalizeBaseUrl(envBaseUrl) : LOCAL_API_BASE_URL;
+  }
+
+  if (envBaseUrl) {
+    if (/^https?:\/\//i.test(envBaseUrl)) {
+      try {
+        const envUrl = new URL(envBaseUrl);
+        if (envUrl.origin === window.location.origin) return '/api';
+      } catch {
+        // Ignore invalid URL and use raw env value
+      }
+    }
+    return normalizeBaseUrl(envBaseUrl);
+  }
+
+  const isLocal = ['localhost', '127.0.0.1'].includes(window.location.hostname);
+  return isLocal ? LOCAL_API_BASE_URL : '/api';
+};
+
 export const config = {
-  apiBaseUrl: import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api',
+  apiBaseUrl: resolveApiBaseUrl(),
   appName: 'Seven Trip',
   parentCompany: 'Evan International',
   legalName: 'Evan International',
