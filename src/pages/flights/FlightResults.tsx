@@ -1227,7 +1227,14 @@ const LegMini = ({ flight, label, labelColor }: { flight: any; label: string; la
             <AnimatedFlightArc compact direction={isReturn ? "return" : "departure"} />
           )}
           <p className="text-[10px] text-muted-foreground font-medium">{duration}</p>
-          <p className={`text-[10px] font-semibold ${stops === 0 ? "text-foreground" : "text-warning"}`}>{stopsLabel}</p>
+          <div className="flex items-center gap-1.5">
+            <p className={`text-[10px] font-semibold ${stops === 0 ? "text-foreground" : "text-warning"}`}>{stopsLabel}</p>
+            {(() => { const d = calcRouteDistance(flight); return d ? (
+              <span className="text-[9px] text-muted-foreground flex items-center gap-0.5">
+                <MapPin className="w-2.5 h-2.5" /> {d.toLocaleString()} Km
+              </span>
+            ) : null; })()}
+          </div>
         </div>
 
         {/* Destination */}
