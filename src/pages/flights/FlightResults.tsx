@@ -213,6 +213,35 @@ function calcDistanceKm(from: string, to: string): number | null {
   return Math.round(2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
 }
 
+/** Smart distance: if flight has legs/stops, sum segment-by-segment distances; otherwise use origin→destination */
+function calcRouteDistance(flight: any): number | null {
+  const legs = flight?.legs || [];
+  if (legs.length > 1) {
+    let total = 0;
+    let allResolved = true;
+    for (const leg of legs) {
+      const d = calcDistanceKm(leg.origin, leg.destination);
+      if (d) { total += d; } else { allResolved = false; }
+    }
+    if (total > 0) return total;
+    if (!allResolved) {
+      // Fallback: try origin→stop→stop→destination using stopCodes
+      const stops = flight.stopCodes || [];
+      const points = [flight.origin, ...stops, flight.destination].filter(Boolean);
+      let sum = 0;
+      for (let i = 0; i < points.length - 1; i++) {
+        const d = calcDistanceKm(points[i], points[i + 1]);
+        if (d) sum += d;
+      }
+      if (sum > 0) return sum;
+    }
+  }
+  // Direct or fallback
+  const from = flight?.origin || "";
+  const to = flight?.destination || "";
+  return calcDistanceKm(from, to);
+}
+
 /* ─── Session Timer Component — with expiry callback ─── */
 const SessionTimer = ({ startTime, onExpired }: { startTime: number; onExpired?: () => void }) => {
   const [elapsed, setElapsed] = useState(0);
