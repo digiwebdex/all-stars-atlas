@@ -2120,7 +2120,45 @@ const DOMESTIC_ROUTES = [
 ];
 
 let routePriceCache = { data: null, expiry: 0 };
-const ROUTE_CACHE_TTL = 2 * 60 * 60 * 1000; // 2 hours
+const ROUTE_CACHE_TTL = 1 * 60 * 60 * 1000; // 1 hour
+
+// Background refresh: auto-update route prices every hour
+function scheduleRoutePriceRefresh() {
+  setInterval(async () => {
+    try {
+      console.log('[Route Prices] Background refresh starting...');
+      const dateStr = new Date().toISOString().split('T')[0];
+      const results = await Promise.allSettled(
+        DOMESTIC_ROUTES.map(async (route) => {
+          const params = { origin: route.fromCode, destination: route.toCode, departDate: dateStr, adults: 1, children: 0, infants: 0, cabinClass: 'economy' };
+          const [tti, bdf, sabre] = await Promise.allSettled([
+            ttiSearch(params).catch(() => []),
+            bdfSearch(params).catch(() => []),
+            sabreSearch(params).catch(() => []),
+          ]);
+          let allFlights = [];
+          for (const r of [tti, bdf, sabre]) {
+            if (r.status === 'fulfilled') allFlights.push(...(r.value || []));
+          }
+          let cheapest = null;
+          for (const f of allFlights) {
+            const price = f.price || f.totalPrice || f.fareDetails?.totalPrice || 0;
+            if (price > 0 && (!cheapest || price < cheapest)) cheapest = price;
+          }
+          return { ...route, price: cheapest ? `৳${Math.round(cheapest).toLocaleString('en-IN')}` : null, priceRaw: cheapest || null, flightCount: allFlights.length };
+        })
+      );
+      const routes = results.map((r, i) => r.status === 'fulfilled' ? r.value : { ...DOMESTIC_ROUTES[i], price: null, priceRaw: null, flightCount: 0 });
+      routePriceCache = { data: routes, expiry: Date.now() + ROUTE_CACHE_TTL };
+      console.log(`[Route Prices] Background refresh done:`, routes.map(r => `${r.fromCode}→${r.toCode}: ${r.price || 'N/A'}`).join(', '));
+    } catch (err) {
+      console.error('[Route Prices] Background refresh error:', err.message);
+    }
+  }, ROUTE_CACHE_TTL);
+}
+
+// Start background refresh after 30 seconds (let server stabilize first)
+setTimeout(scheduleRoutePriceRefresh, 30000);
 
 router.get('/route-prices', async (req, res) => {
   try {

@@ -152,86 +152,29 @@ const Index = () => {
   const todayDate = useMemo(() => new Date().toISOString().split('T')[0], []);
   const visibleCmsRoutes = useMemo(() => cms.routes.filter(r => r.visible), [cms.routes]);
 
-  // Live route prices: use dedicated endpoint, fallback to direct /flights/search per route
+  // Live route prices — always from /api/flights/route-prices, no fallback
   const { data: liveRoutes, isLoading: isLiveRoutesLoading } = useQuery<{ success: boolean; routes: { from: string; fromCode: string; to: string; toCode: string; price: string | null }[] }>({
-    queryKey: ['flights', 'route-prices', todayDate, visibleCmsRoutes.map(r => `${r.fromCode}-${r.toCode}`).join('|')],
-    queryFn: async () => {
-      try {
-        return await api.get('/flights/route-prices', { date: todayDate });
-      } catch {
-        const routes = await Promise.all(
-          visibleCmsRoutes.map(async (route) => {
-            try {
-              const result = await api.get<any>('/flights/search', {
-                from: route.fromCode,
-                to: route.toCode,
-                date: todayDate,
-                adults: 1,
-                children: 0,
-                infants: 0,
-                cabinClass: 'economy',
-              });
-
-              const flights = Array.isArray(result?.flights)
-                ? result.flights
-                : Array.isArray(result?.data)
-                  ? result.data
-                  : [];
-
-              let cheapest: number | null = null;
-              for (const flight of flights) {
-                const raw = Number(
-                  flight?.price ??
-                  flight?.totalPrice ??
-                  flight?.fareDetails?.totalPrice ??
-                  0
-                );
-                if (raw > 0 && (cheapest === null || raw < cheapest)) cheapest = raw;
-              }
-
-              return {
-                from: route.from,
-                fromCode: route.fromCode,
-                to: route.to,
-                toCode: route.toCode,
-                price: cheapest !== null ? `৳${Math.round(cheapest).toLocaleString('en-IN')}` : null,
-              };
-            } catch {
-              return {
-                from: route.from,
-                fromCode: route.fromCode,
-                to: route.to,
-                toCode: route.toCode,
-                price: null,
-              };
-            }
-          })
-        );
-
-        return { success: true, routes };
-      }
-    },
-    staleTime: 5 * 60 * 1000,
-    gcTime: 30 * 60 * 1000,
-    refetchInterval: 10 * 60 * 1000,
-    refetchOnWindowFocus: true,
+    queryKey: ['flights', 'route-prices'],
+    queryFn: () => api.get('/flights/route-prices'),
+    staleTime: 60 * 60 * 1000, // 1 hour
+    gcTime: 2 * 60 * 60 * 1000,
+    refetchInterval: 60 * 60 * 1000, // auto-refresh every hour
+    retry: 2,
   });
 
   const visibleRoutes = useMemo(() => {
     if (!liveRoutes?.routes?.length) {
       return visibleCmsRoutes.map((route) => ({
         ...route,
-        price: isLiveRoutesLoading ? 'Loading...' : 'N/A',
+        price: isLiveRoutesLoading ? '...' : route.price,
       }));
     }
-
     const priceMap = new Map(
-      liveRoutes.routes.map((route) => [`${route.fromCode}-${route.toCode}`, route.price])
+      liveRoutes.routes.map((r) => [`${r.fromCode}-${r.toCode}`, r.price])
     );
-
     return visibleCmsRoutes.map((route) => ({
       ...route,
-      price: priceMap.get(`${route.fromCode}-${route.toCode}`) ?? 'N/A',
+      price: priceMap.get(`${route.fromCode}-${route.toCode}`) ?? route.price,
     }));
   }, [visibleCmsRoutes, liveRoutes, isLiveRoutesLoading]);
 
