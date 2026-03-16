@@ -86,74 +86,129 @@ async function getSabreConfig() {
 
 function clearSabreHotelConfigCache() { _configCache = null; _configCacheTime = 0; }
 
-// ── OAuth — CSL uses /v2/auth/token with client_credentials on havail.sabre.com ──
-// Reference: https://github.com/SabreDevStudio/get-hotel-avail-v2-sample-nodejs
+// ── OAuth — CSL uses /v2/auth/token on havail; platform commonly uses /v3/auth/token password grant ──
+// References:
+// - https://developer.sabre.com/rest-api/oauth-token-create-rest-api/v2/index.html
+// - Existing, proven flight auth flow in sabre-flights.js (/v3/auth/token + password grant)
 let hotelTokenCache = { token: null, expiresAt: 0 };
 let platformTokenCache = { token: null, expiresAt: 0 };
+
+function writeHotelAuthDebug(payload) {
+  try {
+    require('fs').writeFileSync('/tmp/sabre-hotel-auth-debug.json', JSON.stringify(payload, null, 2));
+  } catch {}
+}
 
 async function getAccessToken(config, domain = 'hotel') {
   const cache = domain === 'hotel' ? hotelTokenCache : platformTokenCache;
   if (cache.token && Date.now() < cache.expiresAt - 60000) return cache.token;
 
-  // Build the base64 credential — Sabre CSL sample calls this "userSecret"
   const credentials = config.basicAuth
     ? config.basicAuth
     : Buffer.from(`${config.clientId}:${config.clientSecret}`).toString('base64');
 
-  // CSL auth domains to try:
-  // 1. havail.sabre.com (official CSL domain)
-  // 2. platform.sabre.com (flight domain — tokens may work cross-domain)
-  const authBases = domain === 'hotel'
-    ? [config.hotelUrl, config.baseUrl]
-    : [config.baseUrl];
+  const username = `${config.epr}-${config.pcc}-AA`;
+  const passwordGrantBody = `grant_type=password&username=${encodeURIComponent(username)}&password=${encodeURIComponent(config.agencyPassword)}`;
 
-  // Grant types to try (CSL officially uses client_credentials)
-  const grants = [
-    { path: '/v2/auth/token', body: 'grant_type=client_credentials' },
-    { path: '/v3/auth/token', body: 'grant_type=client_credentials' },
-    { path: '/v2/auth/token', body: `grant_type=password&username=${encodeURIComponent(`${config.epr}-${config.pcc}-AA`)}&password=${encodeURIComponent(config.agencyPassword)}` },
-  ];
+  const attempts = [];
+  const plans = domain === 'hotel'
+    ? [
+        // Official CSL token endpoint (if CSL is provisioned)
+        { base: config.hotelUrl, path: '/v2/auth/token', body: 'grant_type=client_credentials', label: 'havail-v2-client' },
+        { base: config.hotelUrl, path: '/v3/auth/token', body: 'grant_type=client_credentials', label: 'havail-v3-client' },
+        // Practical fallback: use proven platform token flow
+        { base: config.baseUrl, path: '/v3/auth/token', body: passwordGrantBody, label: 'platform-v3-password-fallback' },
+        { base: config.baseUrl, path: '/v3/auth/token', body: 'grant_type=client_credentials', label: 'platform-v3-client-fallback' },
+      ]
+    : [
+        // Match working flight auth first
+        { base: config.baseUrl, path: '/v3/auth/token', body: passwordGrantBody, label: 'platform-v3-password' },
+        { base: config.baseUrl, path: '/v3/auth/token', body: 'grant_type=client_credentials', label: 'platform-v3-client' },
+        { base: config.baseUrl, path: '/v2/auth/token', body: 'grant_type=client_credentials', label: 'platform-v2-client' },
+      ];
 
-  for (const base of authBases) {
-    for (const grant of grants) {
-      try {
-        const url = `${base}${grant.path}`;
-        console.log(`[Sabre Hotels] Auth try → ${url} (${grant.body.split('&')[0]})`);
-        const res = await fetch(url, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Basic ${credentials}`,
-            'Content-Type': 'application/x-www-form-urlencoded',
-          },
-          body: grant.body,
-          signal: AbortSignal.timeout(12000),
-        });
+  for (const plan of plans) {
+    const url = `${plan.base}${plan.path}`;
+    const grantType = plan.body.split('&')[0];
+    try {
+      console.log(`[Sabre Hotels] Auth try → ${url} (${plan.label}, ${grantType})`);
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Basic ${credentials}`,
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: plan.body,
+        signal: AbortSignal.timeout(12000),
+      });
 
-        if (!res.ok) {
-          const errText = await res.text().catch(() => '');
-          console.warn(`[Sabre Hotels] Auth ${res.status} from ${url}: ${errText.slice(0, 200)}`);
-          continue;
-        }
+      const raw = await res.text().catch(() => '');
+      let data = null;
+      try { data = raw ? JSON.parse(raw) : null; } catch {}
 
-        const data = await res.json();
-        if (data.access_token) {
-          const newCache = { token: data.access_token, expiresAt: Date.now() + (data.expires_in || 604800) * 1000 };
-          if (domain === 'hotel') hotelTokenCache = newCache;
-          else platformTokenCache = newCache;
-          console.log(`[Sabre Hotels] ✓ Auth success: ${base} via ${grant.path}`);
-          return newCache.token;
-        }
-      } catch (err) {
-        console.warn(`[Sabre Hotels] Auth error ${base}${grant.path}: ${err.message}`);
+      attempts.push({
+        label: plan.label,
+        url,
+        status: res.status,
+        ok: res.ok,
+        preview: (data?.error_description || data?.error || raw || '').slice(0, 220),
+      });
+
+      if (!res.ok) {
+        console.warn(`[Sabre Hotels] Auth ${res.status} from ${url}: ${(data?.error_description || data?.error || raw || '').slice(0, 200)}`);
+        continue;
       }
+
+      const token = data?.access_token;
+      if (!token) {
+        console.warn(`[Sabre Hotels] Auth response without access_token from ${url}`);
+        continue;
+      }
+
+      const newCache = { token, expiresAt: Date.now() + (data?.expires_in || 604800) * 1000 };
+      if (domain === 'hotel') hotelTokenCache = newCache;
+      else platformTokenCache = newCache;
+
+      writeHotelAuthDebug({
+        domain,
+        success: true,
+        selected: { label: plan.label, url, status: res.status },
+        attempts,
+        timestamp: new Date().toISOString(),
+      });
+
+      console.log(`[Sabre Hotels] ✓ Auth success (${plan.label})`);
+      return token;
+    } catch (err) {
+      attempts.push({ label: plan.label, url, ok: false, error: err.message });
+      console.warn(`[Sabre Hotels] Auth error ${url}: ${err.message}`);
     }
   }
 
-  // Last resort: reuse platform token for hotel calls (Sabre may share tokens)
-  if (domain === 'hotel' && platformTokenCache.token && Date.now() < platformTokenCache.expiresAt) {
-    console.log(`[Sabre Hotels] Reusing platform flight token for CSL hotel API`);
-    return platformTokenCache.token;
+  // Last resort: platform token can often authorize hotel calls
+  if (domain === 'hotel') {
+    if (platformTokenCache.token && Date.now() < platformTokenCache.expiresAt - 60000) {
+      console.log('[Sabre Hotels] Reusing cached platform token for hotel domain');
+      return platformTokenCache.token;
+    }
+
+    const fallbackPlatformToken = await getAccessToken(config, 'platform');
+    if (fallbackPlatformToken) {
+      hotelTokenCache = { token: fallbackPlatformToken, expiresAt: platformTokenCache.expiresAt };
+      console.log('[Sabre Hotels] Reusing freshly-acquired platform token for hotel domain');
+      return fallbackPlatformToken;
+    }
   }
+
+  writeHotelAuthDebug({
+    domain,
+    success: false,
+    attempts,
+    hint: domain === 'hotel'
+      ? 'If havail fails but platform v3 password works, CSL might not be provisioned for this PCC.'
+      : 'Platform OAuth failed. Verify client credentials, EPR, PCC, and agency password in api_sabre settings.',
+    timestamp: new Date().toISOString(),
+  });
 
   console.error(`[Sabre Hotels] ✗ All auth attempts failed for domain=${domain}`);
   return null;
