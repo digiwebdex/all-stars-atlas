@@ -1,6 +1,6 @@
 import { motion, useScroll, useTransform, useSpring } from "framer-motion";
 import React from "react";
-import { useEffect, useState, useRef, useCallback, memo } from "react";
+import { useEffect, useState, useRef, useCallback, memo, useMemo } from "react";
 import {
   ArrowRight, Star, MapPin, Shield, Headphones, BadgePercent,
   Smartphone, Plane, Award, TrendingUp,
@@ -8,8 +8,10 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import SearchWidget from "@/components/search/SearchWidget";
 import { useHomepageContent } from "@/lib/homepage-store";
+import { api } from "@/lib/api";
 
 // --- Animated counter hook ---
 function useCounter(end: number, duration = 2000) {
