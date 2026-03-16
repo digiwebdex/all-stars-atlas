@@ -1044,7 +1044,7 @@ async function exchangeBooking(params) {
 /**
  * Search hotels by city code using OTA_HotelAvailLLSRQ
  * Uses session-based SOAP (same credentials as flights)
- * @param {Object} params - { cityCode, checkIn (YYYY-MM-DD), checkOut (YYYY-MM-DD), guests, rooms }
+ * @param {Object} params - { cityCode, cityName, checkIn (YYYY-MM-DD), checkOut (YYYY-MM-DD), guests, rooms }
  * @returns {Array} list of hotel availability results
  */
 async function getHotelAvail(params, _retried = false) {
@@ -1064,11 +1064,12 @@ async function getHotelAvail(params, _retried = false) {
   }
 
   const soapUrl = getSoapEndpoint(config);
-  const guestCount = parseInt(params.guests || params.adults || 2);
+  const guestCount = Math.max(1, parseInt(params.guests || params.adults || 2, 10) || 2);
 
   // TimeSpan uses MM-DD format for Sabre LLS
   const startMD = params.checkIn ? params.checkIn.slice(5) : '';
   const endMD = params.checkOut ? params.checkOut.slice(5) : '';
+  const cityName = escapeXml(params.cityName || params.cityCode || '');
 
   const envelope = `<?xml version="1.0" encoding="UTF-8"?>
 <SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/"
@@ -1089,13 +1090,14 @@ async function getHotelAvail(params, _retried = false) {
     </wsse:Security>
   </SOAP-ENV:Header>
   <SOAP-ENV:Body>
-    <OTA_HotelAvailRQ Version="2.3.0" xmlns="http://webservices.sabre.com/sabreXML/2011/10"
+    <OTA_HotelAvailRQ Version="2.3.0" ReturnHostCommand="true" xmlns="http://webservices.sabre.com/sabreXML/2011/10"
       xmlns:xs="http://www.w3.org/2001/XMLSchema"
       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
       <AvailRequestSegment>
         <GuestCounts Count="${guestCount}"/>
         <HotelSearchCriteria>
           <Criterion>
+            <Address><CityName>${cityName}</CityName></Address>
             <HotelRef HotelCityCode="${params.cityCode}"/>
           </Criterion>
         </HotelSearchCriteria>
@@ -1118,7 +1120,7 @@ async function getHotelAvail(params, _retried = false) {
     console.log(`[Sabre SOAP] Hotel search response length: ${xml.length}`);
 
     // Check for SOAP fault
-    const faultMatch = xml.match(/faultstring>([^<]+)/);
+    const faultMatch = xml.match(/faultstring>([^<]+)/i);
     if (faultMatch) {
       if (!_retried && isSoapSessionError(faultMatch[1])) {
         await resetSoapSessionCacheWithClose(config);
@@ -1128,8 +1130,20 @@ async function getHotelAvail(params, _retried = false) {
       return [];
     }
 
+    const diagnostics = extractSoapDiagnostics(xml);
+    if (diagnostics.status && diagnostics.status !== 'Complete') {
+      console.warn(`[Sabre SOAP] Hotel search status=${diagnostics.status}`);
+    }
+    if (diagnostics.messages.length > 0) {
+      console.warn(`[Sabre SOAP] Hotel search messages: ${diagnostics.messages.join(' | ')}`);
+    }
+
     // Parse hotel results from XML
-    return parseHotelAvailResponse(xml, params);
+    const hotels = parseHotelAvailResponse(xml, params);
+    if (hotels.length === 0 && diagnostics.xmlHint) {
+      console.warn(`[Sabre SOAP] Hotel search empty result hint: ${diagnostics.xmlHint}`);
+    }
+    return hotels;
   } catch (err) {
     if (!_retried && isSoapSessionError(err.message)) {
       await resetSoapSessionCacheWithClose(config);
@@ -1140,59 +1154,104 @@ async function getHotelAvail(params, _retried = false) {
   }
 }
 
+function escapeXml(value = '') {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
+
+function extractSoapDiagnostics(xml) {
+  const status = xml.match(/ApplicationResults[^>]*status="([^"]+)"/i)?.[1] || null;
+  const messageMatches = [
+    ...xml.matchAll(/<(?:\w+:)?Message(?:\s[^>]*)?>([\s\S]*?)<\/(?:\w+:)?Message>/gi),
+    ...xml.matchAll(/ShortText="([^"]+)"/gi),
+    ...xml.matchAll(/ErrorCode="([^"]+)"/gi),
+  ];
+  const messages = [...new Set(messageMatches
+    .map(m => (m?.[1] || '').replace(/\s+/g, ' ').trim())
+    .filter(Boolean))]
+    .slice(0, 6);
+
+  const xmlHint = xml
+    .replace(/\s+/g, ' ')
+    .match(/<(?:\w+:)?ApplicationResults[\s\S]*?<\/(?:\w+:)?ApplicationResults>/i)?.[0]
+    ?.slice(0, 500) || '';
+
+  return { status, messages, xmlHint };
+}
+
+function firstMatchFloat(text, patterns) {
+  for (const pattern of patterns) {
+    const raw = text.match(pattern)?.[1];
+    if (!raw) continue;
+    const value = Number.parseFloat(raw);
+    if (Number.isFinite(value) && value > 0) return value;
+  }
+  return 0;
+}
+
 /**
  * Parse OTA_HotelAvailRS XML into normalized hotel objects
  */
 function parseHotelAvailResponse(xml, params) {
   const hotels = [];
   try {
-    // Extract all BasicPropertyInfo blocks
-    const propRegex = /<BasicPropertyInfo[^>]*>([\s\S]*?)<\/BasicPropertyInfo>/g;
-    const attrRegex = /<BasicPropertyInfo([^>]*)>/g;
-    
-    // Get all BasicPropertyInfo elements (including self-closing and with children)
-    const allProps = xml.match(/<BasicPropertyInfo[\s\S]*?(?:\/>|<\/BasicPropertyInfo>)/g) || [];
+    const availBlocks = [...xml.matchAll(/<(?:\w+:)?HotelAvailInfo\b[\s\S]*?<\/(?:\w+:)?HotelAvailInfo>/gi)].map(m => m[0]);
+    const fallbackBlocks = [...xml.matchAll(/<(?:\w+:)?BasicPropertyInfo\b[\s\S]*?(?:\/>|<\/(?:\w+:)?BasicPropertyInfo>)/gi)].map(m => m[0]);
+    const blocks = availBlocks.length > 0 ? availBlocks : fallbackBlocks;
 
-    for (const propXml of allProps) {
-      // Extract attributes
-      const hotelCode = propXml.match(/HotelCode="([^"]+)"/)?.[1];
-      const hotelName = propXml.match(/HotelName="([^"]+)"/)?.[1];
-      const cityCode = propXml.match(/HotelCityCode="([^"]+)"/)?.[1];
-      const latitude = propXml.match(/Latitude="([^"]+)"/)?.[1];
-      const longitude = propXml.match(/Longitude="([^"]+)"/)?.[1];
-      const distance = propXml.match(/Distance="([^"]+)"/)?.[1];
+    const nights = params.checkIn && params.checkOut
+      ? Math.max(1, Math.ceil((new Date(params.checkOut) - new Date(params.checkIn)) / 86400000))
+      : 1;
 
+    for (const block of blocks) {
+      const propertyXml = block.match(/<(?:\w+:)?BasicPropertyInfo\b[\s\S]*?(?:\/>|<\/(?:\w+:)?BasicPropertyInfo>)/i)?.[0] || block;
+      const attr = (src, name) => src.match(new RegExp(`\\b${name}="([^"]+)"`, 'i'))?.[1] || '';
+      const tagText = (src, tag) => src.match(new RegExp(`<(?:\\w+:)?${tag}>([^<]+)<\\/(?:\\w+:)?${tag}>`, 'i'))?.[1]?.trim() || '';
+
+      const hotelCode = attr(propertyXml, 'HotelCode');
+      const hotelName = attr(propertyXml, 'HotelName');
       if (!hotelCode || !hotelName) continue;
 
-      // Extract address
-      const addressLine = propXml.match(/<AddressLine>([^<]+)/)?.[1] || '';
-      const cityName = propXml.match(/<CityName>([^<]+)/)?.[1] || '';
-      const countryCode = propXml.match(/<CountryCode>([^<]+)/)?.[1] || '';
-      const postalCode = propXml.match(/<PostalCode>([^<]+)/)?.[1] || '';
+      const cityCode = attr(propertyXml, 'HotelCityCode') || params.cityCode || '';
+      const latitude = attr(propertyXml, 'Latitude');
+      const longitude = attr(propertyXml, 'Longitude');
+      const distance = attr(propertyXml, 'Distance');
+      const chainCode = attr(propertyXml, 'ChainCode');
+      const brandCode = attr(propertyXml, 'BrandCode');
 
-      // Extract rating/award
-      const sabreRating = propXml.match(/Rating="([^"]+)"/)?.[1];
-      const ratingProvider = propXml.match(/Provider="([^"]+)"/)?.[1];
-      const starRating = sabreRating ? parseInt(sabreRating) : 0;
+      const addressLine = tagText(block, 'AddressLine');
+      const cityName = tagText(block, 'CityName');
+      const countryCode = tagText(block, 'CountryCode');
 
-      // Extract rate range
-      const minRate = propXml.match(/Min="([^"]+)"/)?.[1];
-      const maxRate = propXml.match(/Max="([^"]+)"/)?.[1];
-      const currencyCode = propXml.match(/CurrencyCode="([^"]+)"/)?.[1] || 'USD';
+      const sabreRatingRaw = attr(propertyXml, 'Rating');
+      const starRating = Number.isFinite(Number.parseFloat(sabreRatingRaw))
+        ? Number.parseFloat(sabreRatingRaw)
+        : 0;
 
-      // Extract property type info
-      const chainCode = propXml.match(/ChainCode="([^"]+)"/)?.[1] || '';
-      const brandCode = propXml.match(/BrandCode="([^"]+)"/)?.[1] || '';
+      const minRate = firstMatchFloat(block, [
+        /<(?:\w+:)?RateRange[^>]*\bMin="([^"]+)"/i,
+        /<(?:\w+:)?RateRange[^>]*\bMinRate="([^"]+)"/i,
+        /\bMin="([^"]+)"/i,
+        /\bMinRate="([^"]+)"/i,
+        /\bAmountBeforeTax="([^"]+)"/i,
+        /\bAmount="([^"]+)"/i,
+      ]);
+      const maxRate = firstMatchFloat(block, [
+        /<(?:\w+:)?RateRange[^>]*\bMax="([^"]+)"/i,
+        /<(?:\w+:)?RateRange[^>]*\bMaxRate="([^"]+)"/i,
+        /\bMax="([^"]+)"/i,
+        /\bMaxRate="([^"]+)"/i,
+      ]);
+      const price = minRate > 0 ? minRate : maxRate;
+      const currencyCode =
+        block.match(/<(?:\w+:)?RateRange[^>]*\bCurrencyCode="([^"]+)"/i)?.[1]
+        || attr(propertyXml, 'CurrencyCode')
+        || 'USD';
 
-      const price = minRate ? parseFloat(minRate) : 0;
-      if (price <= 0) continue; // Skip hotels with no price
-
-      // Calculate nights
-      const nights = params.checkIn && params.checkOut
-        ? Math.max(1, Math.ceil((new Date(params.checkOut) - new Date(params.checkIn)) / 86400000))
-        : 1;
-
-      // Tags
       const tags = [];
       if (starRating >= 5) tags.push('Luxury');
       else if (starRating >= 4) tags.push('Top Rated');
@@ -1202,21 +1261,21 @@ function parseHotelAvailResponse(xml, params) {
         sabreHotelCode: hotelCode,
         source: 'sabre',
         name: hotelName,
-        city: cityName || params.cityCode || '',
+        city: cityName || cityCode,
         country: countryCode,
         address: addressLine,
-        latitude: latitude ? parseFloat(latitude) : null,
-        longitude: longitude ? parseFloat(longitude) : null,
+        latitude: latitude ? Number.parseFloat(latitude) : null,
+        longitude: longitude ? Number.parseFloat(longitude) : null,
         starRating,
         stars: starRating,
-        userRating: starRating > 0 ? starRating * 0.9 : null,
-        rating: starRating > 0 ? starRating * 0.9 : null,
+        userRating: starRating > 0 ? Number((starRating * 0.9).toFixed(1)) : null,
+        rating: starRating > 0 ? Number((starRating * 0.9).toFixed(1)) : null,
         reviewCount: 0,
         reviews: 0,
-        pricePerNight: Math.round(price),
-        price: Math.round(price),
-        totalPrice: Math.round(price * nights),
-        originalPrice: maxRate ? Math.round(parseFloat(maxRate)) : null,
+        pricePerNight: price > 0 ? Math.round(price) : 0,
+        price: price > 0 ? Math.round(price) : 0,
+        totalPrice: price > 0 ? Math.round(price * nights) : 0,
+        originalPrice: maxRate > 0 ? Math.round(maxRate) : null,
         currency: currencyCode,
         img: null,
         images: [],
@@ -1224,7 +1283,7 @@ function parseHotelAvailResponse(xml, params) {
         description: '',
         tags,
         tag: tags[0] || null,
-        location: `${cityName || params.cityCode}, ${countryCode}`.replace(/, $/, ''),
+        location: `${cityName || cityCode}, ${countryCode}`.replace(/, $/, ''),
         cancelPolicy: null,
         isFreeCancellation: false,
         rateKey: null,
@@ -1233,7 +1292,7 @@ function parseHotelAvailResponse(xml, params) {
         checkOut: params.checkOut,
         chainCode,
         brandCode,
-        distance: distance ? parseFloat(distance) : null,
+        distance: distance ? Number.parseFloat(distance) : null,
       });
     }
 
