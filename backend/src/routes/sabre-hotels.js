@@ -345,7 +345,7 @@ async function searchHotels({ city, checkIn, checkOut, adults = 2, children = 0,
 
   try {
     console.log(`[Sabre Hotels] Searching: city=${cityCode}(type=${refPointType}), ${checkIn} → ${checkOut}, ${adults}A+${children}C, ${rooms} rooms`);
-    const response = await sabreRequest(config, '/v2.0.0/shop/hotels', requestBody, 'POST', 60000);
+    const response = await sabreRequest(config, '/v2/get/hotelavail', requestBody, 'POST', 60000);
     
     const hotels = normalizeSearchResponse(response, city, checkIn, checkOut);
     console.log(`[Sabre Hotels] Found ${hotels.length} hotels for ${city}`);
