@@ -1,6 +1,6 @@
 import { motion, useScroll, useTransform, useSpring } from "framer-motion";
 import React from "react";
-import { useEffect, useState, useRef, useCallback, memo } from "react";
+import { useEffect, useState, useRef, useCallback, memo, useMemo } from "react";
 import {
   ArrowRight, Star, MapPin, Shield, Headphones, BadgePercent,
   Smartphone, Plane, Award, TrendingUp,
@@ -8,8 +8,10 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import SearchWidget from "@/components/search/SearchWidget";
 import { useHomepageContent } from "@/lib/homepage-store";
+import { api } from "@/lib/api";
 
 // --- Animated counter hook ---
 function useCounter(end: number, duration = 2000) {
@@ -147,7 +149,24 @@ const Index = () => {
   const visibleAirlines = cms.airlines.filter(a => a.visible);
   const visibleHotels = cms.hotels.filter(h => h.visible);
   const visiblePackages = cms.packages.filter(p => p.visible);
-  const visibleRoutes = cms.routes.filter(r => r.visible);
+  // Fetch live route prices from real GDS API
+  const { data: liveRoutes } = useQuery<{ success: boolean; routes: { fromCode: string; toCode: string; price: string | null; from: string; to: string }[] }>({
+    queryKey: ['flights', 'route-prices'],
+    queryFn: () => api.get('/flights/route-prices'),
+    staleTime: 30 * 60 * 1000, // 30 min on client
+    gcTime: 60 * 60 * 1000,
+  });
+
+  // Merge live prices into CMS routes
+  const visibleRoutes = useMemo(() => {
+    const cmsRoutes = cms.routes.filter(r => r.visible);
+    if (!liveRoutes?.routes) return cmsRoutes;
+    return cmsRoutes.map(route => {
+      const live = liveRoutes.routes.find(lr => lr.fromCode === route.fromCode && lr.toCode === route.toCode);
+      if (live?.price) return { ...route, price: live.price };
+      return route;
+    });
+  }, [cms.routes, liveRoutes]);
   const visibleTestimonials = cms.testimonials.filter(t => t.visible);
   const visibleStats = cms.stats.filter(s => s.visible);
   const visibleFeatures = cms.features.filter(f => f.visible);
