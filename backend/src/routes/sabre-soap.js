@@ -1467,7 +1467,7 @@ async function getHotelPropertyDescription(params, _retried = false) {
       <eb:Action>${actionVariant.action}</eb:Action>
       <eb:MessageData>
         <eb:MessageId>${Date.now()}.${Math.random().toString(36).slice(2, 10)}</eb:MessageId>
-        <eb:Timestamp>${new Date().toISOString().replace('Z', '')}</eb:Timestamp>
+        <eb:Timestamp>${new Date().toISOString()}</eb:Timestamp>
       </eb:MessageData>
     </eb:MessageHeader>
     <wsse:Security xmlns:wsse="http://schemas.xmlsoap.org/ws/2002/12/secext">
