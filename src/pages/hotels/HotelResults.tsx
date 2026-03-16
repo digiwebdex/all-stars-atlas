@@ -85,6 +85,13 @@ const HotelResults = () => {
               <h1 className="text-xl sm:text-2xl font-bold">{page?.pageTitle || "Hotel Reservation"} – {destination || "your destination"}</h1>
               <p className="text-sm text-muted-foreground mt-0.5">
                 {checkIn && checkOut ? `${checkIn} → ${checkOut}` : ""} • {hotels.length} properties
+                {(apiData.sources?.sabre > 0 || apiData.sources?.hotelbeds > 0) && (
+                  <span className="ml-2 text-xs">
+                    {apiData.sources?.sabre > 0 && <Badge variant="outline" className="ml-1 text-[10px] py-0 border-primary/30 text-primary">Sabre: {apiData.sources.sabre}</Badge>}
+                    {apiData.sources?.hotelbeds > 0 && <Badge variant="outline" className="ml-1 text-[10px] py-0 border-secondary/50 text-secondary-foreground">HotelBeds: {apiData.sources.hotelbeds}</Badge>}
+                    {apiData.sources?.db > 0 && <Badge variant="outline" className="ml-1 text-[10px] py-0">Local: {apiData.sources.db}</Badge>}
+                  </span>
+                )}
               </p>
             </div>
             <Button variant="outline" size="sm" asChild><Link to="/">Modify Search</Link></Button>
