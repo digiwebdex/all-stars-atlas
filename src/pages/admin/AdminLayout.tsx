@@ -17,18 +17,22 @@ type SidebarItem = {
   label: string;
   href: string;
   icon: React.ElementType;
+  iconColor: string;
+  iconBg: string;
   badge?: string;
   children?: { label: string; href: string }[];
 };
 
 const sidebarItems: SidebarItem[] = [
-  { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
-  { label: "Bookings", href: "/admin/bookings", icon: Ticket },
-  { label: "Users", href: "/admin/users", icon: Users },
+  { label: "Dashboard", href: "/admin", icon: LayoutDashboard, iconColor: "text-blue-400", iconBg: "bg-blue-500/15" },
+  { label: "Bookings", href: "/admin/bookings", icon: Ticket, iconColor: "text-violet-400", iconBg: "bg-violet-500/15" },
+  { label: "Users", href: "/admin/users", icon: Users, iconColor: "text-cyan-400", iconBg: "bg-cyan-500/15" },
   {
     label: "Finance",
     href: "/admin/payments",
     icon: CreditCard,
+    iconColor: "text-emerald-400",
+    iconBg: "bg-emerald-500/15",
     children: [
       { label: "Payments", href: "/admin/payments" },
       { label: "Payment Approvals", href: "/admin/payment-approvals" },
@@ -41,6 +45,8 @@ const sidebarItems: SidebarItem[] = [
     label: "CMS",
     href: "/admin/cms/pages",
     icon: PenLine,
+    iconColor: "text-amber-400",
+    iconBg: "bg-amber-500/15",
     children: [
       { label: "All Pages", href: "/admin/cms/pages" },
       { label: "Booking Forms", href: "/admin/cms/booking-forms" },
@@ -58,6 +64,8 @@ const sidebarItems: SidebarItem[] = [
     label: "Services",
     href: "/admin/visa",
     icon: Globe,
+    iconColor: "text-rose-400",
+    iconBg: "bg-rose-500/15",
     children: [
       { label: "Visa", href: "/admin/visa" },
       { label: "Markup & Revenue", href: "/admin/markup" },
@@ -116,7 +124,9 @@ const SidebarNav = ({
                       childActive ? "admin-sidebar-item-active" : "admin-sidebar-item-inactive"
                     )}
                   >
-                    <item.icon className="w-[18px] h-[18px] flex-shrink-0" />
+                    <div className={cn("w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0", item.iconBg)}>
+                      <item.icon className={cn("w-3.5 h-3.5", item.iconColor)} />
+                    </div>
                   </Link>
                 </TooltipTrigger>
                 <TooltipContent side="right">{item.label}</TooltipContent>
@@ -132,7 +142,9 @@ const SidebarNav = ({
                   childActive && "admin-sidebar-item-parent-active"
                 )}
               >
-                <item.icon className="w-[18px] h-[18px] flex-shrink-0" />
+                <div className={cn("w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0", item.iconBg)}>
+                  <item.icon className={cn("w-3.5 h-3.5", item.iconColor)} />
+                </div>
                 <span className="flex-1 text-left">{item.label}</span>
                 <ChevronDown
                   className={cn(
@@ -191,7 +203,9 @@ const SidebarNav = ({
                     active ? "admin-sidebar-item-active" : "admin-sidebar-item-inactive"
                   )}
                 >
-                  <item.icon className="w-[18px] h-[18px] flex-shrink-0" />
+                    <div className={cn("w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0", item.iconBg)}>
+                      <item.icon className={cn("w-3.5 h-3.5", item.iconColor)} />
+                    </div>
                 </Link>
               </TooltipTrigger>
               <TooltipContent side="right">{item.label}</TooltipContent>
@@ -209,7 +223,9 @@ const SidebarNav = ({
               active ? "admin-sidebar-item-active" : "admin-sidebar-item-inactive"
             )}
           >
-            <item.icon className="w-[18px] h-[18px] flex-shrink-0" />
+            <div className={cn("w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0", item.iconBg)}>
+              <item.icon className={cn("w-3.5 h-3.5", item.iconColor)} />
+            </div>
             <span>{item.label}</span>
           </Link>
         );
