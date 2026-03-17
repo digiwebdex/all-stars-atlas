@@ -32,12 +32,10 @@ export function useSearchTabConfig(): SearchTabConfig {
     queryKey: ['settings', 'search-tabs'],
     queryFn: async () => {
       try {
-        const settings = await api.get<any>('/admin/settings');
-        if (settings?.searchTabs) {
-          const merged = { ...DEFAULT_CONFIG, ...settings.searchTabs };
-          try { localStorage.setItem(STORAGE_KEY, JSON.stringify(merged)); } catch {}
-          return merged;
-        }
+        const result = await api.get<SearchTabConfig>('/config/search-tabs');
+        const merged = { ...DEFAULT_CONFIG, ...result };
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(merged)); } catch {}
+        return merged;
       } catch {}
       return getFromCache();
     },

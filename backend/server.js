@@ -45,6 +45,18 @@ app.use('/uploads', express.static(path.join(__dirname, process.env.UPLOAD_DIR |
 // Health check
 app.get('/api/health', (req, res) => res.json({ status: 'ok', timestamp: new Date().toISOString() }));
 
+// Public: search tab config (no auth required)
+app.get('/api/config/search-tabs', async (req, res) => {
+  try {
+    const db = require('./src/config/db');
+    const [rows] = await db.query("SELECT setting_value FROM system_settings WHERE setting_key = 'search_tabs' LIMIT 1");
+    if (rows.length > 0 && rows[0].setting_value) {
+      return res.json(JSON.parse(rows[0].setting_value));
+    }
+    res.json({ flight: true, hotel: true, holiday: true, visa: true, medical: true, cars: true, esim: true, recharge: true, paybill: true });
+  } catch { res.json({ flight: true, hotel: true, holiday: true, visa: true, medical: true, cars: true, esim: true, recharge: true, paybill: true }); }
+});
+
 // ====== ROUTES ======
 
 // Auth
