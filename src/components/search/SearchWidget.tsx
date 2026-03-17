@@ -1036,8 +1036,8 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
 
     // ====== VISA ======
     visa: (
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-12 gap-0 border border-border rounded-2xl bg-background shadow-sm">
-        <div className="sm:col-span-2 md:col-span-3 search-field border-b md:border-b-0 flex-col items-start">
+      <div className={`grid grid-cols-1 sm:grid-cols-2 ${bp}:grid-cols-12 gap-0 border border-border rounded-2xl bg-background shadow-sm`}>
+        <div className={`sm:col-span-2 ${bp}:col-span-3 search-field border-b ${bp}:border-b-0 flex-col items-start`}>
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Country</div>
           <div className="flex items-center gap-2 w-full">
             <span className="text-xl font-black text-primary">{VISA_COUNTRIES.find(c => c.code === visaCountry)?.flag || "🌍"}</span>
@@ -1063,7 +1063,7 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
             </div>
           </div>
         </div>
-        <div className={`search-field border-b md:border-b-0 flex-col items-start md:col-span-2 ${dateErrorClass("visaDate")}`}>
+        <div className={`search-field border-b ${bp}:border-b-0 flex-col items-start ${bp}:col-span-2 ${dateErrorClass("visaDate")}`}>
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Travel Date</div>
           <Popover open={openDatePopover === "visaDate"} onOpenChange={(o) => setOpenDatePopover(o ? "visaDate" : null)}>
             <PopoverTrigger className="w-full text-left">
@@ -1074,7 +1074,7 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
             </PopoverContent>
           </Popover>
         </div>
-        <div className={`search-field border-b md:border-b-0 flex-col items-start md:col-span-2 ${dateErrorClass("visaReturnDate")}`}>
+        <div className={`search-field border-b ${bp}:border-b-0 flex-col items-start ${bp}:col-span-2 ${dateErrorClass("visaReturnDate")}`}>
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Return Date</div>
           <Popover open={openDatePopover === "visaReturnDate"} onOpenChange={(o) => setOpenDatePopover(o ? "visaReturnDate" : null)}>
             <PopoverTrigger className="w-full text-left">
@@ -1085,7 +1085,7 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
             </PopoverContent>
           </Popover>
         </div>
-        <div className="sm:col-span-2 md:col-span-2 search-field border-b md:border-b-0 flex-col items-start">
+        <div className={`sm:col-span-2 ${bp}:col-span-2 search-field border-b ${bp}:border-b-0 flex-col items-start`}>
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Travellers</div>
           <Popover>
             <PopoverTrigger className="w-full text-left">
@@ -1111,8 +1111,8 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
             </PopoverContent>
           </Popover>
         </div>
-        <div className="sm:col-span-2 md:col-span-3 flex items-center justify-center p-3">
-          <Button onClick={handleVisaSearch} className="w-full h-12 md:h-full md:min-h-[56px] rounded-xl bg-secondary text-secondary-foreground hover:bg-secondary/90 text-base font-extrabold shadow-xl shadow-secondary/25 transition-all active:scale-[0.98]">
+        <div className={`sm:col-span-2 ${bp}:col-span-3 flex items-center justify-center p-3`}>
+          <Button onClick={handleVisaSearch} className={`w-full h-12 ${bp === 'md' ? 'md:h-full md:min-h-[56px]' : 'lg:h-full lg:min-h-[56px]'} rounded-xl bg-secondary text-secondary-foreground hover:bg-secondary/90 text-base font-extrabold shadow-xl shadow-secondary/25 transition-all active:scale-[0.98]`}>
             <Search className="w-5 h-5 mr-2" /> Search
           </Button>
         </div>
