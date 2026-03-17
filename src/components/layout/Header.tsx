@@ -171,8 +171,8 @@ const Header = () => {
                       </Button>
                     ) : (
                       <>
-                        <Button className="w-full h-11 font-bold" asChild>
-                          <Link to="/auth/login" onClick={() => setMobileOpen(false)}>Login</Link>
+                        <Button className="w-full h-11 font-bold" onClick={() => { setMobileOpen(false); setLoginOpen(true); }}>
+                          Login
                         </Button>
                         <Button variant="outline" className="w-full h-11" asChild>
                           <Link to="/auth/register" onClick={() => setMobileOpen(false)}>Create Account</Link>
