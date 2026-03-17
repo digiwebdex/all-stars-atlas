@@ -162,7 +162,7 @@ const SidebarNav = ({
                     transition={{ duration: 0.2 }}
                     className="overflow-hidden"
                   >
-                    <div className="ml-6 border-l-2 border-white/10 pl-3 py-1 flex flex-col gap-0.5">
+                    <div className="ml-6 border-l-2 border-border pl-3 py-1 flex flex-col gap-0.5">
                       {item.children?.map((child) => {
                         const cActive = isActive(child.href);
                         return (
