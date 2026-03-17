@@ -553,6 +553,113 @@ const DashboardBookingDetail = () => {
             </DialogContent>
           </Dialog>
 
+          {/* ━━ Timeline Dialog ━━ */}
+          <Dialog open={timelineOpen} onOpenChange={setTimelineOpen}>
+            <DialogContent className="sm:max-w-lg max-h-[80vh] overflow-y-auto">
+              <DialogHeader><DialogTitle className="flex items-center gap-2"><Clock className="w-5 h-5 text-primary" /> Booking Timeline</DialogTitle></DialogHeader>
+              {timelineLoading ? (
+                <div className="py-8 text-center text-muted-foreground text-sm">Loading timeline...</div>
+              ) : (() => {
+                const tb = timelineData ? ((timelineData as any)?.data || (timelineData as any)?.bookings || [])[0] : null;
+                const events: { date: string; type: string; title: string; desc: string }[] = [];
+                if (tb || booking) {
+                  const b = tb || rawBookings[0];
+                  const ref = b?.booking_ref || b?.bookingRef || booking?.id;
+                  events.push({ date: b?.created_at || b?.bookedAt || booking?.bookedAt || "", type: "created", title: "Booking Created", desc: `${ref} created` });
+                  if (["confirmed", "ticketed"].includes(b?.status || booking?.status)) {
+                    events.push({ date: b?.updated_at || b?.bookedAt || "", type: "confirmed", title: "Booking Confirmed", desc: `${ref} · Payment received` });
+                  }
+                  if ((b?.status || booking?.status) === "ticketed") {
+                    events.push({ date: b?.updated_at || "", type: "ticketed", title: "Ticket Issued", desc: `${ref} · PNR: ${b?.pnr || booking?.pnr || "—"}` });
+                  }
+                  if ((b?.status || booking?.status) === "cancelled") {
+                    events.push({ date: b?.updated_at || "", type: "cancelled", title: "Booking Cancelled", desc: ref });
+                  }
+                  if ((b?.status || booking?.status) === "on_hold") {
+                    events.push({ date: b?.created_at || b?.bookedAt || "", type: "on_hold", title: "On Hold", desc: `${ref} · Awaiting payment` });
+                  }
+                }
+                events.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+                const eventIconMap: Record<string, any> = { created: Clock, confirmed: CheckCircle, ticketed: FileText, cancelled: XCircle, on_hold: AlertTriangle };
+                const eventColorMap: Record<string, string> = {
+                  created: "bg-blue-100 text-blue-600 dark:bg-blue-500/20",
+                  confirmed: "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20",
+                  ticketed: "bg-green-100 text-green-600 dark:bg-green-500/20",
+                  cancelled: "bg-red-100 text-red-600 dark:bg-red-500/20",
+                  on_hold: "bg-amber-100 text-amber-600 dark:bg-amber-500/20",
+                };
+
+                return events.length === 0 ? (
+                  <p className="text-center text-muted-foreground py-8 text-sm">No timeline events</p>
+                ) : (
+                  <div className="relative">
+                    <div className="absolute left-5 top-0 bottom-0 w-px bg-border" />
+                    <div className="space-y-5">
+                      {events.map((ev, i) => {
+                        const Ic = eventIconMap[ev.type] || Clock;
+                        return (
+                          <div key={i} className="relative flex items-start gap-4 pl-2">
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 z-10 ${eventColorMap[ev.type] || eventColorMap.created}`}>
+                              <Ic className="w-4 h-4" />
+                            </div>
+                            <div className="flex-1 pt-0.5">
+                              <p className="text-sm font-semibold">{ev.title}</p>
+                              <p className="text-xs text-muted-foreground">{ev.desc}</p>
+                              <p className="text-[11px] text-muted-foreground/70 mt-1">{ev.date ? fmtDateTime(ev.date) : "—"}</p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })()}
+            </DialogContent>
+          </Dialog>
+
+          {/* ━━ SSR Dialog ━━ */}
+          <Dialog open={ssrOpen} onOpenChange={setSsrOpen}>
+            <DialogContent className="sm:max-w-2xl max-h-[80vh] overflow-y-auto">
+              <DialogHeader><DialogTitle className="flex items-center gap-2"><Eye className="w-5 h-5 text-primary" /> SSR History</DialogTitle></DialogHeader>
+              {ssrLoading ? (
+                <div className="py-8 text-center text-muted-foreground text-sm">Loading SSR data...</div>
+              ) : ssrList.length === 0 ? (
+                <p className="text-center text-muted-foreground py-8 text-sm">No SSR requests found for this booking</p>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Passenger</TableHead>
+                      <TableHead>Details</TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {ssrList.map((ssr: any, i: number) => {
+                      const ssrIcons: Record<string, any> = { meal: Utensils, seat: Armchair, baggage: Luggage, wheelchair: Accessibility, infant: Baby };
+                      const Ic = ssrIcons[ssr.ssrType?.toLowerCase()] || Utensils;
+                      const statusCol: Record<string, string> = {
+                        confirmed: "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10",
+                        pending: "bg-amber-50 text-amber-700 dark:bg-amber-500/10",
+                        rejected: "bg-rose-50 text-rose-700 dark:bg-rose-500/10",
+                      };
+                      return (
+                        <TableRow key={ssr.id || i}>
+                          <TableCell><div className="flex items-center gap-2"><Ic className="w-4 h-4 text-muted-foreground" /><span className="capitalize text-sm">{ssr.ssrType || "N/A"}</span></div></TableCell>
+                          <TableCell className="text-sm">{ssr.passengerName || "—"}</TableCell>
+                          <TableCell className="text-xs text-muted-foreground max-w-[200px] truncate">{ssr.details || ssr.description || "—"}</TableCell>
+                          <TableCell><Badge variant="outline" className={statusCol[ssr.status] || ""}>{ssr.status || "unknown"}</Badge></TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              )}
+            </DialogContent>
+          </Dialog>
+
           {docVerifyOpen && booking && (
             <TravelDocVerificationModal open={docVerifyOpen} onOpenChange={o => { if (!o) setDocVerifyOpen(false); }}
               onVerified={() => { toast({ title: "Verified ✓" }); setDocVerifyOpen(false); navigate("/dashboard/payments"); }}
