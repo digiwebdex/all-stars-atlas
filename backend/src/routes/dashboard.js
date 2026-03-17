@@ -785,4 +785,130 @@ router.get('/bookings/:id/ancillaries', async (req, res) => {
   }
 });
 
+// ── Wallet ──────────────────────────────────────────────
+router.get('/wallet', async (req, res) => {
+  try {
+    const userId = req.user.sub || req.user.id;
+    // Try to get wallet balance from transactions summary
+    const [credits] = await db.query(
+      `SELECT COALESCE(SUM(amount), 0) as total FROM transactions WHERE user_id = ? AND type = 'credit'`,
+      [userId]
+    );
+    const [debits] = await db.query(
+      `SELECT COALESCE(SUM(ABS(amount)), 0) as total FROM transactions WHERE user_id = ? AND type = 'debit'`,
+      [userId]
+    );
+    const totalCredited = Number(credits[0]?.total || 0);
+    const totalDebited = Number(debits[0]?.total || 0);
+    const balance = totalCredited - totalDebited;
+
+    // Recent wallet transactions
+    const [txns] = await db.query(
+      `SELECT id, type, amount, description, created_at as date, 
+       (SELECT COALESCE(SUM(CASE WHEN t2.type='credit' THEN t2.amount ELSE -ABS(t2.amount) END), 0) 
+        FROM transactions t2 WHERE t2.user_id = ? AND t2.created_at <= transactions.created_at) as balance
+       FROM transactions WHERE user_id = ? ORDER BY created_at DESC LIMIT 50`,
+      [userId, userId]
+    );
+
+    res.json({ balance, totalCredited, totalDebited, transactions: txns });
+  } catch (err) {
+    console.error('Wallet error:', err);
+    res.json({ balance: 0, totalCredited: 0, totalDebited: 0, transactions: [] });
+  }
+});
+
+// ── SSR History ─────────────────────────────────────────
+router.get('/ssr-history', async (req, res) => {
+  try {
+    const userId = req.user.sub || req.user.id;
+    const { search } = req.query;
+    // SSR data is stored within booking details JSON
+    const [bookings] = await db.query(
+      `SELECT id, booking_ref, details, passenger_info, created_at FROM bookings WHERE user_id = ? AND booking_type = 'flight' ORDER BY created_at DESC LIMIT 100`,
+      [userId]
+    );
+
+    const ssrHistory = [];
+    for (const b of bookings) {
+      const details = safeJsonParse(b.details, {});
+      const passengers = safeJsonParse(b.passenger_info, []);
+      const ssrRequests = details.ssrRequests || details.specialServices || [];
+      
+      for (const ssr of ssrRequests) {
+        const paxIndex = ssr.passengerIndex || 0;
+        const pax = passengers[paxIndex] || {};
+        const entry = {
+          id: `${b.id}-${ssr.type || 'ssr'}-${paxIndex}`,
+          bookingRef: b.booking_ref,
+          ssrType: ssr.type || ssr.ssrType || 'general',
+          passengerName: pax.firstName ? `${pax.firstName} ${pax.lastName || ''}`.trim() : ssr.passengerName || 'N/A',
+          details: ssr.details || ssr.description || ssr.code || '',
+          status: ssr.status || 'confirmed',
+          gdsResponse: ssr.gdsResponse || null,
+          createdAt: b.created_at,
+        };
+        if (!search || entry.bookingRef?.toLowerCase().includes(String(search).toLowerCase()) || entry.passengerName?.toLowerCase().includes(String(search).toLowerCase())) {
+          ssrHistory.push(entry);
+        }
+      }
+    }
+
+    res.json({ data: ssrHistory, total: ssrHistory.length });
+  } catch (err) {
+    console.error('SSR history error:', err);
+    res.json({ data: [], total: 0 });
+  }
+});
+
+// ── Bank Accounts (for user payment reference) ─────────
+router.get('/bank-accounts', async (req, res) => {
+  try {
+    const [rows] = await db.query(
+      `SELECT setting_value FROM system_settings WHERE setting_key = 'payment_bank_accounts'`
+    );
+    const banks = rows.length > 0 ? safeJsonParse(rows[0].setting_value, []) : [];
+    res.json({ banks });
+  } catch (err) {
+    console.error('Bank accounts error:', err);
+    res.json({ banks: [] });
+  }
+});
+
+// ── MFS Accounts (bKash, Nagad, etc for user payment reference) ──
+router.get('/mfs-accounts', async (req, res) => {
+  try {
+    const [rows] = await db.query(
+      `SELECT setting_value FROM system_settings WHERE setting_key = 'payment_mfs_accounts'`
+    );
+    const accounts = rows.length > 0 ? safeJsonParse(rows[0].setting_value, []) : [];
+    res.json({ accounts });
+  } catch (err) {
+    console.error('MFS accounts error:', err);
+    res.json({ accounts: [] });
+  }
+});
+
+// ── Send Payment Request ────────────────────────────────
+router.post('/payment-requests', async (req, res) => {
+  try {
+    const userId = req.user.sub || req.user.id;
+    const { bookingRef, amount, paymentMethod, notes } = req.body;
+    if (!bookingRef || !amount) {
+      return res.status(400).json({ message: 'Booking reference and amount are required' });
+    }
+
+    const id = require('uuid').v4();
+    await db.query(
+      `INSERT INTO transactions (id, user_id, type, amount, description, status, created_at) VALUES (?, ?, 'payment_request', ?, ?, 'pending', NOW())`,
+      [id, userId, amount, `Payment request for ${bookingRef} via ${paymentMethod || 'unspecified'}. ${notes || ''}`]
+    );
+
+    res.json({ success: true, id, message: 'Payment request submitted' });
+  } catch (err) {
+    console.error('Payment request error:', err);
+    res.status(500).json({ message: 'Failed to submit payment request' });
+  }
+});
+
 module.exports = router;
