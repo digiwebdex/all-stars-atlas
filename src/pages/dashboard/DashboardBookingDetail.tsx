@@ -707,8 +707,8 @@ const DashboardBookingDetail = () => {
                   </TableHeader>
                   <TableBody>
                     {ssrList.map((ssr: any, i: number) => {
-                      const ssrIcons: Record<string, any> = { meal: Utensils, seat: Armchair, baggage: Luggage, wheelchair: Accessibility, infant: Baby };
-                      const Ic = ssrIcons[ssr.ssrType?.toLowerCase()] || Utensils;
+                      const ssrIcons: Record<string, any> = { meal: Utensils, seat: Armchair, baggage: Luggage, wheelchair: Accessibility, infant: Baby, docs: FileText, contact: Users, cabin: Plane, time_limit: Clock, frequent_flyer: CreditCard, service: Package };
+                      const Ic = ssrIcons[ssr.ssrType?.toLowerCase()] || FileText;
                       const statusCol: Record<string, string> = {
                         confirmed: "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10",
                         pending: "bg-amber-50 text-amber-700 dark:bg-amber-500/10",
