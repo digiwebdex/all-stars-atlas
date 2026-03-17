@@ -562,7 +562,7 @@ async function buildInvoiceDoc(inv: InvoiceData): Promise<jsPDF> {
     doc.setDrawColor(220);
     doc.rect(totalsLabelX - 5, y, tableRight - totalsLabelX + 5, totalsRowH, "S");
     doc.text("Tax", totalsValueX - 45, y + 6, { align: "right" });
-    doc.text(`${inv.tax.toLocaleString("en-IN", { minimumFractionDigits: 2 })}৳`, totalsValueX, y + 6, { align: "right" });
+    doc.text(`${inv.tax.toLocaleString("en-IN", { minimumFractionDigits: 2 })} BDT`, totalsValueX, y + 6, { align: "right" });
     y += totalsRowH;
   }
 
