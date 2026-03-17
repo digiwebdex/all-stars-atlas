@@ -2196,9 +2196,11 @@ const MultiCityFlightCard = ({
                         <Users className="w-3 h-3 inline mr-0.5" />{seg.availableSeats} Seat{seg.availableSeats !== 1 ? "s" : ""} Left
                       </span>
                     )}
-                    {(seg.cabinClass || seg.bookingClass || flight.fareDetails?.[0]?.bookingClass) && (
-                      <span className="text-[10px] text-muted-foreground">{seg.cabinClass || ''}{seg.bookingClass || flight.fareDetails?.[0]?.bookingClass ? ` - ${seg.bookingClass || flight.fareDetails?.[0]?.bookingClass}` : ''}</span>
-                    )}
+                    {(seg.cabinClass || seg.bookingClass || flight.fareDetails?.[0]?.bookingClass) && (() => {
+                      const bkCls = (seg.bookingClass || flight.fareDetails?.[0]?.bookingClass || '').charAt(0).toUpperCase();
+                      const cabinFromClass = ({ C: 'Business', J: 'Business', D: 'Business', I: 'Business', Z: 'Business', F: 'First', A: 'First', P: 'First', R: 'First', W: 'Premium Economy', E: 'Premium Economy' } as Record<string, string>)[bkCls] || seg.cabinClass || 'Economy';
+                      return <span className="text-[10px] text-muted-foreground">{cabinFromClass}{bkCls ? ` - ${bkCls} Class` : ''}</span>;
+                    })()}
                   </div>
                 </div>
               );
