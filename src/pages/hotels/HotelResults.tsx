@@ -195,8 +195,8 @@ const HotelResults = () => {
           className="mb-3"
         />
         <div className="flex justify-between text-xs font-semibold">
-          <span className="bg-muted px-2 py-1 rounded-lg">${priceRange[0].toLocaleString()}</span>
-          <span className="bg-muted px-2 py-1 rounded-lg">${priceRange[1].toLocaleString()}</span>
+          <span className="bg-muted px-2 py-1 rounded-lg">৳{priceRange[0].toLocaleString()}</span>
+          <span className="bg-muted px-2 py-1 rounded-lg">৳{priceRange[1].toLocaleString()}</span>
         </div>
       </div>
 
