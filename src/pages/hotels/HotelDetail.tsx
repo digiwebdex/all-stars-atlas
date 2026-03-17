@@ -11,6 +11,7 @@ import {
   ParkingCircle, Bath, Phone, Mail, Globe, CreditCard, Info, AlertCircle,
 } from "lucide-react";
 import { Link, useParams, useNavigate, useSearchParams } from "react-router-dom";
+import { usePrefixedNavigate } from "@/hooks/useRoutePrefix";
 import { useHotelDetails } from "@/hooks/useApiData";
 import { useAuth } from "@/hooks/useAuth";
 import AuthGateModal from "@/components/AuthGateModal";
@@ -42,7 +43,7 @@ const getRatingLabel = (r: number) => {
 
 const HotelDetail = () => {
   const { id } = useParams();
-  const navigate = useNavigate();
+  const navigate = usePrefixedNavigate();
   const [searchParams] = useSearchParams();
   const { isAuthenticated } = useAuth();
   const [authOpen, setAuthOpen] = useState(false);

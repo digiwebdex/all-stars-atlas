@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Smartphone, Check, Shield } from "lucide-react";
 import { useSearchParams, useNavigate } from "react-router-dom";
+import { usePrefixedNavigate } from "@/hooks/useRoutePrefix";
 import { useCmsPageContent } from "@/hooks/useCmsContent";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -19,7 +20,7 @@ const ESIMPurchase = () => {
   const country = searchParams.get("country") || "Thailand";
   const plan = searchParams.get("plan") || "3 GB";
   const [authOpen, setAuthOpen] = useState(false);
-  const navigate = useNavigate();
+  const navigate = usePrefixedNavigate();
   const { isAuthenticated } = useAuth();
   const { toast } = useToast();
   const { data: page, isLoading } = useCmsPageContent("/esim/purchase");

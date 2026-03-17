@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Star, MapPin, Calendar, CheckCircle2, ArrowRight, Clock } from "lucide-react";
 import { Link, useParams, useNavigate } from "react-router-dom";
+import { usePrefixedNavigate } from "@/hooks/useRoutePrefix";
 import { useToast } from "@/hooks/use-toast";
 import { api } from "@/lib/api";
 import { useHolidayDetails } from "@/hooks/useApiData";
@@ -14,7 +15,7 @@ import DataLoader from "@/components/DataLoader";
 
 const HolidayDetail = () => {
   const { id } = useParams();
-  const navigate = useNavigate();
+  const navigate = usePrefixedNavigate();
   const { isAuthenticated } = useAuth();
   const [authOpen, setAuthOpen] = useState(false);
   const [bookingLoading, setBookingLoading] = useState(false);

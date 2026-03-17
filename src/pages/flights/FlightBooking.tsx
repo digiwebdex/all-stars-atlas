@@ -20,6 +20,7 @@ import {
   Armchair, Info,
 } from "lucide-react";
 import { Link, useNavigate, useSearchParams, useLocation } from "react-router-dom";
+import { usePrefixedNavigate } from "@/hooks/useRoutePrefix";
 import { useCmsPageContent } from "@/hooks/useCmsContent";
 import { NATIONALITY_OPTIONS, COUNTRY_OPTIONS } from "@/lib/countries";
 import { useAuth } from "@/hooks/useAuth";
@@ -399,7 +400,7 @@ const FlightBooking = () => {
   const [agreedTerms, setAgreedTerms] = useState(false);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  const navigate = useNavigate();
+  const navigate = usePrefixedNavigate();
   const { isAuthenticated } = useAuth();
   const { data: page, isLoading } = useCmsPageContent("/flights/book");
   const { toast } = useToast();

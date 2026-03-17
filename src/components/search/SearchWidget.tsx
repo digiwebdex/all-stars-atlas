@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
+import { usePrefixedNavigate } from "@/hooks/useRoutePrefix";
 import { TREATMENT_TYPES, RECHARGE_OPERATORS, BILL_CATEGORIES } from "@/lib/constants";
 
 
@@ -252,7 +253,7 @@ interface SearchWidgetProps {
 }
 
 const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidgetProps = {}) => {
-  const navigate = useNavigate();
+  const navigate = usePrefixedNavigate();
   const [activeTab, setActiveTab] = useState("flight");
 
   // Derive initial values from props

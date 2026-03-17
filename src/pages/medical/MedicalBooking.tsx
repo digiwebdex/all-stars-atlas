@@ -9,6 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Stethoscope, ArrowRight, User, Shield } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { usePrefixedNavigate } from "@/hooks/useRoutePrefix";
 import { useCmsPageContent } from "@/hooks/useCmsContent";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -18,7 +19,7 @@ import type { BookingFormField } from "@/lib/cms-defaults";
 const MedicalBooking = () => {
   const [step, setStep] = useState(1);
   const [authOpen, setAuthOpen] = useState(false);
-  const navigate = useNavigate();
+  const navigate = usePrefixedNavigate();
   const [searchParams] = useSearchParams();
   const { isAuthenticated } = useAuth();
   const { toast } = useToast();

@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Link, useSearchParams, useNavigate } from "react-router-dom";
+import { usePrefixedNavigate } from "@/hooks/useRoutePrefix";
 import { AnimatePresence, motion } from "framer-motion";
 import AnimatedFlightArc from "@/components/flights/AnimatedFlightArc";
 import { useFlightSearch } from "@/hooks/useApiData";
@@ -1309,7 +1310,7 @@ const RoundTripFlightCard = ({
 }: {
   outbound: any; returnFlight: any; cheapest: number; isExpanded: boolean; onToggleExpand: () => void;
 }) => {
-  const cardNavigate = useNavigate();
+  const cardNavigate = usePrefixedNavigate();
   const [cardSearchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState("itinerary");
   const [showFareOptions, setShowFareOptions] = useState(false);
@@ -2152,7 +2153,7 @@ const MultiCityFlightCard = ({
 }: {
   flight: any; cheapest: number; isExpanded: boolean; onToggleExpand: () => void;
 }) => {
-  const cardNavigate = useNavigate();
+  const cardNavigate = usePrefixedNavigate();
   const [cardSearchParams] = useSearchParams();
   const segments = flight.segments || [];
   const grossPrice = flight.price ?? 0;
@@ -2371,7 +2372,7 @@ const FlightCard = ({
   flight: any; cheapest: number; isExpanded: boolean; onToggleExpand: () => void;
   selectionMode?: boolean; isSelected?: boolean; onSelect?: () => void;
 }) => {
-  const cardNavigate = useNavigate();
+  const cardNavigate = usePrefixedNavigate();
   const [cardSearchParams] = useSearchParams();
   const searchedCabin = cardSearchParams.get("cabin") || cardSearchParams.get("class") || "";
   const logo = getAirlineLogo(flight.airlineCode);
@@ -3052,7 +3053,7 @@ function groupSimilarFlights(flights: any[]): { primary: any; similar: any[]; to
 const FlightResults = () => {
   const { data: page } = useCmsPageContent("/flights");
   const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
+  const navigate = usePrefixedNavigate();
   const [sortBy, setSortBy] = useState("best");
 
   // Fetch admin markup settings for fare calculation
