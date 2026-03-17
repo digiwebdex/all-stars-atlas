@@ -82,6 +82,19 @@ curl -s "http://localhost:3001/api/flights/sabre-soap-diagnostic?origin=DAC&dest
 
 **Not a code bug.** PCC J4YL lacks REST cancel API privileges. SOAP cancel (`OTA_CancelLLSRQ`) is the confirmed working method.
 
+### 7. Sabre Hotel Search Returns 0 Results (REST + SOAP)
+
+**Root Cause (confirmed 2026-03-17):** PCC J4YL is NOT provisioned for Sabre Hotel APIs:
+- **REST CSL** (`havail.sabre.com`): `"Invalid CustomerAppId"` — no CSL hotel subscription
+- **SOAP LLS** (`OTA_HotelAvailLLSRQ`): `"Action specified in EbxmlMessage does not exist"` — Hotel LLS not enabled
+
+**This is NOT a code bug.** Sabre hotel search is disabled by default via `api_sabre.hotels_enabled` flag.
+
+**To fix:** Contact Sabre account manager to activate Hotel APIs (CSL + LLS) for PCC J4YL. Then:
+```sql
+UPDATE system_settings SET setting_value = JSON_SET(setting_value, '$.hotels_enabled', 'true') WHERE setting_key = 'api_sabre';
+```
+
 ### 4. TTI Cancellation Fails
 
 **Root Cause:** Sending internal TTI booking ID instead of airline PNR
