@@ -34,7 +34,7 @@ const DashboardSSRHistory = () => {
 
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ["dashboard", "ssr-history", search],
-    queryFn: () => api.get<any>("/dashboard/ssr-history", { params: { search: search || undefined } }),
+    queryFn: () => api.get<any>("/dashboard/ssr-history", { search: search || undefined }),
   });
 
   const resolved = (data as any) || {};
