@@ -2646,6 +2646,7 @@ const FlightCard = ({
           {showFareOptions && (
             <FareOptionsPanel
               flights={[flight]}
+              searchedCabin={searchedCabin}
               onBook={(selectedFlight) => cardNavigate(
                 `/flights/book?adults=${cardSearchParams.get("adults") || "1"}&children=${cardSearchParams.get("children") || "0"}&infants=${cardSearchParams.get("infants") || "0"}&cabin=${cardSearchParams.get("cabin") || "economy"}`,
                 { state: { outboundFlight: selectedFlight || flight } },
