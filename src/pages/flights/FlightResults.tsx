@@ -843,9 +843,9 @@ const FareOptionsPanel = ({ flights, onBook, searchedCabin }: { flights: any[]; 
     <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.25 }}
       className="overflow-hidden border-t border-border">
       <div className="p-4 sm:p-5 bg-muted/10">
-        <div className="flex gap-0">
+        <div className="flex gap-0 overflow-x-auto">
           {/* Left: Fare Type Labels */}
-          <div className="w-40 shrink-0">
+          <div className="w-28 sm:w-40 shrink-0">
             <div className="h-12 flex items-center px-3">
               <span className="text-sm font-bold text-foreground">Fare Type</span>
             </div>
