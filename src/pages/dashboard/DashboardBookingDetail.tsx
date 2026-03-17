@@ -6,10 +6,12 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
   Plane, ArrowLeft, Copy, Download, CreditCard, Luggage, Shield,
   Users, Package, XCircle, AlertTriangle, Ban,
   FileText, Wallet, Clock, Eye, ChevronUp, ChevronDown, RefreshCw,
+  CheckCircle, Utensils, Armchair, Accessibility, Baby,
 } from "lucide-react";
 import { generateTicketPDF } from "@/lib/pdf-generator";
 import { AIRPORTS } from "@/lib/airports";
@@ -22,6 +24,7 @@ import BookingActions from "@/components/flights/BookingActions";
 import FlightStatusBadge from "@/components/flights/FlightStatusBadge";
 import FareRulesModal from "@/components/flights/FareRulesModal";
 import { formatApiDate, formatApiTime } from "@/lib/flight-time";
+import { useQuery } from "@tanstack/react-query";
 
 /* ── helpers ─────────────────────────────────────────── */
 const BD_AIRPORTS = ["DAC", "CXB", "CGP", "ZYL", "JSR", "RJH", "SPD", "BZL", "IRD", "TKR"];
@@ -121,12 +124,29 @@ const DashboardBookingDetail = () => {
   const [docVerifyOpen, setDocVerifyOpen] = useState(false);
   const [voidOpen, setVoidOpen] = useState(false);
   const [voidLoading, setVoidLoading] = useState(false);
+  const [timelineOpen, setTimelineOpen] = useState(false);
+  const [ssrOpen, setSsrOpen] = useState(false);
 
   const { data, isLoading, error, refetch } = useDashboardBookings({ search: id, limit: 1 });
   const resolved = (data as any) || {};
   const rawBookings = resolved?.data || resolved?.bookings || [];
   const booking = rawBookings.length > 0 ? mapBooking(rawBookings[0]) : null;
   const countdown = useCountdown(booking?.paymentDeadline || null);
+
+  // SSR history for this booking
+  const { data: ssrData, isLoading: ssrLoading } = useQuery({
+    queryKey: ["dashboard", "ssr-history", booking?.id],
+    queryFn: () => api.get<any>("/dashboard/ssr-history", { search: booking?.id || booking?.pnr }),
+    enabled: ssrOpen && !!booking,
+  });
+  const ssrList = (ssrData as any)?.data || (ssrData as any)?.ssrHistory || [];
+
+  // Timeline from bookings for this booking
+  const { data: timelineData, isLoading: timelineLoading } = useQuery({
+    queryKey: ["dashboard", "bookings", "timeline-detail", booking?.rawId],
+    queryFn: () => api.get<any>("/dashboard/bookings", { search: booking?.id, limit: 1 }),
+    enabled: timelineOpen && !!booking,
+  });
 
   const copy = (text: string, label: string) => { navigator.clipboard.writeText(text); toast({ title: "Copied", description: `${label} copied` }); };
 
@@ -210,8 +230,8 @@ const DashboardBookingDetail = () => {
               <Button className="bg-emerald-500 hover:bg-emerald-600 text-white font-bold shadow-sm"><Wallet className="w-4 h-4 mr-1.5" /> Issue With Balance</Button>
             </Link>
             <div className="ml-auto flex flex-wrap gap-2">
-              <Link to="/dashboard/timeline"><Button variant="outline" className="font-semibold border-2 border-foreground/80"><Clock className="w-4 h-4 mr-1.5" /> Timeline</Button></Link>
-              <Link to="/dashboard/ssr-history"><Button variant="outline" className="font-semibold border-2 border-foreground/80"><Eye className="w-4 h-4 mr-1.5" /> View SSR</Button></Link>
+              <Button variant="outline" className="font-semibold border-2 border-foreground/80" onClick={() => setTimelineOpen(true)}><Clock className="w-4 h-4 mr-1.5" /> Timeline</Button>
+              <Button variant="outline" className="font-semibold border-2 border-foreground/80" onClick={() => setSsrOpen(true)}><Eye className="w-4 h-4 mr-1.5" /> View SSR</Button>
               <Button variant="outline" className="font-semibold border-2 border-destructive text-destructive hover:bg-destructive/10" onClick={() => setCancelOpen(true)}><Ban className="w-4 h-4 mr-1.5" /> Cancel Booking</Button>
               <Button className="bg-amber-500 hover:bg-amber-600 text-white font-bold shadow-sm" onClick={handleDownload}><Download className="w-4 h-4 mr-1.5" /> Voucher Download</Button>
             </div>
@@ -237,9 +257,9 @@ const DashboardBookingDetail = () => {
           </div>
 
           {booking.status === "on_hold" && (
-            <Link to="/dashboard/ssr-history" className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-destructive/30 text-destructive text-sm font-medium hover:bg-destructive/5">
+            <Button variant="ghost" className="inline-flex items-center gap-2 px-3 py-1.5 text-destructive text-sm font-medium hover:bg-destructive/5" onClick={() => setSsrOpen(true)}>
               <AlertTriangle className="w-4 h-4" /> View SSR to check the actual booking time limit
-            </Link>
+            </Button>
           )}
 
           {/* ━━ Booking Info Bar (7 cols) ━━ */}
@@ -332,14 +352,29 @@ const DashboardBookingDetail = () => {
                     </div>
                   </div>
 
-                  {/* Layover */}
-                  {i < arr.length - 1 && (
-                    <div className="flex items-center justify-center py-3 bg-muted/20 border-t border-dashed border-border">
-                      <span className="text-xs text-muted-foreground bg-card px-4 py-1 rounded-full border border-border">
-                        Change of plane · Layover in {AIRPORTS.find(a => a.code === leg.destination?.toUpperCase())?.city || leg.destination}
-                      </span>
-                    </div>
-                  )}
+                  {/* Layover with duration */}
+                  {i < arr.length - 1 && (() => {
+                    const nextLeg = arr[i + 1];
+                    let layoverStr = "";
+                    if (leg.arrivalTime && nextLeg.departureTime) {
+                      const arrMs = new Date(leg.arrivalTime).getTime();
+                      const depMs = new Date(nextLeg.departureTime).getTime();
+                      const diffMin = Math.round((depMs - arrMs) / 60000);
+                      if (diffMin > 0 && diffMin < 2880) {
+                        const h = Math.floor(diffMin / 60);
+                        const m = diffMin % 60;
+                        layoverStr = h > 0 ? `${h}h ${m > 0 ? `${m}m` : ""}` : `${m}m`;
+                      }
+                    }
+                    const city = AIRPORTS.find(a => a.code === leg.destination?.toUpperCase())?.city || leg.destination;
+                    return (
+                      <div className="flex items-center justify-center py-3 bg-muted/20 border-t border-dashed border-border">
+                        <span className="text-xs text-muted-foreground bg-card px-4 py-1 rounded-full border border-border">
+                          Change of plane · Layover in {city}{layoverStr ? ` · ${layoverStr}` : ""}
+                        </span>
+                      </div>
+                    );
+                  })()}
                 </div>
               ))}
             </div>
@@ -515,6 +550,113 @@ const DashboardBookingDetail = () => {
                 <Button variant="outline" onClick={() => setVoidOpen(false)}>Cancel</Button>
                 <Button variant="destructive" onClick={handleVoid} disabled={voidLoading}>{voidLoading ? "Submitting..." : "Submit Void Request"}</Button>
               </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          {/* ━━ Timeline Dialog ━━ */}
+          <Dialog open={timelineOpen} onOpenChange={setTimelineOpen}>
+            <DialogContent className="sm:max-w-lg max-h-[80vh] overflow-y-auto">
+              <DialogHeader><DialogTitle className="flex items-center gap-2"><Clock className="w-5 h-5 text-primary" /> Booking Timeline</DialogTitle></DialogHeader>
+              {timelineLoading ? (
+                <div className="py-8 text-center text-muted-foreground text-sm">Loading timeline...</div>
+              ) : (() => {
+                const tb = timelineData ? ((timelineData as any)?.data || (timelineData as any)?.bookings || [])[0] : null;
+                const events: { date: string; type: string; title: string; desc: string }[] = [];
+                if (tb || booking) {
+                  const b = tb || rawBookings[0];
+                  const ref = b?.booking_ref || b?.bookingRef || booking?.id;
+                  events.push({ date: b?.created_at || b?.bookedAt || booking?.bookedAt || "", type: "created", title: "Booking Created", desc: `${ref} created` });
+                  if (["confirmed", "ticketed"].includes(b?.status || booking?.status)) {
+                    events.push({ date: b?.updated_at || b?.bookedAt || "", type: "confirmed", title: "Booking Confirmed", desc: `${ref} · Payment received` });
+                  }
+                  if ((b?.status || booking?.status) === "ticketed") {
+                    events.push({ date: b?.updated_at || "", type: "ticketed", title: "Ticket Issued", desc: `${ref} · PNR: ${b?.pnr || booking?.pnr || "—"}` });
+                  }
+                  if ((b?.status || booking?.status) === "cancelled") {
+                    events.push({ date: b?.updated_at || "", type: "cancelled", title: "Booking Cancelled", desc: ref });
+                  }
+                  if ((b?.status || booking?.status) === "on_hold") {
+                    events.push({ date: b?.created_at || b?.bookedAt || "", type: "on_hold", title: "On Hold", desc: `${ref} · Awaiting payment` });
+                  }
+                }
+                events.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+                const eventIconMap: Record<string, any> = { created: Clock, confirmed: CheckCircle, ticketed: FileText, cancelled: XCircle, on_hold: AlertTriangle };
+                const eventColorMap: Record<string, string> = {
+                  created: "bg-blue-100 text-blue-600 dark:bg-blue-500/20",
+                  confirmed: "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20",
+                  ticketed: "bg-green-100 text-green-600 dark:bg-green-500/20",
+                  cancelled: "bg-red-100 text-red-600 dark:bg-red-500/20",
+                  on_hold: "bg-amber-100 text-amber-600 dark:bg-amber-500/20",
+                };
+
+                return events.length === 0 ? (
+                  <p className="text-center text-muted-foreground py-8 text-sm">No timeline events</p>
+                ) : (
+                  <div className="relative">
+                    <div className="absolute left-5 top-0 bottom-0 w-px bg-border" />
+                    <div className="space-y-5">
+                      {events.map((ev, i) => {
+                        const Ic = eventIconMap[ev.type] || Clock;
+                        return (
+                          <div key={i} className="relative flex items-start gap-4 pl-2">
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 z-10 ${eventColorMap[ev.type] || eventColorMap.created}`}>
+                              <Ic className="w-4 h-4" />
+                            </div>
+                            <div className="flex-1 pt-0.5">
+                              <p className="text-sm font-semibold">{ev.title}</p>
+                              <p className="text-xs text-muted-foreground">{ev.desc}</p>
+                              <p className="text-[11px] text-muted-foreground/70 mt-1">{ev.date ? fmtDateTime(ev.date) : "—"}</p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })()}
+            </DialogContent>
+          </Dialog>
+
+          {/* ━━ SSR Dialog ━━ */}
+          <Dialog open={ssrOpen} onOpenChange={setSsrOpen}>
+            <DialogContent className="sm:max-w-2xl max-h-[80vh] overflow-y-auto">
+              <DialogHeader><DialogTitle className="flex items-center gap-2"><Eye className="w-5 h-5 text-primary" /> SSR History</DialogTitle></DialogHeader>
+              {ssrLoading ? (
+                <div className="py-8 text-center text-muted-foreground text-sm">Loading SSR data...</div>
+              ) : ssrList.length === 0 ? (
+                <p className="text-center text-muted-foreground py-8 text-sm">No SSR requests found for this booking</p>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Passenger</TableHead>
+                      <TableHead>Details</TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {ssrList.map((ssr: any, i: number) => {
+                      const ssrIcons: Record<string, any> = { meal: Utensils, seat: Armchair, baggage: Luggage, wheelchair: Accessibility, infant: Baby };
+                      const Ic = ssrIcons[ssr.ssrType?.toLowerCase()] || Utensils;
+                      const statusCol: Record<string, string> = {
+                        confirmed: "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10",
+                        pending: "bg-amber-50 text-amber-700 dark:bg-amber-500/10",
+                        rejected: "bg-rose-50 text-rose-700 dark:bg-rose-500/10",
+                      };
+                      return (
+                        <TableRow key={ssr.id || i}>
+                          <TableCell><div className="flex items-center gap-2"><Ic className="w-4 h-4 text-muted-foreground" /><span className="capitalize text-sm">{ssr.ssrType || "N/A"}</span></div></TableCell>
+                          <TableCell className="text-sm">{ssr.passengerName || "—"}</TableCell>
+                          <TableCell className="text-xs text-muted-foreground max-w-[200px] truncate">{ssr.details || ssr.description || "—"}</TableCell>
+                          <TableCell><Badge variant="outline" className={statusCol[ssr.status] || ""}>{ssr.status || "unknown"}</Badge></TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              )}
             </DialogContent>
           </Dialog>
 
