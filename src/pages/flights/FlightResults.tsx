@@ -698,7 +698,7 @@ const StopDotsWithTooltip = ({ flight, stops }: { flight: any; stops: number }) 
 };
 
 /* ─── Fare Options Panel — BDFare-inspired but unique design ─── */
-const FareOptionsPanel = ({ flights, onBook }: { flights: any[]; onBook: (flight: any) => void }) => {
+const FareOptionsPanel = ({ flights, onBook, searchedCabin }: { flights: any[]; onBook: (flight: any) => void; searchedCabin?: string }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   // Build fare options from the flight's fareDetails or generate from the flight itself
   const fareOptions = useMemo(() => {
