@@ -140,40 +140,58 @@ const DashboardBookingDetail = () => {
     enabled: ssrOpen && !!booking,
   });
 
-  // Build SSR list: prefer API data, fallback to extracting from booking details JSON
+  // Build SSR list: merge API + extracted from booking details JSON
   const apiSSRList = (ssrData as any)?.data || (ssrData as any)?.ssrHistory || [];
   const extractedSSRs = (() => {
     if (!booking) return [];
     const items: any[] = [];
     const d = booking.details || {};
     const pax = booking.passengers || [];
-    // Extract from specialServices / addOns in booking details
-    const ssrs = d.specialServices || d.ssrs || d.addOns?.services || [];
-    if (Array.isArray(ssrs)) {
-      ssrs.forEach((s: any) => {
-        items.push({
-          ssrType: s.type || s.ssrType || s.code || "service",
-          passengerName: s.passengerName || s.passenger || pax[0] ? `${pax[0]?.firstName || ""} ${pax[0]?.lastName || ""}`.trim() : "—",
-          details: s.details || s.description || s.text || s.code || "—",
-          status: s.status || "confirmed",
+    const rawObj = rawBookings[0] || {};
+    const rd = rawObj.details || {};
+
+    // 1. specialServices / ssrs / addOns arrays
+    [d.specialServices, d.ssrs, d.addOns?.services, d.addOns?.ssrs, rd.specialServices, rd.ssrs]
+      .filter(Array.isArray).forEach((arr: any[]) => {
+        arr.forEach((s: any) => {
+          items.push({
+            ssrType: s.type || s.ssrType || s.code || s.ssrCode || "service",
+            passengerName: s.passengerName || s.passenger || s.paxName || (pax[0] ? `${pax[0]?.firstName || ""} ${pax[0]?.lastName || ""}`.trim() : "All"),
+            details: s.details || s.description || s.text || s.freeText || s.code || "—",
+            status: s.status || "confirmed",
+          });
         });
       });
-    }
-    // Extract meals from passengers
+
+    // 2. Per-passenger SSRs
     pax.forEach((p: any) => {
       const name = `${p.title || ""} ${p.firstName || ""} ${p.lastName || ""}`.trim();
       if (p.meal || p.mealPreference) items.push({ ssrType: "meal", passengerName: name, details: p.meal || p.mealPreference, status: "confirmed" });
       if (p.seatPreference || p.seat) items.push({ ssrType: "seat", passengerName: name, details: p.seatPreference || p.seat, status: "confirmed" });
-      if (p.wheelchair) items.push({ ssrType: "wheelchair", passengerName: name, details: p.wheelchair === true ? "Wheelchair requested" : p.wheelchair, status: "confirmed" });
+      if (p.wheelchair || p.wheelchairRequired) items.push({ ssrType: "wheelchair", passengerName: name, details: typeof p.wheelchair === "string" ? p.wheelchair : "Wheelchair requested", status: "confirmed" });
       if (p.frequentFlyer || p.ffNumber) items.push({ ssrType: "frequent_flyer", passengerName: name, details: `${p.ffAirline || ""} ${p.frequentFlyer || p.ffNumber || ""}`.trim(), status: "confirmed" });
+      if (p.passport || p.passportNumber) items.push({ ssrType: "docs", passengerName: name, details: `Passport: ${p.passport || p.passportNumber}${p.passportExpiry ? ` Exp: ${p.passportExpiry}` : ""}${p.nationality ? ` (${p.nationality})` : ""}`, status: "confirmed" });
     });
-    // Baggage from booking
-    if (booking.baggage) items.push({ ssrType: "baggage", passengerName: pax[0] ? `${pax[0]?.firstName || ""} ${pax[0]?.lastName || ""}`.trim() : "All", details: typeof booking.baggage === "string" ? booking.baggage : `${booking.baggage}KG`, status: "confirmed" });
-    // Extra baggage from addOns
-    if (d.addOns?.extraBaggage) items.push({ ssrType: "baggage", passengerName: "All", details: `Extra: ${d.addOns.extraBaggage}`, status: "confirmed" });
+
+    // 3. Contact SSRs
+    const ct = booking.contactInfo || d.contactInfo || {};
+    const primaryName = pax[0] ? `${pax[0]?.firstName || ""} ${pax[0]?.lastName || ""}`.trim() : "Primary";
+    if (ct.phone || ct.mobile) items.push({ ssrType: "contact", passengerName: primaryName, details: `Phone: ${ct.phone || ct.mobile}`, status: "confirmed" });
+    if (ct.email) items.push({ ssrType: "contact", passengerName: primaryName, details: `Email: ${ct.email}`, status: "confirmed" });
+
+    // 4. Baggage
+    if (booking.baggage) items.push({ ssrType: "baggage", passengerName: "All Passengers", details: typeof booking.baggage === "string" ? booking.baggage : `${booking.baggage}KG`, status: "confirmed" });
+    if (d.addOns?.extraBaggage) items.push({ ssrType: "baggage", passengerName: "All Passengers", details: `Extra: ${d.addOns.extraBaggage}`, status: "confirmed" });
+
+    // 5. Cabin class
+    if (booking.cabinClass) items.push({ ssrType: "cabin", passengerName: "All Passengers", details: booking.cabinClass, status: "confirmed" });
+
+    // 6. Time limit
+    if (booking.paymentDeadline) items.push({ ssrType: "time_limit", passengerName: "Booking", details: `Last ticketing: ${fmtDateTime(booking.paymentDeadline)}`, status: booking.status === "on_hold" ? "pending" : "confirmed" });
+
     return items;
   })();
-  const ssrList = apiSSRList.length > 0 ? apiSSRList : extractedSSRs;
+  const ssrList = [...apiSSRList, ...extractedSSRs];
 
   // Timeline from bookings for this booking
   const { data: timelineData, isLoading: timelineLoading } = useQuery({
@@ -689,8 +707,8 @@ const DashboardBookingDetail = () => {
                   </TableHeader>
                   <TableBody>
                     {ssrList.map((ssr: any, i: number) => {
-                      const ssrIcons: Record<string, any> = { meal: Utensils, seat: Armchair, baggage: Luggage, wheelchair: Accessibility, infant: Baby };
-                      const Ic = ssrIcons[ssr.ssrType?.toLowerCase()] || Utensils;
+                      const ssrIcons: Record<string, any> = { meal: Utensils, seat: Armchair, baggage: Luggage, wheelchair: Accessibility, infant: Baby, docs: FileText, contact: Users, cabin: Plane, time_limit: Clock, frequent_flyer: CreditCard, service: Package };
+                      const Ic = ssrIcons[ssr.ssrType?.toLowerCase()] || FileText;
                       const statusCol: Record<string, string> = {
                         confirmed: "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10",
                         pending: "bg-amber-50 text-amber-700 dark:bg-amber-500/10",
