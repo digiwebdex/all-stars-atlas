@@ -412,7 +412,7 @@ const HotelResults = () => {
                 </div>
               )}
               <div className="text-right">
-                <p className="text-lg font-black text-primary">${hotel.price?.toLocaleString()}</p>
+                <p className="text-lg font-black text-primary">৳{hotel.price?.toLocaleString()}</p>
                 <p className="text-[10px] text-muted-foreground">{nights} night{nights > 1 ? 's' : ''}</p>
               </div>
             </div>
