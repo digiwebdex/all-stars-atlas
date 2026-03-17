@@ -656,6 +656,23 @@ const DashboardBookingDetail = () => {
           <Dialog open={ssrOpen} onOpenChange={setSsrOpen}>
             <DialogContent className="sm:max-w-2xl max-h-[80vh] overflow-y-auto">
               <DialogHeader><DialogTitle className="flex items-center gap-2"><Eye className="w-5 h-5 text-primary" /> SSR History</DialogTitle></DialogHeader>
+              
+              {/* Ticketing Time Limit */}
+              {booking?.paymentDeadline && (
+                <div className={`flex items-start gap-3 p-3 rounded-lg border ${booking.status === "on_hold" ? "border-warning/40 bg-warning/5" : "border-border bg-muted/20"}`}>
+                  <Clock className={`w-5 h-5 flex-shrink-0 mt-0.5 ${booking.status === "on_hold" ? "text-warning" : "text-muted-foreground"}`} />
+                  <div>
+                    <p className="text-sm font-semibold">Ticketing Time Limit</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Deadline: <span className="font-mono font-bold">{fmtDateTime(booking.paymentDeadline)}</span>
+                    </p>
+                    {countdown && booking.status === "on_hold" && (
+                      <p className="text-xs text-warning font-medium mt-1">Expires in {countdown}</p>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {ssrLoading ? (
                 <div className="py-8 text-center text-muted-foreground text-sm">Loading SSR data...</div>
               ) : ssrList.length === 0 ? (
