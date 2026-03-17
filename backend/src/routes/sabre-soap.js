@@ -1172,75 +1172,20 @@ async function getHotelAvail(params, _retried = false) {
     console.log(`[Sabre SOAP] Hotel search: ${params.cityCode}, ${params.checkIn} → ${params.checkOut}, ${guestCount} guests`);
 
     let lastDiagnostics = null;
+    let invalidActionSeen = false;
     for (const actionVariant of HOTEL_AVAIL_ACTION_VARIANTS) {
       let actionRejected = false;
-
-      for (const criteriaAttempt of criteriaAttempts) {
-        const attemptLabel = `${actionVariant.label}:${criteriaAttempt.label}`;
-        const envelope = buildEnvelope(criteriaAttempt.criterionXml, actionVariant);
-
-        const res = await fetch(soapUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'text/xml; charset=utf-8', 'SOAPAction': actionVariant.soapAction },
-          body: envelope,
-          signal: AbortSignal.timeout(30000),
-        });
-
-        const xml = await res.text();
-        const diagnostics = extractSoapDiagnostics(xml);
-        lastDiagnostics = diagnostics;
-        console.log(`[Sabre SOAP] Hotel search response length (${attemptLabel}): ${xml.length}`);
-
-        if (xml.length < 3000) {
-          try { require('fs').writeFileSync('/tmp/sabre-hotel-response.xml', xml); } catch {}
-          console.log(`[Sabre SOAP] Hotel FULL XML (${attemptLabel}) written to /tmp/sabre-hotel-response.xml`);
-          console.log(`[Sabre SOAP] Hotel XML preview (${attemptLabel}): ${xml.replace(/\n/g, ' ').slice(0, 500)}`);
-        }
-
-        const faultMsg = xml.match(/faultstring>([^<]+)/i)?.[1] || '';
-        if (faultMsg) {
-          if (!_retried && isSoapSessionError(faultMsg)) {
-            await resetSoapSessionCacheWithClose(config);
-            return getHotelAvail(params, true);
-          }
-
+...
           if (isInvalidEbxmlAction(faultMsg)) {
+            invalidActionSeen = true;
             actionRejected = true;
             console.error(`[Sabre SOAP] Hotel search invalid action (${attemptLabel}): ${faultMsg}`);
             break;
           }
-
-          console.error(`[Sabre SOAP] Hotel search fault (${attemptLabel}): ${faultMsg}`);
-          continue;
-        }
-
-        if (diagnostics.status) {
-          console.warn(`[Sabre SOAP] Hotel search status (${attemptLabel})=${diagnostics.status}`);
-        }
-        if (diagnostics.messages.length > 0) {
-          console.warn(`[Sabre SOAP] Hotel search messages (${attemptLabel}): ${diagnostics.messages.join(' | ')}`);
-        }
-
-        const hotels = parseHotelAvailResponse(xml, params);
-        if (hotels.length > 0) {
-          console.log(`[Sabre SOAP] Hotel search success via ${attemptLabel}: ${hotels.length} hotels`);
-          return hotels;
-        }
-
-        if (diagnostics.hostCommand) {
-          console.warn(`[Sabre SOAP] HostCommand (${attemptLabel}): ${diagnostics.hostCommand}`);
-        }
-        if (diagnostics.xmlHint) {
-          console.warn(`[Sabre SOAP] Hotel search empty result hint (${attemptLabel}): ${diagnostics.xmlHint}`);
-        }
-        if (diagnostics.rawPreview) {
-          console.warn(`[Sabre SOAP] Hotel search raw preview (${attemptLabel}): ${diagnostics.rawPreview}`);
-        }
-      }
-
-      if (actionRejected) {
-        continue;
-      }
+...
+    if (invalidActionSeen) {
+      markHotelLlsUnavailable('Sabre returned InvalidAction for Hotel LLS actions (likely entitlement issue for current PCC)', 30);
+      return [];
     }
 
     if (lastDiagnostics?.messages?.length) {
