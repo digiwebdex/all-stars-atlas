@@ -562,7 +562,7 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
           date: s.date ? format(s.date, 'yyyy-MM-dd') : undefined,
         }))),
       });
-      navigate(`${routePrefix}/flights?${params.toString()}`);
+      navigate(`/flights?${params.toString()}`);
       return;
     }
 
