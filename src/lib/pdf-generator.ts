@@ -552,7 +552,7 @@ async function buildInvoiceDoc(inv: InvoiceData): Promise<jsPDF> {
   doc.setFont("helvetica", "bold");
   doc.setTextColor(0);
   doc.text("Subtotal", totalsValueX - 45, y + 6, { align: "right" });
-  doc.text(`${(inv.subtotal || inv.amount || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}৳`, totalsValueX, y + 6, { align: "right" });
+  doc.text(`${(inv.subtotal || inv.amount || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })} BDT`, totalsValueX, y + 6, { align: "right" });
   y += totalsRowH;
 
   // Tax (if applicable)
