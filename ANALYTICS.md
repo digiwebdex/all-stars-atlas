@@ -1,7 +1,7 @@
 # Seven Trip — Complete Development Analytics & Project History
 
-> Comprehensive analytical overview of the Seven Trip platform — from first commit to production v4.1.5.
-> Last updated: 2026-03-17 (v4.1.5)
+> Comprehensive analytical overview of the Seven Trip platform — from first commit to production v4.1.6.
+> Last updated: 2026-03-17 (v4.1.6)
 
 ---
 
@@ -21,6 +21,7 @@
 | **UI/UX Overhaul** | v4.1.0 | Mar 14, 2026 | 1 day | SearchWidget props refactor, compact pill bar, AnimatedFlightArc redesign, Sabre child/infant PTC fix, session timeout redirect |
 | **Documentation & Fixes** | v4.1.3 | Mar 15, 2026 | 1 day | Flight sorting/filter/responsiveness fixes, TTI payload docs, 20+ .md version bump |
 | **Cabin Class Accuracy** | v4.1.5 | Mar 17, 2026 | 1 day | Branded fare naming, cabin class derived from booking code, fare option ordering by searched cabin |
+| **Dashboard Hardening** | v4.1.6 | Mar 17, 2026 | 1 day | E-ticket PDF ASCII fix, Flight Status/Fare Rules resilience, SSR History popup, all 15+ dashboard modules verified |
 
 **Total Development Time:** ~22 days (Mar 1–17, 2026)
 
@@ -32,7 +33,7 @@
 |--------|-------|
 | **Total Pages** | 70+ |
 | **Public Pages** | 27 |
-| **Dashboard Pages** | 12 |
+| **Dashboard Pages** | 15+ |
 | **Admin Modules** | 17 |
 | **CMS Modules** | 10 |
 | **Auth Pages** | 5 |
@@ -44,7 +45,7 @@
 | **Airports Database** | 740+ |
 | **Frontend Components** | 100+ |
 | **Backend Route Files** | 25 |
-| **Changelog Versions** | 50+ releases |
+| **Changelog Versions** | 55+ releases |
 | **Documentation Files** | 20+ (.md files) |
 
 ---
@@ -238,8 +239,8 @@
 | File | Description | Lines |
 |------|-------------|-------|
 | `README.md` | Project overview, features, setup | ~320 |
-| `CHANGELOG.md` | Version history (v1.0–v4.0.0, 45+ releases) | ~920 |
-| `ANALYTICS.md` | This file — development analytics & history | ~250 |
+| `CHANGELOG.md` | Version history (v1.0–v4.1.6, 55+ releases) | ~1030 |
+| `ANALYTICS.md` | This file — development analytics & history | ~260 |
 | `BUG_TRACKER.md` | 44+ bugs with root cause analysis | ~160 |
 | `GDS_INTEGRATION_HISTORY.md` | GDS provider integration timeline | ~220 |
 | `DEPLOYMENT_HISTORY.md` | All deployment records with commands | — |

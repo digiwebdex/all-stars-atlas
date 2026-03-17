@@ -1,7 +1,7 @@
 # Seven Trip — Working Deployment Commands
 
 > **Auto-updated** with every change. Copy-paste ready commands for your VPS.
-> Last updated: 2026-03-17 (v4.1.5 — Cabin Class Accuracy & Branded Fare Naming)
+> Last updated: 2026-03-17 (v4.1.6 — Dashboard Hardening, E-Ticket PDF Fix, API Resilience)
 
 ---
 
@@ -157,6 +157,7 @@ pm2 logs seventrip-api --lines 30
 
 | Date | Change | Deploy Command |
 |------|--------|----------------|
+| 2026-03-17 | **v4.1.6** Dashboard hardening: E-ticket PDF ASCII fix (garbled Unicode→text), Flight Status graceful error handling, Fare Rules airline code dedup, Sabre `sabreRequest()` empty response resilience. All 15+ dashboard modules verified. | Standard Deployment |
 | 2026-03-14 | **v4.1.3** Sabre search recovery hotfix: restored missing `getResponseStats` + `normalizeParams` and removed undefined decoder dependency in BFM fallback flow. | Backend Only |
 | 2026-03-14 | **v4.1.2** Sabre search crash hotfix: removed accidental `...` token in `backend/src/routes/sabre-flights.js` that caused Node startup `SyntaxError` and intermittent 502 on `/api/flights/search`. | Backend Only |
 | 2026-03-14 | **v4.1.1** 100% production probe verified: 10/10 tests, 34 assertions, 9 PNRs created+cancelled. UI pill badges for baggage/seats/class. Full documentation overhaul. | Standard Deployment |

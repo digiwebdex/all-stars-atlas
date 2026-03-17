@@ -1,13 +1,13 @@
 
 # Complete Seven Trip Platform — 100% Production Ready ✅
 
-## Status: FULLY COMPLETE (v4.1.5 — 2026-03-17)
+## Status: FULLY COMPLETE (v4.1.6 — 2026-03-17)
 
 All features are production-ready. Zero placeholders. Zero "Coming Soon". Every button works.
 All API keys stored securely in database `system_settings` table (not in env files).
 Enterprise-grade 4-step flight booking with professional e-ticket PDF generation.
 Mobile-responsive verified — no horizontal overflow on any screen size.
-**All 26 Sabre GDS sections fully implemented — 100% feature coverage. v4.1.5: Cabin class accuracy + branded fare naming + fare option ordering by searched cabin.**
+**All 26 Sabre GDS sections fully implemented — 100% feature coverage. v4.1.6: Dashboard hardening + E-ticket PDF ASCII fix + Flight Status/Fare Rules API resilience.**
 
 ---
 
@@ -55,7 +55,7 @@ These files MUST be kept in sync with every code change.
 - ✅ **BDFare proxy** (`backend/src/routes/bdf-flights.js`) — Additional GDS with normalized output
 - ✅ **Parallel multi-provider search** via `Promise.allSettled` with deduplication
 
-## ✅ Phase 3: Customer Dashboard (Complete — 12 Pages)
+## ✅ Phase 3: Customer Dashboard (Complete — 15+ Pages)
 
 - ✅ Dashboard home with stats, charts, upcoming trip, quick actions
 - ✅ My Bookings with 12 status filters, e-ticket download, status actions
@@ -137,5 +137,5 @@ Config:   API keys in DB system_settings (not .env)
 
 ## Counts
 
-- **Public pages:** 27 | **Dashboard:** 12 | **Admin:** 17 | **CMS:** 10 | **Auth:** 5
+- **Public pages:** 27 | **Dashboard:** 15+ | **Admin:** 17 | **CMS:** 10 | **Auth:** 5
 - **Total: 70+ pages | 100+ API endpoints | 24 DB tables | 60+ airline logos | 26/26 Sabre features**

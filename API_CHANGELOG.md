@@ -1,7 +1,18 @@
 # Seven Trip — API Changelog
 
 > All backend API changes, new endpoints, breaking changes, and schema updates per version.
-> Last updated: 2026-03-17 (v4.1.5)
+> Last updated: 2026-03-17 (v4.1.6)
+
+---
+
+## v4.1.6 — 2026-03-17
+
+### Changed (Backend — Sabre API Resilience)
+- **`sabreRequest()`** in `sabre-flights.js` now gracefully handles empty or non-JSON Sabre responses
+- Prevents `Unexpected end of JSON input` crashes when Sabre FLIFO or Fare Rules endpoints return empty bodies
+- Returns structured `{ error: 'Empty response' }` instead of throwing
+
+### No New Endpoints
 
 ---
 

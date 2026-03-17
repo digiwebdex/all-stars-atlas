@@ -1,7 +1,7 @@
-# Seven Trip — Bangladesh's #1 Travel Platform (v4.1.5)
+# Seven Trip — Bangladesh's #1 Travel Platform (v4.1.6)
 
 > Full-stack B2C travel agency web application. Book flights, hotels, visa, holiday packages, medical tourism, car rentals, eSIM, mobile recharge & utility bill payments.
-> Last updated: 2026-03-17 (v4.1.5 — Cabin Class Accuracy, Branded Fare Naming, Fare Option Ordering)
+> Last updated: 2026-03-17 (v4.1.6 — Dashboard Hardening, E-Ticket PDF Fix, Flight Status & Fare Rules Resilience)
 
 **Live URL:** [https://seven-trip.com](https://seven-trip.com)
 **GitHub:** [https://github.com/digiwebdex/all-stars-atlas-d07a1d89](https://github.com/digiwebdex/all-stars-atlas-d07a1d89)
@@ -101,7 +101,7 @@
 │       ├── paybill/           # PayBillPage
 │       ├── booking/           # BookingConfirmation
 │       ├── static/            # About, Contact, Blog, FAQ, Terms, Privacy, etc.
-│       ├── dashboard/         # 12 user dashboard pages
+│       ├── dashboard/         # 15+ user dashboard pages
 │       └── admin/             # 17 admin panel modules
 ├── public/                   # Static assets
 │   ├── images/               # Logo, hero images
@@ -110,14 +110,14 @@
 │   ├── robots.txt            # Crawler rules
 │   └── favicon.png           # App icon
 ├── BACKEND_API_SPEC.md       # 100+ API endpoint spec
-├── CHANGELOG.md              # Version history (v1.0–v4.1.1, 50+ releases)
+├── CHANGELOG.md              # Version history (v1.0–v4.1.6, 55+ releases)
 ├── Deployment.md             # VPS deployment guide
 └── developer_documentation.md # Dev handbook
 ```
 
 ---
 
-## 🎯 Features (100% Complete — Probe Verified 2026-03-14 v4.1.1)
+## 🎯 Features (100% Complete — All Dashboard Modules Verified 2026-03-17 v4.1.6)
 
 ### Public Site (10 Services)
 - **Homepage** — 11 CMS-driven sections with parallax hero video, animated counters, and section reordering
@@ -148,20 +148,25 @@
 - **Role-based routing** — Admin ↔ Customer strict separation
 - **AuthGateModal** — Inline auth popup during booking flow (no page redirect)
 
-### User Dashboard (12 pages)
+### User Dashboard (15+ pages)
 | Page | Features |
 |------|----------|
-| Overview | Stats cards, recent bookings, quick actions |
-| Bookings | 12-status lifecycle, filters, detail view |
-| E-Tickets | PDF download via jsPDF, print |
-| Transactions | Running balance ledger with debit/credit |
+| Overview | Stats cards, recent bookings, quick actions, embedded SearchWidget |
+| Bookings | 12-status lifecycle, filters, detail view, cancel, void, pay |
+| Booking Detail | Flight segments, fare breakdown, passengers, dual PNR display |
+| E-Tickets | PDF download via jsPDF, print, void, refund quote |
+| Transactions | Running balance ledger with debit/credit, CSV export |
 | E-Transactions | Digital gateway fee tracking |
 | Payments | Receipt upload for manual payment verification |
 | Invoices | Auto-generated Invoice PDF + Money Receipt PDF with QR codes |
 | Pay Later | Due management & reminders |
 | Travellers | Saved passenger profiles for faster booking |
+| Wallet | Add funds (SSLCommerz/bKash/Nagad/bank), transfer, transaction history |
 | Wishlist | Saved hotels |
 | Search History | Past flight/hotel searches |
+| SSR History | Special service requests across bookings with popup detail view |
+| Timeline | Booking lifecycle events timeline |
+| Rewards | Points balance, earn/redeem history, coupons |
 | Settings | Profile, password, notifications, 2FA toggle, delete account |
 
 ### Admin Panel (17 modules)
@@ -286,7 +291,7 @@ Express, mysql2, bcryptjs, jsonwebtoken, multer, uuid, cors, helmet, morgan, exp
 | Document | Description |
 |----------|-------------|
 | [README.md](./README.md) | This file — project overview |
-| [CHANGELOG.md](./CHANGELOG.md) | Complete version history (v1.0–v4.0.0, 45+ releases) |
+| [CHANGELOG.md](./CHANGELOG.md) | Complete version history (v1.0–v4.1.6, 55+ releases) |
 | [ANALYTICS.md](./ANALYTICS.md) | Development analytics, timeline, codebase statistics |
 | [BUG_TRACKER.md](./BUG_TRACKER.md) | 44+ bugs with root cause analysis and recurring patterns |
 | [GDS_INTEGRATION_HISTORY.md](./GDS_INTEGRATION_HISTORY.md) | GDS provider integration timeline, issues, resolutions |

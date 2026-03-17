@@ -1,7 +1,7 @@
 # Seven Trip — Complete Deployment History
 
 > Every deployment to production with exact commands, what changed, and verification steps.
-> Last updated: 2026-03-17 (v4.1.5 — Cabin Class Accuracy & Branded Fare Naming)
+> Last updated: 2026-03-17 (v4.1.6 — Dashboard Hardening, E-Ticket PDF Fix, API Resilience)
 
 ---
 
@@ -273,8 +273,8 @@ cd ~/projects/all-stars-atlas && git pull origin main && cd backend && npm insta
 
 | Metric | Value |
 |--------|-------|
-| **Total Deployments** | 9 |
-| **Full Stack** | 5 |
+| **Total Deployments** | 10 |
+| **Full Stack** | 6 |
 | **Backend Only** | 3 |
 | **Nginx Only** | 1 |
 | **Database Only** | 1 |

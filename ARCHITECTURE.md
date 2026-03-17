@@ -1,7 +1,7 @@
 # Seven Trip — System Architecture
 
 > Complete technical architecture documentation for the Seven Trip travel platform.
-> Last updated: 2026-03-17 (v4.1.5 — Cabin Class Accuracy & Branded Fare Naming)
+> Last updated: 2026-03-17 (v4.1.6 — Dashboard Hardening, E-Ticket PDF Fix, API Resilience)
 
 ---
 
@@ -208,7 +208,7 @@ src/
     ├── paybill/                # PayBillPage
     ├── booking/                # BookingConfirmation
     ├── static/                 # About, Contact, Blog, FAQ, etc.
-    ├── dashboard/              # 12 user dashboard pages
+    ├── dashboard/              # 15+ user dashboard pages
     └── admin/                  # 17 admin modules + CMS suite
 ```
 

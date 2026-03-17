@@ -1,10 +1,10 @@
-# Seven Trip — TTI/Air Astra (ZENITH) Working Payloads Reference (v4.1.5)
+# Seven Trip — TTI/Air Astra (ZENITH) Working Payloads Reference (v4.1.6)
 
 > Complete, production-verified payloads for all TTI (Air Astra) API operations.
 > Provider: TTI Sale Engine (ZENITH WCF) | Airline: Air Astra (2A / S2)
 > Protocol: JSON over HTTP POST (WCF-style)
 > Auth: API Key stored in `system_settings` table (`api_tti_astra`)
-> Last verified: 2026-03-17 (v4.1.5)
+> Last verified: 2026-03-17 (v4.1.6)
 > See also: `SABRE_PAYLOADS.md` for Sabre GDS payloads
 
 ---

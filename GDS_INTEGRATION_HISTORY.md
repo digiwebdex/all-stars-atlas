@@ -1,7 +1,7 @@
 # Seven Trip — GDS Integration History & Troubleshooting
 
 > Complete timeline of all GDS provider integrations, issues encountered, and solutions applied.
-> Last updated: 2026-03-17 (v4.1.5 — Cabin Class Accuracy & Branded Fare Naming)
+> Last updated: 2026-03-17 (v4.1.6 — Dashboard Hardening, API Resilience)
 
 ---
 

@@ -2,7 +2,7 @@
 
 > Complete timeline of all development conversations, decisions made, bugs discovered, and features implemented.
 > This serves as the institutional memory of the project — every significant interaction is recorded.
-> Last updated: 2026-03-17 (v4.1.5 — Cabin Class Accuracy & Branded Fare Naming)
+> Last updated: 2026-03-17 (v4.1.6 — Dashboard Hardening, E-Ticket PDF Fix, API Resilience)
 
 ---
 
@@ -10,9 +10,9 @@
 
 | Metric | Count |
 |--------|-------|
-| **Development Days** | 19 (Mar 1–14, 2026) |
-| **Total Versions Released** | 50+ |
-| **Bugs Discovered & Fixed** | 45 |
+| **Development Days** | 22 (Mar 1–17, 2026) |
+| **Total Versions Released** | 55+ |
+| **Bugs Discovered & Fixed** | 48 |
 | **GDS Providers Integrated** | 5 (TTI, BDFare, FlyHub, Sabre REST, Sabre SOAP) |
 | **Sabre Features** | 26/26 (100% coverage) |
 | **VPS Deployments** | 10 |
@@ -407,3 +407,17 @@ Placeholder data persisting in production code. Lesson: zero-mock audit + automa
 - **8 new functions in `sabre-flights.js`**: `voidTickets()`, `refundPrice()`, `refundFulfill()`, `getFlightStatus()`, `getAncillariesStateless()`, `addAncillaryStateless()`, `fulfillTickets()`, `updateFrequentFlyer()`
 - **2 new functions in `sabre-soap.js`**: `getStructuredFareRules()`, `exchangeBooking()`
 - **Result**: 100% Sabre GDS feature coverage (26/26 sections), 100+ total API endpoints
+
+---
+
+## Phase 9: Dashboard Hardening & E-Ticket Fix (Mar 17, 2026)
+
+### v4.1.6 — Mar 17 — Dashboard Hardening & API Resilience
+- **🔴 Bug C16**: E-ticket PDF shows garbled text (`Ø<ßâ`, `Ø>Ýó`) — jsPDF Helvetica cannot render Unicode emojis
+- **Fix**: Replaced all non-Latin-1 chars with ASCII alternatives (emojis→[1][2][3][4], ৳→BDT, →→-)
+- **🔴 Bug C17**: Flight Status crashes with "Unexpected end of JSON input" — Sabre FLIFO returns empty body
+- **Fix**: `sabreRequest()` handles empty/non-JSON responses gracefully; FlightStatusBadge shows user-friendly fallback
+- **🔴 Bug C18**: Fare Rules title shows duplicated airline code (`WYWY318`)
+- **Fix**: `cleanFlightNum()` strips airline prefix before display; handles empty response objects
+- **Verified**: SSR History popup correctly fetches and displays data from `/dashboard/ssr-history`
+- **Verified**: All 15+ dashboard modules (Bookings, Wallet, E-Tickets, Transactions, Travellers, Payments, SSR History, Search History, Settings, Wishlist, Rewards, Invoices, Reports, Support Tickets, Pay Later) — all API-connected and functional
