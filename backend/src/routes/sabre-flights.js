@@ -1138,10 +1138,17 @@ function normalizeGroupedResponse(response, params) {
             }
           }
 
+          // Derive bookingClass: prefer inline bookingCode, then first char of fareBasis (standard IATA), then cabin
+          const rawBookingCode = firstSeg.bookingCode || '';
+          const fareBasis = firstSeg.fareBasisCode || '';
+          const derivedBookingClass = rawBookingCode 
+            || (fareBasis ? fareBasis.charAt(0).toUpperCase() : '') 
+            || '';
+
           return {
-            fareBasis: firstSeg.fareBasisCode || '',
-            bookingClass: firstSeg.bookingCode || '',
-            cabinClass: firstSeg.cabin || '',
+            fareBasis,
+            bookingClass: derivedBookingClass,
+            cabinClass: firstSeg.cabin || getCabinName(derivedBookingClass) || '',
             availableSeats: piMinSeats === Infinity ? null : piMinSeats,
             price: piFareTotals.total,
             baseFare: piFareTotals.baseFare,
