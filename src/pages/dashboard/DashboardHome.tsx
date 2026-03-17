@@ -7,6 +7,7 @@ import { useDashboardStats, useDashboardBookings } from "@/hooks/useApiData";
 import DataLoader from "@/components/DataLoader";
 import { motion } from "framer-motion";
 import PaymentReminderBanner from "@/components/PaymentReminder";
+import SearchWidget from "@/components/search/SearchWidget";
 
 import { useAuth } from "@/hooks/useAuth";
 
