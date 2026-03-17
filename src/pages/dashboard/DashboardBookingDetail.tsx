@@ -133,6 +133,21 @@ const DashboardBookingDetail = () => {
   const booking = rawBookings.length > 0 ? mapBooking(rawBookings[0]) : null;
   const countdown = useCountdown(booking?.paymentDeadline || null);
 
+  // SSR history for this booking
+  const { data: ssrData, isLoading: ssrLoading } = useQuery({
+    queryKey: ["dashboard", "ssr-history", booking?.id],
+    queryFn: () => api.get<any>("/dashboard/ssr-history", { search: booking?.id || booking?.pnr }),
+    enabled: ssrOpen && !!booking,
+  });
+  const ssrList = (ssrData as any)?.data || (ssrData as any)?.ssrHistory || [];
+
+  // Timeline from bookings for this booking
+  const { data: timelineData, isLoading: timelineLoading } = useQuery({
+    queryKey: ["dashboard", "bookings", "timeline-detail", booking?.rawId],
+    queryFn: () => api.get<any>("/dashboard/bookings", { search: booking?.id, limit: 1 }),
+    enabled: timelineOpen && !!booking,
+  });
+
   const copy = (text: string, label: string) => { navigator.clipboard.writeText(text); toast({ title: "Copied", description: `${label} copied` }); };
 
   const handleCancel = async () => {
