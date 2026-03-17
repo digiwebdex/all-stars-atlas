@@ -698,7 +698,7 @@ const StopDotsWithTooltip = ({ flight, stops }: { flight: any; stops: number }) 
 };
 
 /* ─── Fare Options Panel — BDFare-inspired but unique design ─── */
-const FareOptionsPanel = ({ flights, onBook }: { flights: any[]; onBook: (flight: any) => void }) => {
+const FareOptionsPanel = ({ flights, onBook, searchedCabin }: { flights: any[]; onBook: (flight: any) => void; searchedCabin?: string }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   // Build fare options from the flight's fareDetails or generate from the flight itself
   const fareOptions = useMemo(() => {
@@ -793,7 +793,23 @@ const FareOptionsPanel = ({ flights, onBook }: { flights: any[]; onBook: (flight
     };
 
     if (fd.length > 1) {
-      const sorted = [...fd].sort((a: any, b: any) => (a.price || a.amount || 0) - (b.price || b.amount || 0));
+      // Sort: searched cabin class first, then by price
+      const searchedCab = (searchedCabin || primary.cabinClass || 'economy').toLowerCase();
+      const getCabinForClass = (cls: string) => {
+        const c = cls.charAt(0).toUpperCase();
+        if ('CJDIZ'.includes(c)) return 'business';
+        if ('FAPR'.includes(c)) return 'first';
+        if ('WE'.includes(c)) return 'premium economy';
+        return 'economy';
+      };
+      const sorted = [...fd].sort((a: any, b: any) => {
+        const aCab = getCabinForClass(a.bookingClass || a.cabinClass || '');
+        const bCab = getCabinForClass(b.bookingClass || b.cabinClass || '');
+        const aMatch = aCab === searchedCab ? 0 : 1;
+        const bMatch = bCab === searchedCab ? 0 : 1;
+        if (aMatch !== bMatch) return aMatch - bMatch;
+        return (a.price || a.amount || 0) - (b.price || b.amount || 0);
+      });
       return sorted.map((f: any, i: number) => buildOption(f, i, false));
     } else if (fd.length === 1) {
       return [buildOption(fd[0], 0, true)];
@@ -1546,6 +1562,7 @@ const RoundTripFlightCard = ({
           {showFareOptions && (
             <FareOptionsPanel
               flights={roundTripFarePanelFlights}
+              searchedCabin={cardSearchParams.get("cabin") || cardSearchParams.get("class") || "economy"}
               onBook={(selectedFlight) => {
                 const selectedFare = selectedFlight?.fareDetails?.[0];
                 const baseOutbound = selectedFlight?._baseOutboundFlight || outbound;
@@ -2196,9 +2213,11 @@ const MultiCityFlightCard = ({
                         <Users className="w-3 h-3 inline mr-0.5" />{seg.availableSeats} Seat{seg.availableSeats !== 1 ? "s" : ""} Left
                       </span>
                     )}
-                    {(seg.cabinClass || seg.bookingClass || flight.fareDetails?.[0]?.bookingClass) && (
-                      <span className="text-[10px] text-muted-foreground">{seg.cabinClass || ''}{seg.bookingClass || flight.fareDetails?.[0]?.bookingClass ? ` - ${seg.bookingClass || flight.fareDetails?.[0]?.bookingClass}` : ''}</span>
-                    )}
+                    {(seg.cabinClass || seg.bookingClass || flight.fareDetails?.[0]?.bookingClass) && (() => {
+                      const bkCls = (seg.bookingClass || flight.fareDetails?.[0]?.bookingClass || '').charAt(0).toUpperCase();
+                      const cabinFromClass = ({ C: 'Business', J: 'Business', D: 'Business', I: 'Business', Z: 'Business', F: 'First', A: 'First', P: 'First', R: 'First', W: 'Premium Economy', E: 'Premium Economy' } as Record<string, string>)[bkCls] || seg.cabinClass || 'Economy';
+                      return <span className="text-[10px] text-muted-foreground">{cabinFromClass}{bkCls ? ` - ${bkCls} Class` : ''}</span>;
+                    })()}
                   </div>
                 </div>
               );
@@ -2627,6 +2646,7 @@ const FlightCard = ({
           {showFareOptions && (
             <FareOptionsPanel
               flights={[flight]}
+              searchedCabin={searchedCabin}
               onBook={(selectedFlight) => cardNavigate(
                 `/flights/book?adults=${cardSearchParams.get("adults") || "1"}&children=${cardSearchParams.get("children") || "0"}&infants=${cardSearchParams.get("infants") || "0"}&cabin=${cardSearchParams.get("cabin") || "economy"}`,
                 { state: { outboundFlight: selectedFlight || flight } },
