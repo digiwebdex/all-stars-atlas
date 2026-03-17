@@ -263,15 +263,15 @@ const AdminLayout = () => {
             </span>
           </Link>
           <div className="ml-auto flex items-center gap-2 sm:gap-3">
-            <ThemeToggle className="text-white/40 hover:text-white hover:bg-white/10" />
-            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/8">
+            <ThemeToggle className="text-muted-foreground hover:text-foreground hover:bg-muted" />
+            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted border border-border">
               <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span className="text-xs text-white/50 font-medium">{user?.email || 'Admin'}</span>
+              <span className="text-xs text-muted-foreground font-medium">{user?.email || 'Admin'}</span>
             </div>
             <Button
               variant="ghost"
               size="sm"
-              className="text-white/40 hover:text-white hover:bg-white/10"
+              className="text-muted-foreground hover:text-foreground hover:bg-muted"
               onClick={() => {
                 logout();
                 navigate("/admin/login", { replace: true });
