@@ -689,6 +689,9 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
     </div>
   );
 
+  // When compact (dashboard), use lg: breakpoint since sidebar eats ~240px from viewport
+  const bp = compact ? 'lg' : 'md';
+
   const tabContent: Record<string, React.ReactNode> = {
     // ====== FLIGHT ======
     flight: (
@@ -809,16 +812,16 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
         {tripType === "multicity" ? (
           <div className="space-y-3">
             {multiCitySegments.map((segment, index) => (
-              <div key={index} className="grid grid-cols-1 md:grid-cols-12 gap-0 border border-border rounded-2xl bg-background shadow-sm relative">
-                <div className="md:col-span-4 search-field border-b md:border-b-0 flex-col items-start">
+              <div key={index} className={`grid grid-cols-1 ${compact ? 'lg:grid-cols-12' : 'md:grid-cols-12'} gap-0 border border-border rounded-2xl bg-background shadow-sm relative`}>
+                <div className={`${compact ? 'lg:col-span-4' : 'md:col-span-4'} search-field border-b ${compact ? 'lg:border-b-0' : 'md:border-b-0'} flex-col items-start min-w-0`}>
                   <AirportInput label={`From (Flight ${index + 1})`} value={segment.from} onChange={(a) => updateSegment(index, 'from', a)} placeholder="Type city or airport..." airports={scopedMultiCityFromAirports} icon={<PlaneTakeoff className="w-5 h-5" />} />
                 </div>
 
-                <div className="md:col-span-4 search-field border-b md:border-b-0 flex-col items-start">
+                <div className={`${compact ? 'lg:col-span-4' : 'md:col-span-4'} search-field border-b ${compact ? 'lg:border-b-0' : 'md:border-b-0'} flex-col items-start min-w-0`}>
                   <AirportInput label={`To (Flight ${index + 1})`} value={segment.to} onChange={(a) => updateSegment(index, 'to', a)} placeholder="Where to?" airports={getMultiCityToAirports(segment.from)} icon={<PlaneLanding className="w-5 h-5" />} />
                 </div>
 
-                <div className="md:col-span-3 search-field border-b md:border-b-0 flex-col items-start">
+                <div className={`${compact ? 'lg:col-span-3' : 'md:col-span-3'} search-field border-b ${compact ? 'lg:border-b-0' : 'md:border-b-0'} flex-col items-start`}>
                   <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1 flex items-center gap-1"><CalendarDays className="w-3 h-3" /> Departure</div>
                   <Popover open={openDatePopover === `mc-${index}`} onOpenChange={(o) => setOpenDatePopover(o ? `mc-${index}` : null)}>
                     <PopoverTrigger className="w-full text-left">
@@ -828,7 +831,6 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
                       <Calendar mode="single" selected={segment.date} onSelect={(d) => { updateSegment(index, 'date', d); setOpenDatePopover(null); }} initialFocus className="pointer-events-auto" disabled={(date) => {
                         const today = new Date(); today.setHours(0,0,0,0);
                         if (date < today) return true;
-                        // Enforce: segment date must be >= previous segment's date
                         if (index > 0) {
                           const prevDate = multiCitySegments[index - 1]?.date;
                           if (prevDate) {
@@ -843,7 +845,7 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
                 </div>
 
                 {multiCitySegments.length > 2 && (
-                  <div className="md:col-span-1 flex items-center justify-center p-2">
+                  <div className={`${compact ? 'lg:col-span-1' : 'md:col-span-1'} flex items-center justify-center p-2`}>
                     <button
                       onClick={() => removeSegment(index)}
                       className="w-8 h-8 rounded-full border border-destructive/30 text-destructive hover:bg-destructive hover:text-destructive-foreground transition-all text-sm font-bold"
@@ -867,27 +869,27 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
             </div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-0 border border-border rounded-2xl bg-background shadow-sm overflow-hidden">
-            <div className="md:col-span-3 search-field border-b md:border-b-0 flex-col items-start">
+          <div className={`grid grid-cols-1 ${compact ? 'lg:grid-cols-12' : 'md:grid-cols-12'} gap-0 border border-border rounded-2xl bg-background shadow-sm overflow-hidden`}>
+            <div className={`${compact ? 'lg:col-span-3' : 'md:col-span-3'} search-field border-b ${compact ? 'lg:border-b-0' : 'md:border-b-0'} flex-col items-start min-w-0`}>
               <AirportInput label="From" value={fromAirport} onChange={setFromAirport} placeholder="Type city or airport..." airports={scopedFromAirports} icon={<PlaneTakeoff className="w-5 h-5" />} />
             </div>
 
-            <div className="flex md:hidden items-center justify-center py-1">
+            <div className={`flex ${compact ? 'lg:hidden' : 'md:hidden'} items-center justify-center py-1`}>
               <button onClick={swapAirports} className="w-9 h-9 rounded-full bg-card border-2 border-primary/30 flex items-center justify-center text-primary hover:bg-primary hover:text-primary-foreground transition-all shadow-sm">
                 <Repeat2 className="w-4 h-4 rotate-90" />
               </button>
             </div>
-            <div className="hidden md:flex items-center justify-center -mx-4 z-10">
+            <div className={`hidden ${compact ? 'lg:flex' : 'md:flex'} items-center justify-center -mx-4 z-10`}>
               <button onClick={swapAirports} className="w-10 h-10 rounded-full bg-card border-2 border-primary/30 flex items-center justify-center text-primary hover:bg-primary hover:text-primary-foreground transition-all shadow-md hover:shadow-lg hover:scale-110">
                 <Repeat2 className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="md:col-span-3 search-field border-b md:border-b-0 flex-col items-start">
+            <div className={`${compact ? 'lg:col-span-3' : 'md:col-span-3'} search-field border-b ${compact ? 'lg:border-b-0' : 'md:border-b-0'} flex-col items-start min-w-0`}>
               <AirportInput label="To" value={toAirport} onChange={setToAirport} placeholder="Where to?" airports={scopedToAirports} icon={<PlaneLanding className="w-5 h-5" />} />
             </div>
 
-            <div className={`${tripType === "roundtrip" ? "col-span-1 sm:col-span-1" : ""} md:col-span-2 search-field border-b md:border-b-0 flex-col items-start ${dateErrorClass("depart")}`}>
+            <div className={`${tripType === "roundtrip" ? "col-span-1 sm:col-span-1" : ""} ${compact ? 'lg:col-span-2' : 'md:col-span-2'} search-field border-b ${compact ? 'lg:border-b-0' : 'md:border-b-0'} flex-col items-start ${dateErrorClass("depart")}`}>
               <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1 flex items-center gap-1"><CalendarDays className="w-3 h-3" /> Departure</div>
               <Popover open={openDatePopover === "depart"} onOpenChange={(o) => setOpenDatePopover(o ? "depart" : null)}>
                 <PopoverTrigger className="w-full text-left">
@@ -900,7 +902,7 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
             </div>
 
             {tripType === "roundtrip" && (
-              <div className={`md:col-span-2 search-field border-b md:border-b-0 flex-col items-start ${dateErrorClass("return")}`}>
+              <div className={`${compact ? 'lg:col-span-2' : 'md:col-span-2'} search-field border-b ${compact ? 'lg:border-b-0' : 'md:border-b-0'} flex-col items-start ${dateErrorClass("return")}`}>
                 <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1 flex items-center gap-1"><CalendarDays className="w-3 h-3" /> Return</div>
                 <Popover open={openDatePopover === "return"} onOpenChange={(o) => setOpenDatePopover(o ? "return" : null)}>
                   <PopoverTrigger className="w-full text-left">
@@ -913,7 +915,7 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
               </div>
             )}
 
-            <div className={`${tripType === "roundtrip" ? "md:col-span-2" : "md:col-span-4"} flex items-center justify-center p-3`}>
+            <div className={`${tripType === "roundtrip" ? (compact ? "lg:col-span-2" : "md:col-span-2") : (compact ? "lg:col-span-4" : "md:col-span-4")} flex items-center justify-center p-3`}>
               <Button onClick={handleFlightSearch} className="w-full h-12 md:h-full md:min-h-[56px] rounded-xl bg-secondary text-secondary-foreground hover:bg-secondary/90 text-base font-extrabold shadow-xl shadow-secondary/25 hover:shadow-secondary/40 transition-all active:scale-[0.98]">
                 <SendHorizontal className="w-5 h-5 mr-2" /> SEARCH
               </Button>
@@ -941,8 +943,8 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
 
     // ====== HOTEL ======
     hotel: (
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-0 border border-border rounded-2xl bg-background shadow-sm">
-        <div className="md:col-span-4 search-field border-b md:border-b-0 flex-col items-start">
+      <div className={`grid grid-cols-1 ${bp}:grid-cols-12 gap-0 border border-border rounded-2xl bg-background shadow-sm`}>
+        <div className={`${bp}:col-span-4 search-field border-b ${bp}:border-b-0 flex-col items-start min-w-0`}>
           <CityInput
             label="Destination"
             value={hotelCity}
@@ -952,8 +954,8 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
             placeholder="Where are you going?"
           />
         </div>
-        <div className="grid grid-cols-2 md:contents">
-          <div className={`md:col-span-2 search-field border-b md:border-b-0 border-r md:border-r flex-col items-start ${dateErrorClass("checkIn")}`}>
+        <div className={`grid grid-cols-2 ${bp}:contents`}>
+          <div className={`${bp}:col-span-2 search-field border-b ${bp}:border-b-0 border-r ${bp}:border-r flex-col items-start ${dateErrorClass("checkIn")}`}>
             <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Check-in</div>
             <Popover open={openDatePopover === "checkIn"} onOpenChange={(o) => setOpenDatePopover(o ? "checkIn" : null)}>
               <PopoverTrigger className="w-full text-left">
@@ -964,7 +966,7 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
               </PopoverContent>
             </Popover>
           </div>
-          <div className={`md:col-span-2 search-field border-b md:border-b-0 flex-col items-start ${dateErrorClass("checkOut")}`}>
+          <div className={`${bp}:col-span-2 search-field border-b ${bp}:border-b-0 flex-col items-start ${dateErrorClass("checkOut")}`}>
             <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Check-out</div>
             <Popover open={openDatePopover === "checkOut"} onOpenChange={(o) => setOpenDatePopover(o ? "checkOut" : null)}>
               <PopoverTrigger className="w-full text-left">
@@ -976,7 +978,7 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
             </Popover>
           </div>
         </div>
-        <div className="md:col-span-2 search-field border-b md:border-b-0 flex-col items-start">
+        <div className={`${bp}:col-span-2 search-field border-b ${bp}:border-b-0 flex-col items-start`}>
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Guests & Rooms</div>
           <Popover>
             <PopoverTrigger className="w-full text-left">
@@ -1024,8 +1026,8 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
             </PopoverContent>
           </Popover>
         </div>
-        <div className="md:col-span-2 flex items-center justify-center p-3">
-          <Button onClick={handleHotelSearch} className="w-full h-12 md:h-full md:min-h-[56px] rounded-xl bg-secondary text-secondary-foreground hover:bg-secondary/90 text-base font-extrabold shadow-xl shadow-secondary/25 hover:shadow-secondary/40 transition-all active:scale-[0.98]">
+        <div className={`${bp}:col-span-2 flex items-center justify-center p-3`}>
+          <Button onClick={handleHotelSearch} className={`w-full h-12 ${bp === 'md' ? 'md:h-full md:min-h-[56px]' : 'lg:h-full lg:min-h-[56px]'} rounded-xl bg-secondary text-secondary-foreground hover:bg-secondary/90 text-base font-extrabold shadow-xl shadow-secondary/25 hover:shadow-secondary/40 transition-all active:scale-[0.98]`}>
             <Search className="w-5 h-5" />
           </Button>
         </div>
@@ -1034,8 +1036,8 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
 
     // ====== VISA ======
     visa: (
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-12 gap-0 border border-border rounded-2xl bg-background shadow-sm">
-        <div className="sm:col-span-2 md:col-span-3 search-field border-b md:border-b-0 flex-col items-start">
+      <div className={`grid grid-cols-1 sm:grid-cols-2 ${bp}:grid-cols-12 gap-0 border border-border rounded-2xl bg-background shadow-sm`}>
+        <div className={`sm:col-span-2 ${bp}:col-span-3 search-field border-b ${bp}:border-b-0 flex-col items-start`}>
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Country</div>
           <div className="flex items-center gap-2 w-full">
             <span className="text-xl font-black text-primary">{VISA_COUNTRIES.find(c => c.code === visaCountry)?.flag || "🌍"}</span>
@@ -1061,7 +1063,7 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
             </div>
           </div>
         </div>
-        <div className={`search-field border-b md:border-b-0 flex-col items-start md:col-span-2 ${dateErrorClass("visaDate")}`}>
+        <div className={`search-field border-b ${bp}:border-b-0 flex-col items-start ${bp}:col-span-2 ${dateErrorClass("visaDate")}`}>
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Travel Date</div>
           <Popover open={openDatePopover === "visaDate"} onOpenChange={(o) => setOpenDatePopover(o ? "visaDate" : null)}>
             <PopoverTrigger className="w-full text-left">
@@ -1072,7 +1074,7 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
             </PopoverContent>
           </Popover>
         </div>
-        <div className={`search-field border-b md:border-b-0 flex-col items-start md:col-span-2 ${dateErrorClass("visaReturnDate")}`}>
+        <div className={`search-field border-b ${bp}:border-b-0 flex-col items-start ${bp}:col-span-2 ${dateErrorClass("visaReturnDate")}`}>
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Return Date</div>
           <Popover open={openDatePopover === "visaReturnDate"} onOpenChange={(o) => setOpenDatePopover(o ? "visaReturnDate" : null)}>
             <PopoverTrigger className="w-full text-left">
@@ -1083,7 +1085,7 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
             </PopoverContent>
           </Popover>
         </div>
-        <div className="sm:col-span-2 md:col-span-2 search-field border-b md:border-b-0 flex-col items-start">
+        <div className={`sm:col-span-2 ${bp}:col-span-2 search-field border-b ${bp}:border-b-0 flex-col items-start`}>
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Travellers</div>
           <Popover>
             <PopoverTrigger className="w-full text-left">
@@ -1109,8 +1111,8 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
             </PopoverContent>
           </Popover>
         </div>
-        <div className="sm:col-span-2 md:col-span-3 flex items-center justify-center p-3">
-          <Button onClick={handleVisaSearch} className="w-full h-12 md:h-full md:min-h-[56px] rounded-xl bg-secondary text-secondary-foreground hover:bg-secondary/90 text-base font-extrabold shadow-xl shadow-secondary/25 transition-all active:scale-[0.98]">
+        <div className={`sm:col-span-2 ${bp}:col-span-3 flex items-center justify-center p-3`}>
+          <Button onClick={handleVisaSearch} className={`w-full h-12 ${bp === 'md' ? 'md:h-full md:min-h-[56px]' : 'lg:h-full lg:min-h-[56px]'} rounded-xl bg-secondary text-secondary-foreground hover:bg-secondary/90 text-base font-extrabold shadow-xl shadow-secondary/25 transition-all active:scale-[0.98]`}>
             <Search className="w-5 h-5 mr-2" /> Search
           </Button>
         </div>
@@ -1120,8 +1122,8 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
     // ====== HOLIDAY ======
     holiday: (
       <div className="space-y-3">
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-0 border border-border rounded-2xl bg-background shadow-sm">
-          <div className="md:col-span-5 search-field border-b md:border-b-0 flex-col items-start">
+        <div className={`grid grid-cols-1 ${bp}:grid-cols-12 gap-0 border border-border rounded-2xl bg-background shadow-sm`}>
+          <div className={`${bp}:col-span-5 search-field border-b ${bp}:border-b-0 flex-col items-start`}>
             <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Destination</div>
             <div className="flex items-center gap-2 w-full">
               <span className="text-xl font-black text-primary">{HOLIDAY_DESTINATIONS.find(d => d.name === holidayDest)?.flag || "🌍"}</span>
@@ -1138,7 +1140,7 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
               </div>
             </div>
           </div>
-          <div className={`md:col-span-4 search-field border-b md:border-b-0 flex-col items-start ${dateErrorClass("travelDate")}`}>
+          <div className={`${bp}:col-span-4 search-field border-b ${bp}:border-b-0 flex-col items-start ${dateErrorClass("travelDate")}`}>
             <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Travel Date</div>
             <Popover open={openDatePopover === "travelDate"} onOpenChange={(o) => setOpenDatePopover(o ? "travelDate" : null)}>
               <PopoverTrigger className="w-full text-left">
@@ -1149,8 +1151,8 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
               </PopoverContent>
             </Popover>
           </div>
-          <div className="md:col-span-3 flex items-center justify-center p-3">
-            <Button onClick={handleHolidaySearch} className="w-full h-12 md:h-full md:min-h-[56px] rounded-xl bg-secondary text-secondary-foreground hover:bg-secondary/90 text-base font-extrabold shadow-xl shadow-secondary/25 transition-all active:scale-[0.98]">
+          <div className={`${bp}:col-span-3 flex items-center justify-center p-3`}>
+            <Button onClick={handleHolidaySearch} className={`w-full h-12 ${bp === 'md' ? 'md:h-full md:min-h-[56px]' : 'lg:h-full lg:min-h-[56px]'} rounded-xl bg-secondary text-secondary-foreground hover:bg-secondary/90 text-base font-extrabold shadow-xl shadow-secondary/25 transition-all active:scale-[0.98]`}>
               <Search className="w-5 h-5 mr-2" /> Search
             </Button>
           </div>
@@ -1160,8 +1162,8 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
 
     // ====== MEDICAL TOURISM ======
     medical: (
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-0 border border-border rounded-2xl bg-background shadow-sm">
-        <div className="md:col-span-3 search-field border-b md:border-b-0 flex-col items-start">
+      <div className={`grid grid-cols-1 ${bp}:grid-cols-12 gap-0 border border-border rounded-2xl bg-background shadow-sm`}>
+        <div className={`${bp}:col-span-3 search-field border-b ${bp}:border-b-0 flex-col items-start`}>
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Destination</div>
           <div className="flex items-center gap-2 w-full">
             <Globe className="w-5 h-5 text-primary shrink-0" />
@@ -1180,58 +1182,45 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
             </div>
           </div>
         </div>
-        <div className="md:col-span-3 search-field border-b md:border-b-0 flex-col items-start">
+        <div className={`${bp}:col-span-3 search-field border-b ${bp}:border-b-0 flex-col items-start`}>
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Treatment</div>
           <Select value={treatmentType} onValueChange={setTreatmentType}>
-            <SelectTrigger className="border-0 p-0 h-auto text-sm font-bold shadow-none focus:ring-0">
-              <SelectValue placeholder="Select treatment" />
-            </SelectTrigger>
-            <SelectContent>
-              {TREATMENT_TYPES.map(t => (
-                <SelectItem key={t} value={t.toLowerCase().replace(/ /g, '-')}>{t}</SelectItem>
-              ))}
-            </SelectContent>
+            <SelectTrigger className="border-0 p-0 h-auto text-sm font-bold shadow-none focus:ring-0"><SelectValue placeholder="Select treatment" /></SelectTrigger>
+            <SelectContent>{TREATMENT_TYPES.map(t => (<SelectItem key={t} value={t.toLowerCase().replace(/ /g, '-')}>{t}</SelectItem>))}</SelectContent>
           </Select>
         </div>
-        <div className={`md:col-span-2 search-field border-b md:border-b-0 flex-col items-start ${dateErrorClass("medicalDate")}`}>
+        <div className={`${bp}:col-span-2 search-field border-b ${bp}:border-b-0 flex-col items-start ${dateErrorClass("medicalDate")}`}>
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Travel Date</div>
           <Popover open={openDatePopover === "medicalDate"} onOpenChange={(o) => setOpenDatePopover(o ? "medicalDate" : null)}>
-            <PopoverTrigger className="w-full text-left">
-              <DateDisplay date={medicalDate} fallbackDay="—" fallbackMonth="Select" fallbackWeekday="Date" />
-            </PopoverTrigger>
+            <PopoverTrigger className="w-full text-left"><DateDisplay date={medicalDate} fallbackDay="—" fallbackMonth="Select" fallbackWeekday="Date" /></PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="start">
               <Calendar mode="single" selected={medicalDate} onSelect={(d) => { setMedicalDate(d); clearDateError("medicalDate"); setOpenDatePopover(null); }} initialFocus className="pointer-events-auto" disabled={(date) => date < new Date()} />
             </PopoverContent>
           </Popover>
         </div>
-        <div className="md:col-span-2 search-field border-b md:border-b-0 flex-col items-start">
+        <div className={`${bp}:col-span-2 search-field border-b ${bp}:border-b-0 flex-col items-start`}>
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Patients</div>
           <Popover>
             <PopoverTrigger className="w-full text-left">
               <div className="flex items-center gap-2">
                 <span className="text-xl sm:text-2xl font-black">{String(medicalPatients).padStart(2, '0')}</span>
-                <div>
-                  <div className="text-sm font-bold">Patient{medicalPatients > 1 ? 's' : ''}</div>
-                  <div className="text-[11px] text-muted-foreground">+ Companion</div>
-                </div>
+                <div><div className="text-sm font-bold">Patient{medicalPatients > 1 ? 's' : ''}</div><div className="text-[11px] text-muted-foreground">+ Companion</div></div>
               </div>
             </PopoverTrigger>
             <PopoverContent className="w-56" align="start">
               <div className="flex items-center justify-between">
                 <div className="text-sm font-semibold">Patients</div>
                 <div className="flex items-center gap-2">
-                  <Button variant="outline" size="icon" className="h-8 w-8 text-xs rounded-lg"
-                    onClick={() => setMedicalPatients(prev => Math.max(1, prev - 1))}>−</Button>
+                  <Button variant="outline" size="icon" className="h-8 w-8 text-xs rounded-lg" onClick={() => setMedicalPatients(prev => Math.max(1, prev - 1))}>−</Button>
                   <span className="w-5 text-center text-sm font-bold">{medicalPatients}</span>
-                  <Button variant="outline" size="icon" className="h-8 w-8 text-xs rounded-lg"
-                    onClick={() => setMedicalPatients(prev => prev + 1)}>+</Button>
+                  <Button variant="outline" size="icon" className="h-8 w-8 text-xs rounded-lg" onClick={() => setMedicalPatients(prev => prev + 1)}>+</Button>
                 </div>
               </div>
             </PopoverContent>
           </Popover>
         </div>
-        <div className="md:col-span-2 flex items-center justify-center p-3">
-          <Button onClick={handleMedicalSearch} className="w-full h-12 md:h-full md:min-h-[56px] rounded-xl bg-secondary text-secondary-foreground hover:bg-secondary/90 text-base font-extrabold shadow-xl shadow-secondary/25 transition-all active:scale-[0.98]">
+        <div className={`${bp}:col-span-2 flex items-center justify-center p-3`}>
+          <Button onClick={handleMedicalSearch} className={`w-full h-12 ${bp === 'md' ? 'md:h-full md:min-h-[56px]' : 'lg:h-full lg:min-h-[56px]'} rounded-xl bg-secondary text-secondary-foreground hover:bg-secondary/90 text-base font-extrabold shadow-xl shadow-secondary/25 transition-all active:scale-[0.98]`}>
             <Search className="w-5 h-5" />
           </Button>
         </div>
@@ -1240,53 +1229,31 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
 
     // ====== CAR RENTAL ======
     cars: (
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-0 border border-border rounded-2xl bg-background shadow-sm">
-        <div className="md:col-span-3 search-field border-b md:border-b-0 flex-col items-start">
-          <CityInput
-            label="Pickup Location"
-            value={pickupCity}
-            onChange={setPickupCity}
-            cities={HOTEL_CITIES.filter(c => ["Dhaka", "Chittagong", "Cox's Bazar", "Sylhet", "Rajshahi", "Gazipur", "Rangpur", "Sreemangal"].includes(c))}
-            icon={<MapPin className="w-5 h-5 text-primary shrink-0" />}
-            placeholder="Pickup city..."
-          />
+      <div className={`grid grid-cols-1 ${bp}:grid-cols-12 gap-0 border border-border rounded-2xl bg-background shadow-sm`}>
+        <div className={`${bp}:col-span-3 search-field border-b ${bp}:border-b-0 flex-col items-start min-w-0`}>
+          <CityInput label="Pickup Location" value={pickupCity} onChange={setPickupCity} cities={HOTEL_CITIES.filter(c => ["Dhaka", "Chittagong", "Cox's Bazar", "Sylhet", "Rajshahi", "Gazipur", "Rangpur", "Sreemangal"].includes(c))} icon={<MapPin className="w-5 h-5 text-primary shrink-0" />} placeholder="Pickup city..." />
         </div>
-        <div className="md:col-span-3 search-field border-b md:border-b-0 flex-col items-start">
-          <CityInput
-            label="Drop-off Location"
-            value={dropoffCity}
-            onChange={setDropoffCity}
-            cities={HOTEL_CITIES.filter(c => ["Dhaka", "Chittagong", "Cox's Bazar", "Sylhet", "Rajshahi", "Gazipur", "Rangpur", "Sreemangal"].includes(c))}
-            icon={<MapPin className="w-5 h-5 text-secondary shrink-0" />}
-            placeholder="Drop-off city..."
-          />
+        <div className={`${bp}:col-span-3 search-field border-b ${bp}:border-b-0 flex-col items-start min-w-0`}>
+          <CityInput label="Drop-off Location" value={dropoffCity} onChange={setDropoffCity} cities={HOTEL_CITIES.filter(c => ["Dhaka", "Chittagong", "Cox's Bazar", "Sylhet", "Rajshahi", "Gazipur", "Rangpur", "Sreemangal"].includes(c))} icon={<MapPin className="w-5 h-5 text-secondary shrink-0" />} placeholder="Drop-off city..." />
         </div>
-        <div className="grid grid-cols-2 md:contents">
-          <div className={`md:col-span-2 search-field border-b md:border-b-0 border-r flex-col items-start ${dateErrorClass("pickupDate")}`}>
+        <div className={`grid grid-cols-2 ${bp}:contents`}>
+          <div className={`${bp}:col-span-2 search-field border-b ${bp}:border-b-0 border-r flex-col items-start ${dateErrorClass("pickupDate")}`}>
             <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Pickup Date</div>
             <Popover open={openDatePopover === "pickupDate"} onOpenChange={(o) => setOpenDatePopover(o ? "pickupDate" : null)}>
-              <PopoverTrigger className="w-full text-left">
-                <DateDisplay date={pickupDate} fallbackDay="—" fallbackMonth="Select" fallbackWeekday="Date" />
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar mode="single" selected={pickupDate} onSelect={(d) => { setPickupDate(d); clearDateError("pickupDate"); setOpenDatePopover(null); }} initialFocus className="pointer-events-auto" disabled={(date) => date < new Date()} />
-              </PopoverContent>
+              <PopoverTrigger className="w-full text-left"><DateDisplay date={pickupDate} fallbackDay="—" fallbackMonth="Select" fallbackWeekday="Date" /></PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={pickupDate} onSelect={(d) => { setPickupDate(d); clearDateError("pickupDate"); setOpenDatePopover(null); }} initialFocus className="pointer-events-auto" disabled={(date) => date < new Date()} /></PopoverContent>
             </Popover>
           </div>
-          <div className={`md:col-span-2 search-field border-b md:border-b-0 flex-col items-start ${dateErrorClass("dropoffDate")}`}>
+          <div className={`${bp}:col-span-2 search-field border-b ${bp}:border-b-0 flex-col items-start ${dateErrorClass("dropoffDate")}`}>
             <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Drop-off Date</div>
             <Popover open={openDatePopover === "dropoffDate"} onOpenChange={(o) => setOpenDatePopover(o ? "dropoffDate" : null)}>
-              <PopoverTrigger className="w-full text-left">
-                <DateDisplay date={dropoffDate} fallbackDay="—" fallbackMonth="Select" fallbackWeekday="Date" />
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar mode="single" selected={dropoffDate} onSelect={(d) => { setDropoffDate(d); clearDateError("dropoffDate"); setOpenDatePopover(null); }} initialFocus className="pointer-events-auto" disabled={(date) => date < (pickupDate || new Date())} />
-              </PopoverContent>
+              <PopoverTrigger className="w-full text-left"><DateDisplay date={dropoffDate} fallbackDay="—" fallbackMonth="Select" fallbackWeekday="Date" /></PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={dropoffDate} onSelect={(d) => { setDropoffDate(d); clearDateError("dropoffDate"); setOpenDatePopover(null); }} initialFocus className="pointer-events-auto" disabled={(date) => date < (pickupDate || new Date())} /></PopoverContent>
             </Popover>
           </div>
         </div>
-        <div className="md:col-span-2 flex items-center justify-center p-3">
-          <Button onClick={handleCarSearch} className="w-full h-12 md:h-full md:min-h-[56px] rounded-xl bg-secondary text-secondary-foreground hover:bg-secondary/90 text-base font-extrabold shadow-xl shadow-secondary/25 transition-all active:scale-[0.98]">
+        <div className={`${bp}:col-span-2 flex items-center justify-center p-3`}>
+          <Button onClick={handleCarSearch} className={`w-full h-12 ${bp === 'md' ? 'md:h-full md:min-h-[56px]' : 'lg:h-full lg:min-h-[56px]'} rounded-xl bg-secondary text-secondary-foreground hover:bg-secondary/90 text-base font-extrabold shadow-xl shadow-secondary/25 transition-all active:scale-[0.98]`}>
             <Search className="w-5 h-5" />
           </Button>
         </div>
@@ -1295,8 +1262,8 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
 
     // ====== eSIM ======
     esim: (
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-0 border border-border rounded-2xl bg-background shadow-sm">
-        <div className="md:col-span-4 search-field border-b md:border-b-0 flex-col items-start">
+      <div className={`grid grid-cols-1 ${bp}:grid-cols-12 gap-0 border border-border rounded-2xl bg-background shadow-sm`}>
+        <div className={`${bp}:col-span-4 search-field border-b ${bp}:border-b-0 flex-col items-start`}>
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Destination Country</div>
           <div className="flex items-center gap-2 w-full">
             <Wifi className="w-5 h-5 text-primary shrink-0" />
@@ -1304,50 +1271,31 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
               <Select value={esimCountry} onValueChange={setEsimCountry}>
                 <SelectTrigger className="border-0 p-0 h-auto text-sm font-bold shadow-none focus:ring-0"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="thailand">🇹🇭 Thailand</SelectItem>
-                  <SelectItem value="malaysia">🇲🇾 Malaysia</SelectItem>
-                  <SelectItem value="singapore">🇸🇬 Singapore</SelectItem>
-                  <SelectItem value="india">🇮🇳 India</SelectItem>
-                  <SelectItem value="uae">🇦🇪 UAE</SelectItem>
-                  <SelectItem value="turkey">🇹🇷 Turkey</SelectItem>
-                  <SelectItem value="uk">🇬🇧 United Kingdom</SelectItem>
-                  <SelectItem value="usa">🇺🇸 United States</SelectItem>
-                  <SelectItem value="japan">🇯🇵 Japan</SelectItem>
-                  <SelectItem value="south-korea">🇰🇷 South Korea</SelectItem>
-                  <SelectItem value="australia">🇦🇺 Australia</SelectItem>
-                  <SelectItem value="europe">🇪🇺 Europe (Multi)</SelectItem>
+                  <SelectItem value="thailand">🇹🇭 Thailand</SelectItem><SelectItem value="malaysia">🇲🇾 Malaysia</SelectItem><SelectItem value="singapore">🇸🇬 Singapore</SelectItem><SelectItem value="india">🇮🇳 India</SelectItem><SelectItem value="uae">🇦🇪 UAE</SelectItem><SelectItem value="turkey">🇹🇷 Turkey</SelectItem><SelectItem value="uk">🇬🇧 United Kingdom</SelectItem><SelectItem value="usa">🇺🇸 United States</SelectItem><SelectItem value="japan">🇯🇵 Japan</SelectItem><SelectItem value="south-korea">🇰🇷 South Korea</SelectItem><SelectItem value="australia">🇦🇺 Australia</SelectItem><SelectItem value="europe">🇪🇺 Europe (Multi)</SelectItem>
                 </SelectContent>
               </Select>
               <div className="text-[11px] text-muted-foreground">eSIM Data Plan</div>
             </div>
           </div>
         </div>
-        <div className="md:col-span-3 search-field border-b md:border-b-0 flex-col items-start">
+        <div className={`${bp}:col-span-3 search-field border-b ${bp}:border-b-0 flex-col items-start`}>
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Data Plan</div>
           <Select value={esimPlan} onValueChange={setEsimPlan}>
             <SelectTrigger className="border-0 p-0 h-auto text-sm font-bold shadow-none focus:ring-0"><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="1gb-7d">1 GB — 7 Days</SelectItem>
-              <SelectItem value="3gb-15d">3 GB — 15 Days</SelectItem>
-              <SelectItem value="5gb-30d">5 GB — 30 Days</SelectItem>
-              <SelectItem value="10gb-30d">10 GB — 30 Days</SelectItem>
-              <SelectItem value="unlimited-30d">Unlimited — 30 Days</SelectItem>
+              <SelectItem value="1gb-7d">1 GB — 7 Days</SelectItem><SelectItem value="3gb-15d">3 GB — 15 Days</SelectItem><SelectItem value="5gb-30d">5 GB — 30 Days</SelectItem><SelectItem value="10gb-30d">10 GB — 30 Days</SelectItem><SelectItem value="unlimited-30d">Unlimited — 30 Days</SelectItem>
             </SelectContent>
           </Select>
         </div>
-        <div className={`md:col-span-3 search-field border-b md:border-b-0 flex-col items-start ${dateErrorClass("esimDate")}`}>
+        <div className={`${bp}:col-span-3 search-field border-b ${bp}:border-b-0 flex-col items-start ${dateErrorClass("esimDate")}`}>
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Activation Date</div>
           <Popover open={openDatePopover === "esimDate"} onOpenChange={(o) => setOpenDatePopover(o ? "esimDate" : null)}>
-            <PopoverTrigger className="w-full text-left">
-              <DateDisplay date={esimDate} fallbackDay="—" fallbackMonth="Select" fallbackWeekday="Date" />
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <Calendar mode="single" selected={esimDate} onSelect={(d) => { setEsimDate(d); clearDateError("esimDate"); setOpenDatePopover(null); }} initialFocus className="pointer-events-auto" disabled={(date) => date < new Date()} />
-            </PopoverContent>
+            <PopoverTrigger className="w-full text-left"><DateDisplay date={esimDate} fallbackDay="—" fallbackMonth="Select" fallbackWeekday="Date" /></PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={esimDate} onSelect={(d) => { setEsimDate(d); clearDateError("esimDate"); setOpenDatePopover(null); }} initialFocus className="pointer-events-auto" disabled={(date) => date < new Date()} /></PopoverContent>
           </Popover>
         </div>
-        <div className="md:col-span-2 flex items-center justify-center p-3">
-          <Button onClick={handleEsimSearch} className="w-full h-12 md:h-full md:min-h-[56px] rounded-xl bg-secondary text-secondary-foreground hover:bg-secondary/90 text-base font-extrabold shadow-xl shadow-secondary/25 transition-all active:scale-[0.98]">
+        <div className={`${bp}:col-span-2 flex items-center justify-center p-3`}>
+          <Button onClick={handleEsimSearch} className={`w-full h-12 ${bp === 'md' ? 'md:h-full md:min-h-[56px]' : 'lg:h-full lg:min-h-[56px]'} rounded-xl bg-secondary text-secondary-foreground hover:bg-secondary/90 text-base font-extrabold shadow-xl shadow-secondary/25 transition-all active:scale-[0.98]`}>
             <Search className="w-5 h-5" />
           </Button>
         </div>
@@ -1370,38 +1318,30 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
             </button>
           ))}
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-0 border border-border rounded-2xl bg-background shadow-sm">
-          <div className="md:col-span-3 search-field border-b md:border-b-0 flex-col items-start">
+        <div className={`grid grid-cols-1 ${bp}:grid-cols-12 gap-0 border border-border rounded-2xl bg-background shadow-sm`}>
+          <div className={`${bp}:col-span-3 search-field border-b ${bp}:border-b-0 flex-col items-start`}>
             <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Operator</div>
             <Select value={rechargeOperator} onValueChange={setRechargeOperator}>
-              <SelectTrigger className="border-0 p-0 h-auto text-sm font-bold shadow-none focus:ring-0">
-                <SelectValue placeholder="Select operator" />
-              </SelectTrigger>
-              <SelectContent>
-                {RECHARGE_OPERATORS.map(op => (
-                  <SelectItem key={op.id} value={op.id}>{op.logo} {op.name}</SelectItem>
-                ))}
-              </SelectContent>
+              <SelectTrigger className="border-0 p-0 h-auto text-sm font-bold shadow-none focus:ring-0"><SelectValue placeholder="Select operator" /></SelectTrigger>
+              <SelectContent>{RECHARGE_OPERATORS.map(op => (<SelectItem key={op.id} value={op.id}>{op.logo} {op.name}</SelectItem>))}</SelectContent>
             </Select>
           </div>
-          <div className="md:col-span-3 search-field border-b md:border-b-0 flex-col items-start">
+          <div className={`${bp}:col-span-3 search-field border-b ${bp}:border-b-0 flex-col items-start`}>
             <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Phone Number</div>
             <div className="flex items-center gap-2 w-full">
               <PhoneCall className="w-4 h-4 text-primary shrink-0" />
-              <Input value={rechargeNumber} onChange={e => setRechargeNumber(e.target.value)}
-                placeholder="01XXX-XXXXXX" className="border-0 p-0 h-auto text-sm font-bold shadow-none focus-visible:ring-0" />
+              <Input value={rechargeNumber} onChange={e => setRechargeNumber(e.target.value)} placeholder="01XXX-XXXXXX" className="border-0 p-0 h-auto text-sm font-bold shadow-none focus-visible:ring-0" />
             </div>
           </div>
-          <div className="md:col-span-3 search-field border-b md:border-b-0 flex-col items-start">
+          <div className={`${bp}:col-span-3 search-field border-b ${bp}:border-b-0 flex-col items-start`}>
             <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Amount (৳)</div>
             <div className="flex items-center gap-2 w-full">
               <Zap className="w-4 h-4 text-secondary shrink-0" />
-              <Input value={rechargeAmount} onChange={e => setRechargeAmount(e.target.value)}
-                placeholder="Enter amount" type="number" className="border-0 p-0 h-auto text-sm font-bold shadow-none focus-visible:ring-0" />
+              <Input value={rechargeAmount} onChange={e => setRechargeAmount(e.target.value)} placeholder="Enter amount" type="number" className="border-0 p-0 h-auto text-sm font-bold shadow-none focus-visible:ring-0" />
             </div>
           </div>
-          <div className="md:col-span-3 flex items-center justify-center p-3">
-            <Button onClick={handleRecharge} className="w-full h-12 md:h-full md:min-h-[56px] rounded-xl bg-secondary text-secondary-foreground hover:bg-secondary/90 text-base font-extrabold shadow-xl shadow-secondary/25 transition-all active:scale-[0.98]">
+          <div className={`${bp}:col-span-3 flex items-center justify-center p-3`}>
+            <Button onClick={handleRecharge} className={`w-full h-12 ${bp === 'md' ? 'md:h-full md:min-h-[56px]' : 'lg:h-full lg:min-h-[56px]'} rounded-xl bg-secondary text-secondary-foreground hover:bg-secondary/90 text-base font-extrabold shadow-xl shadow-secondary/25 transition-all active:scale-[0.98]`}>
               <Zap className="w-5 h-5 mr-2" /> Recharge
             </Button>
           </div>
@@ -1421,43 +1361,34 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
 
     // ====== PAY BILL ======
     paybill: (
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-0 border border-border rounded-2xl bg-background shadow-sm">
-        <div className="md:col-span-3 search-field border-b md:border-b-0 flex-col items-start">
+      <div className={`grid grid-cols-1 ${bp}:grid-cols-12 gap-0 border border-border rounded-2xl bg-background shadow-sm`}>
+        <div className={`${bp}:col-span-3 search-field border-b ${bp}:border-b-0 flex-col items-start`}>
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Category</div>
           <div className="flex items-center gap-2 w-full">
             <Receipt className="w-5 h-5 text-primary shrink-0" />
             <Select value={billCategory} onValueChange={setBillCategory}>
-              <SelectTrigger className="border-0 p-0 h-auto text-sm font-bold shadow-none focus:ring-0">
-                <SelectValue placeholder="Select category" />
-              </SelectTrigger>
-              <SelectContent>
-                {BILL_CATEGORIES.map(cat => (
-                  <SelectItem key={cat} value={cat.toLowerCase().replace(/ /g, '-')}>{cat}</SelectItem>
-                ))}
-              </SelectContent>
+              <SelectTrigger className="border-0 p-0 h-auto text-sm font-bold shadow-none focus:ring-0"><SelectValue placeholder="Select category" /></SelectTrigger>
+              <SelectContent>{BILL_CATEGORIES.map(cat => (<SelectItem key={cat} value={cat.toLowerCase().replace(/ /g, '-')}>{cat}</SelectItem>))}</SelectContent>
             </Select>
           </div>
         </div>
-        <div className="md:col-span-3 search-field border-b md:border-b-0 flex-col items-start">
+        <div className={`${bp}:col-span-3 search-field border-b ${bp}:border-b-0 flex-col items-start`}>
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Biller Name</div>
-          <Input value={billerName} onChange={e => setBillerName(e.target.value)}
-            placeholder="e.g. DPDC, Titas Gas" className="border-0 p-0 h-auto text-sm font-bold shadow-none focus-visible:ring-0" />
+          <Input value={billerName} onChange={e => setBillerName(e.target.value)} placeholder="e.g. DPDC, Titas Gas" className="border-0 p-0 h-auto text-sm font-bold shadow-none focus-visible:ring-0" />
         </div>
-        <div className="md:col-span-2 search-field border-b md:border-b-0 flex-col items-start">
+        <div className={`${bp}:col-span-2 search-field border-b ${bp}:border-b-0 flex-col items-start`}>
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Account No.</div>
-          <Input value={accountNumber} onChange={e => setAccountNumber(e.target.value)}
-            placeholder="Account/Subscriber #" className="border-0 p-0 h-auto text-sm font-bold shadow-none focus-visible:ring-0" />
+          <Input value={accountNumber} onChange={e => setAccountNumber(e.target.value)} placeholder="Account/Subscriber #" className="border-0 p-0 h-auto text-sm font-bold shadow-none focus-visible:ring-0" />
         </div>
-        <div className="md:col-span-2 search-field border-b md:border-b-0 flex-col items-start">
+        <div className={`${bp}:col-span-2 search-field border-b ${bp}:border-b-0 flex-col items-start`}>
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Amount (৳)</div>
           <div className="flex items-center gap-2 w-full">
             <CreditCard className="w-4 h-4 text-secondary shrink-0" />
-            <Input value={billAmount} onChange={e => setBillAmount(e.target.value)}
-              placeholder="Amount" type="number" className="border-0 p-0 h-auto text-sm font-bold shadow-none focus-visible:ring-0" />
+            <Input value={billAmount} onChange={e => setBillAmount(e.target.value)} placeholder="Amount" type="number" className="border-0 p-0 h-auto text-sm font-bold shadow-none focus-visible:ring-0" />
           </div>
         </div>
-        <div className="md:col-span-2 flex items-center justify-center p-3">
-          <Button onClick={handlePayBill} className="w-full h-12 md:h-full md:min-h-[56px] rounded-xl bg-secondary text-secondary-foreground hover:bg-secondary/90 text-base font-extrabold shadow-xl shadow-secondary/25 transition-all active:scale-[0.98]">
+        <div className={`${bp}:col-span-2 flex items-center justify-center p-3`}>
+          <Button onClick={handlePayBill} className={`w-full h-12 ${bp === 'md' ? 'md:h-full md:min-h-[56px]' : 'lg:h-full lg:min-h-[56px]'} rounded-xl bg-secondary text-secondary-foreground hover:bg-secondary/90 text-base font-extrabold shadow-xl shadow-secondary/25 transition-all active:scale-[0.98]`}>
             <CreditCard className="w-5 h-5 mr-2" /> Pay
           </Button>
         </div>
@@ -1466,23 +1397,23 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
   };
 
   return (
-    <div className={`${compact ? 'bg-card border border-border rounded-xl shadow-sm' : 'glass-card-hero rounded-2xl'} overflow-hidden`}>
+    <div className={`${compact ? 'bg-card border border-border rounded-xl shadow-sm' : 'glass-card-hero rounded-2xl'} overflow-hidden min-w-0 w-full`}>
       {/* Tabs */}
       {!flightOnly && (
-        <div className={`flex items-center justify-center gap-0 px-2 sm:px-4 overflow-x-auto scrollbar-none border-b border-border/40 -webkit-overflow-scrolling-touch ${compact ? 'pt-1.5 pb-0' : 'pt-2 sm:pt-3'}`}>
-          <div className="flex items-center justify-center gap-1 sm:gap-1.5 mx-auto">
+        <div className={`flex overflow-x-auto scrollbar-none border-b border-border/40 ${compact ? 'pt-1.5 pb-0' : 'pt-2 sm:pt-3'}`} style={{ WebkitOverflowScrolling: 'touch' }}>
+          <div className="flex items-center gap-1 sm:gap-1.5 mx-auto px-2 sm:px-4 min-w-max">
             {visibleTabs.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-1.5 sm:gap-2 whitespace-nowrap shrink-0 px-3 sm:px-4 ${compact ? 'py-1.5 text-xs' : 'py-2 sm:py-2.5 text-xs sm:text-sm'} font-semibold rounded-xl transition-all duration-200 cursor-pointer ${
+                className={`flex items-center gap-1.5 sm:gap-2 whitespace-nowrap shrink-0 px-2.5 sm:px-3.5 ${compact ? 'py-1.5 text-[11px]' : 'py-2 sm:py-2.5 text-xs sm:text-sm'} font-semibold rounded-xl transition-all duration-200 cursor-pointer ${
                   activeTab === tab.id
                     ? "text-primary bg-gradient-to-r from-primary/10 to-[hsl(280,70%,55%,0.06)] border border-primary/20 shadow-md shadow-primary/10"
                     : "text-muted-foreground hover:text-foreground hover:bg-muted/60 border border-transparent"
                 }`}
               >
-                <tab.icon className={`w-4 h-4 ${activeTab === tab.id ? 'text-primary' : ''}`} />
-                <span className="hidden xs:inline sm:inline">{tab.label}</span>
+                <tab.icon className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${activeTab === tab.id ? 'text-primary' : ''}`} />
+                <span>{tab.label}</span>
               </button>
             ))}
           </div>
@@ -1490,7 +1421,7 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
       )}
 
       {/* Content */}
-      <div className={compact ? "p-2 sm:p-3" : "p-3 sm:p-4 md:p-6"}>
+      <div className={`min-w-0 ${compact ? "p-2 sm:p-3" : "p-3 sm:p-4 md:p-6"}`}>
         <AnimatePresence mode="wait">
           <motion.div
             key={flightOnly ? "flight" : activeTab}
@@ -1498,6 +1429,7 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -4 }}
             transition={{ duration: 0.12 }}
+            className="min-w-0"
           >
             {flightOnly ? tabContent["flight"] : tabContent[activeTab]}
           </motion.div>
