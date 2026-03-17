@@ -1310,7 +1310,7 @@ const RoundTripFlightCard = ({
 }: {
   outbound: any; returnFlight: any; cheapest: number; isExpanded: boolean; onToggleExpand: () => void;
 }) => {
-  const cardNavigate = useNavigate();
+  const cardNavigate = usePrefixedNavigate();
   const [cardSearchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState("itinerary");
   const [showFareOptions, setShowFareOptions] = useState(false);
