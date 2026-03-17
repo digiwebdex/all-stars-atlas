@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { useSearchTabConfig } from "@/hooks/useSearchTabConfig";
 import { toast } from "sonner";
 import { AIRPORTS, type Airport } from "@/lib/airports";
 import { Button } from "@/components/ui/button";
