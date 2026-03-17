@@ -14,7 +14,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { useDashboardTickets } from "@/hooks/useApiData";
+import { useDashboardTickets, useDashboardBookings } from "@/hooks/useApiData";
 import DataLoader from "@/components/DataLoader";
 import { api } from "@/lib/api";
 import { generateTicketPDF, printTicketPDF } from "@/lib/pdf-generator";
