@@ -33,7 +33,7 @@
 |--------|-------|
 | **Total Pages** | 70+ |
 | **Public Pages** | 27 |
-| **Dashboard Pages** | 12 |
+| **Dashboard Pages** | 15+ |
 | **Admin Modules** | 17 |
 | **CMS Modules** | 10 |
 | **Auth Pages** | 5 |
