@@ -1162,8 +1162,8 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
 
     // ====== MEDICAL TOURISM ======
     medical: (
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-0 border border-border rounded-2xl bg-background shadow-sm">
-        <div className="md:col-span-3 search-field border-b md:border-b-0 flex-col items-start">
+      <div className={`grid grid-cols-1 ${bp}:grid-cols-12 gap-0 border border-border rounded-2xl bg-background shadow-sm`}>
+        <div className={`${bp}:col-span-3 search-field border-b ${bp}:border-b-0 flex-col items-start`}>
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Destination</div>
           <div className="flex items-center gap-2 w-full">
             <Globe className="w-5 h-5 text-primary shrink-0" />
@@ -1182,58 +1182,45 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
             </div>
           </div>
         </div>
-        <div className="md:col-span-3 search-field border-b md:border-b-0 flex-col items-start">
+        <div className={`${bp}:col-span-3 search-field border-b ${bp}:border-b-0 flex-col items-start`}>
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Treatment</div>
           <Select value={treatmentType} onValueChange={setTreatmentType}>
-            <SelectTrigger className="border-0 p-0 h-auto text-sm font-bold shadow-none focus:ring-0">
-              <SelectValue placeholder="Select treatment" />
-            </SelectTrigger>
-            <SelectContent>
-              {TREATMENT_TYPES.map(t => (
-                <SelectItem key={t} value={t.toLowerCase().replace(/ /g, '-')}>{t}</SelectItem>
-              ))}
-            </SelectContent>
+            <SelectTrigger className="border-0 p-0 h-auto text-sm font-bold shadow-none focus:ring-0"><SelectValue placeholder="Select treatment" /></SelectTrigger>
+            <SelectContent>{TREATMENT_TYPES.map(t => (<SelectItem key={t} value={t.toLowerCase().replace(/ /g, '-')}>{t}</SelectItem>))}</SelectContent>
           </Select>
         </div>
-        <div className={`md:col-span-2 search-field border-b md:border-b-0 flex-col items-start ${dateErrorClass("medicalDate")}`}>
+        <div className={`${bp}:col-span-2 search-field border-b ${bp}:border-b-0 flex-col items-start ${dateErrorClass("medicalDate")}`}>
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Travel Date</div>
           <Popover open={openDatePopover === "medicalDate"} onOpenChange={(o) => setOpenDatePopover(o ? "medicalDate" : null)}>
-            <PopoverTrigger className="w-full text-left">
-              <DateDisplay date={medicalDate} fallbackDay="—" fallbackMonth="Select" fallbackWeekday="Date" />
-            </PopoverTrigger>
+            <PopoverTrigger className="w-full text-left"><DateDisplay date={medicalDate} fallbackDay="—" fallbackMonth="Select" fallbackWeekday="Date" /></PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="start">
               <Calendar mode="single" selected={medicalDate} onSelect={(d) => { setMedicalDate(d); clearDateError("medicalDate"); setOpenDatePopover(null); }} initialFocus className="pointer-events-auto" disabled={(date) => date < new Date()} />
             </PopoverContent>
           </Popover>
         </div>
-        <div className="md:col-span-2 search-field border-b md:border-b-0 flex-col items-start">
+        <div className={`${bp}:col-span-2 search-field border-b ${bp}:border-b-0 flex-col items-start`}>
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Patients</div>
           <Popover>
             <PopoverTrigger className="w-full text-left">
               <div className="flex items-center gap-2">
                 <span className="text-xl sm:text-2xl font-black">{String(medicalPatients).padStart(2, '0')}</span>
-                <div>
-                  <div className="text-sm font-bold">Patient{medicalPatients > 1 ? 's' : ''}</div>
-                  <div className="text-[11px] text-muted-foreground">+ Companion</div>
-                </div>
+                <div><div className="text-sm font-bold">Patient{medicalPatients > 1 ? 's' : ''}</div><div className="text-[11px] text-muted-foreground">+ Companion</div></div>
               </div>
             </PopoverTrigger>
             <PopoverContent className="w-56" align="start">
               <div className="flex items-center justify-between">
                 <div className="text-sm font-semibold">Patients</div>
                 <div className="flex items-center gap-2">
-                  <Button variant="outline" size="icon" className="h-8 w-8 text-xs rounded-lg"
-                    onClick={() => setMedicalPatients(prev => Math.max(1, prev - 1))}>−</Button>
+                  <Button variant="outline" size="icon" className="h-8 w-8 text-xs rounded-lg" onClick={() => setMedicalPatients(prev => Math.max(1, prev - 1))}>−</Button>
                   <span className="w-5 text-center text-sm font-bold">{medicalPatients}</span>
-                  <Button variant="outline" size="icon" className="h-8 w-8 text-xs rounded-lg"
-                    onClick={() => setMedicalPatients(prev => prev + 1)}>+</Button>
+                  <Button variant="outline" size="icon" className="h-8 w-8 text-xs rounded-lg" onClick={() => setMedicalPatients(prev => prev + 1)}>+</Button>
                 </div>
               </div>
             </PopoverContent>
           </Popover>
         </div>
-        <div className="md:col-span-2 flex items-center justify-center p-3">
-          <Button onClick={handleMedicalSearch} className="w-full h-12 md:h-full md:min-h-[56px] rounded-xl bg-secondary text-secondary-foreground hover:bg-secondary/90 text-base font-extrabold shadow-xl shadow-secondary/25 transition-all active:scale-[0.98]">
+        <div className={`${bp}:col-span-2 flex items-center justify-center p-3`}>
+          <Button onClick={handleMedicalSearch} className={`w-full h-12 ${bp === 'md' ? 'md:h-full md:min-h-[56px]' : 'lg:h-full lg:min-h-[56px]'} rounded-xl bg-secondary text-secondary-foreground hover:bg-secondary/90 text-base font-extrabold shadow-xl shadow-secondary/25 transition-all active:scale-[0.98]`}>
             <Search className="w-5 h-5" />
           </Button>
         </div>
