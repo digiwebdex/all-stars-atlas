@@ -691,6 +691,7 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
 
   // When compact (dashboard), use lg: breakpoint since sidebar eats ~240px from viewport
   const bp = compact ? 'lg' : 'md';
+  const sf = compact ? 'search-field search-field-lg' : 'search-field';
 
   const tabContent: Record<string, React.ReactNode> = {
     // ====== FLIGHT ======
