@@ -312,7 +312,7 @@ export async function generateMoneyReceiptPDF(data: MoneyReceiptData) {
   doc.setFontSize(10);
   doc.setFont("helvetica", "bold");
   doc.text("Grand Total", totalsValueX - 45, y + 6, { align: "right" });
-  doc.text(`${data.grandTotal.toLocaleString("en-IN", { minimumFractionDigits: 2 })}৳`, totalsValueX, y + 6, { align: "right" });
+  doc.text(`${data.grandTotal.toLocaleString("en-IN", { minimumFractionDigits: 2 })} BDT`, totalsValueX, y + 6, { align: "right" });
   y += totalsRowH;
 
   // In Words
