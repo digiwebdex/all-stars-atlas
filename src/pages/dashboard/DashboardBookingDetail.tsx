@@ -275,18 +275,30 @@ const DashboardBookingDetail = () => {
             <ArrowLeft className="w-4 h-4 mr-1.5" /> Back to Bookings
           </Button>
 
-          {/* Header */}
-          <div className="bg-accent text-accent-foreground rounded-xl px-5 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <Plane className="w-6 h-6 shrink-0" />
-              <div>
-                <h1 className="text-lg font-bold">Booking: {booking.id}</h1>
-                <p className="text-xs text-accent-foreground/70">{booking.airline} · {booking.flightNumber} · {booking.origin} → {booking.destination}</p>
+          {/* Departure / Arrival Header Cards — green like reference */}
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div className="rounded-xl overflow-hidden border border-emerald-200 dark:border-emerald-800">
+              <div className="bg-emerald-500 px-5 py-2"><p className="text-xs font-bold text-white uppercase tracking-wider">Departure</p></div>
+              <div className="p-5 bg-card">
+                <div className="flex items-center justify-between">
+                  <span className="text-4xl font-black tracking-tight">{booking.origin}</span>
+                  <span className="text-2xl font-black text-muted-foreground">{fmtTime(booking.departureTime)}</span>
+                </div>
+                <p className="text-sm text-muted-foreground mt-2">{fmtDate(booking.departureTime)}</p>
+                {booking.legs[0]?.originTerminal && <p className="text-xs text-muted-foreground">Terminal {booking.legs[0].originTerminal}</p>}
               </div>
             </div>
-            <Badge className="bg-accent-foreground/20 text-accent-foreground border-0 text-xs w-fit">
-              {displayStatus(booking.status)}
-            </Badge>
+            <div className="rounded-xl overflow-hidden border border-emerald-200 dark:border-emerald-800">
+              <div className="bg-emerald-500 px-5 py-2"><p className="text-xs font-bold text-white uppercase tracking-wider">Arrival</p></div>
+              <div className="p-5 bg-card">
+                <div className="flex items-center justify-between">
+                  <span className="text-4xl font-black tracking-tight">{booking.destination}</span>
+                  <span className="text-2xl font-black text-muted-foreground">{fmtTime(booking.arrivalTime)}</span>
+                </div>
+                <p className="text-sm text-muted-foreground mt-2">{fmtDate(booking.arrivalTime)}</p>
+                {booking.legs[booking.legs.length - 1]?.destinationTerminal && <p className="text-xs text-muted-foreground">Terminal {booking.legs[booking.legs.length - 1].destinationTerminal}</p>}
+              </div>
+            </div>
           </div>
 
           {/* Payment deadline banner (inline under booking) */}
