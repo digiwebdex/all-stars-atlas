@@ -588,7 +588,7 @@ async function buildInvoiceDoc(inv: InvoiceData): Promise<jsPDF> {
   doc.setFont("helvetica", "bold");
   doc.setTextColor(0);
   doc.text("Grand Total", totalsValueX - 45, y + 6, { align: "right" });
-  doc.text(`${inv.amount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}৳`, totalsValueX, y + 6, { align: "right" });
+  doc.text(`${inv.amount.toLocaleString("en-IN", { minimumFractionDigits: 2 })} BDT`, totalsValueX, y + 6, { align: "right" });
   y += totalsRowH;
 
   // In words
