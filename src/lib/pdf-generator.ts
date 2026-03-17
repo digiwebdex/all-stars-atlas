@@ -1355,10 +1355,10 @@ async function buildPremiumTicketDoc(ticket: TicketData): Promise<jsPDF> {
     doc.setFont("helvetica", "italic");
     setColor(doc, LIGHT);
     const depDate = safeDateShort(seg.departureTime) || "--";
-    doc.text(`📅  Coupon validity: not before ${depDate} / not after ${depDate}`, lm + 3, y + 3);
+    doc.text(`Coupon validity: not before ${depDate} / not after ${depDate}`, lm + 3, y + 3);
     doc.setFont("helvetica", "bold");
     setColor(doc, PURPLE);
-    doc.text(`🧳  Baggage  ${baggageStr(seg.baggage) || "As per airline policy"}`, lm + cw * 0.6, y + 3);
+    doc.text(`Baggage: ${baggageStr(seg.baggage) || "As per airline policy"}`, lm + cw * 0.6, y + 3);
     y += 6;
 
     // ══════ PER-SEGMENT PASSENGER TABLE ══════
