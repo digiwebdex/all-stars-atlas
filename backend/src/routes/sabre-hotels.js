@@ -1,13 +1,15 @@
 /**
- * Sabre Hotel API Integration — SOAP-based (OTA_HotelAvailLLSRQ)
- * Uses session-based SOAP on webservices.platform.sabre.com (same as flights)
- * NOTE: CSL REST APIs (havail.sabre.com) require separate activation/credentials.
- *       This implementation uses the LLS SOAP APIs that work with existing PCC credentials.
+ * Sabre Hotel API Integration
  *
- * SOAP Services:
- *   OTA_HotelAvailLLSRQ v2.3.0           — Search hotels by city code
- *   HotelPropertyDescriptionLLSRQ v2.3.0  — Hotel details + room rates
- *   CreatePassengerNameRecordRQ v2.4.0     — PNR creation (REST, on platform.sabre.com)
+ * ⚠️ IMPORTANT: PCC J4YL is NOT provisioned for Sabre Hotel APIs as of 2026-03-17.
+ *   - REST CSL (havail.sabre.com): Returns "Invalid CustomerAppId" — no CSL subscription
+ *   - SOAP LLS (OTA_HotelAvailLLSRQ): Returns "Action does not exist" — Hotel LLS not enabled
+ *
+ * Set SABRE_HOTELS_ENABLED=true in system_settings (api_sabre.hotels_enabled) once Sabre
+ * activates hotel entitlements for PCC J4YL. Until then, all functions return empty results
+ * gracefully to avoid log spam and wasted API calls.
+ *
+ * To re-enable: UPDATE system_settings SET setting_value = JSON_SET(setting_value, '$.hotels_enabled', 'true') WHERE setting_key = 'api_sabre';
  */
 
 const db = require('../config/db');
