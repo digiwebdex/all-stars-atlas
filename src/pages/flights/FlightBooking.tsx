@@ -772,7 +772,8 @@ const FlightBooking = () => {
 
   const serviceCharge = outboundFlight?.serviceCharge ?? 0;
   const perPaxPayable = isMultiCity ? multiCityPayable : (outboundCalc.payable + returnCalc.payable);
-  const grandTotal = (perPaxPayable * totalPaxCount) + serviceCharge + addOnTotal;
+  const couponDiscount = appliedCoupon ? Math.min(appliedCoupon.amount, (perPaxPayable * totalPaxCount) + serviceCharge + addOnTotal) : 0;
+  const grandTotal = (perPaxPayable * totalPaxCount) + serviceCharge + addOnTotal - couponDiscount;
 
   // Discount/AIT percentages for display
   const DISCOUNT_PCT = outboundFlight?.fareRules?.discount ?? 6.30;
