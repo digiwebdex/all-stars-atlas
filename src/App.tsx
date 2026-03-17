@@ -192,6 +192,24 @@ const App = () => (
                 <Route path="invoices" element={<DashboardInvoices />} />
                 <Route path="rewards" element={<DashboardRewards />} />
                 <Route path="bookings/:id/extras" element={<PostBookingExtras />} />
+                {/* Service pages inside dashboard so user stays in dashboard shell */}
+                <Route path="flights" element={<FlightResults />} />
+                <Route path="flights/book" element={<FlightBooking />} />
+                <Route path="hotels" element={<HotelResults />} />
+                <Route path="hotels/:id" element={<HotelDetail />} />
+                <Route path="visa" element={<VisaServices />} />
+                <Route path="visa/apply" element={<VisaApplication />} />
+                <Route path="holidays" element={<HolidayPackages />} />
+                <Route path="holidays/:id" element={<HolidayDetail />} />
+                <Route path="booking/confirmation" element={<BookingConfirmation />} />
+                <Route path="medical" element={<MedicalServices />} />
+                <Route path="medical/book" element={<MedicalBooking />} />
+                <Route path="cars" element={<CarRental />} />
+                <Route path="cars/book" element={<CarBooking />} />
+                <Route path="esim" element={<ESIMPlans />} />
+                <Route path="esim/purchase" element={<ESIMPurchase />} />
+                <Route path="recharge" element={<RechargePage />} />
+                <Route path="paybill" element={<PayBillPage />} />
               </Route>
 
               {/* Admin Dashboard — Admin Protected */}
