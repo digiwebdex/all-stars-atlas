@@ -1562,7 +1562,7 @@ const RoundTripFlightCard = ({
           {showFareOptions && (
             <FareOptionsPanel
               flights={roundTripFarePanelFlights}
-              searchedCabin={searchedCabin}
+              searchedCabin={cardSearchParams.get("cabin") || cardSearchParams.get("class") || "economy"}
               onBook={(selectedFlight) => {
                 const selectedFare = selectedFlight?.fareDetails?.[0];
                 const baseOutbound = selectedFlight?._baseOutboundFlight || outbound;
