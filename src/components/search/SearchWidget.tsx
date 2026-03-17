@@ -255,7 +255,12 @@ interface SearchWidgetProps {
 
 const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidgetProps = {}) => {
   const navigate = usePrefixedNavigate();
-  const [activeTab, setActiveTab] = useState("flight");
+  const searchTabConfig = useSearchTabConfig();
+  const visibleTabs = useMemo(() => tabs.filter(t => searchTabConfig[t.id as keyof typeof searchTabConfig] !== false), [searchTabConfig]);
+  const [activeTab, setActiveTab] = useState(() => {
+    const first = tabs.find(t => searchTabConfig[t.id as keyof typeof searchTabConfig] !== false);
+    return first?.id || "flight";
+  });
 
   // Derive initial values from props
   const initFrom = initialFlightValues?.from ? AIRPORTS.find(a => a.code === initialFlightValues.from) || AIRPORTS[0] : AIRPORTS[0];
