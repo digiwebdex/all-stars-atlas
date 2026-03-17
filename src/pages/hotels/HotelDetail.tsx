@@ -423,7 +423,7 @@ const HotelDetail = () => {
                       </>
                     ) : hotel.price ? (
                       <>
-                        <p className="text-3xl font-black text-primary">${hotel.price?.toLocaleString()}</p>
+                        <p className="text-3xl font-black text-primary">৳{hotel.price?.toLocaleString()}</p>
                         <p className="text-xs text-muted-foreground">per night</p>
                       </>
                     ) : (
