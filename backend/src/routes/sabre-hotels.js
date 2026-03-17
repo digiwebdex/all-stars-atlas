@@ -258,6 +258,15 @@ async function sabreHotelRequest(config, endpoint, body, method = 'POST', timeou
 
   const errors = [];
 
+  if (isHotelRestDisabled()) {
+    throw new Error(`Sabre Hotels REST disabled temporarily: ${hotelRestCircuit.reason}`);
+  }
+
+  if (!config.appId) {
+    disableHotelRest('Missing CSL appId/customerAppId in api_sabre settings', 60);
+    throw new Error('Sabre Hotels REST skipped: missing CSL appId/customerAppId');
+  }
+
   for (const domain of domains) {
     const token = await getAccessToken(config, domain.tokenDomain);
     if (!token) {
