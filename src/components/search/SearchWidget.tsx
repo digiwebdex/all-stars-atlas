@@ -1373,7 +1373,7 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
             </Select>
           </div>
         </div>
-        <div className={`${bp}:col-span-3 search-field border-b ${bp}:border-b-0 flex-col items-start`}>
+        <div className={`${bp}:col-span-3 ${sf} border-b ${bp}:border-b-0 flex-col items-start`}>
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Biller Name</div>
           <Input value={billerName} onChange={e => setBillerName(e.target.value)} placeholder="e.g. DPDC, Titas Gas" className="border-0 p-0 h-auto text-sm font-bold shadow-none focus-visible:ring-0" />
         </div>
