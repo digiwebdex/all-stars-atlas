@@ -400,7 +400,7 @@ const FlightBooking = () => {
   const [agreedTerms, setAgreedTerms] = useState(false);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  const navigate = useNavigate();
+  const navigate = usePrefixedNavigate();
   const { isAuthenticated } = useAuth();
   const { data: page, isLoading } = useCmsPageContent("/flights/book");
   const { toast } = useToast();
