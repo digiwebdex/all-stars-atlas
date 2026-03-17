@@ -280,34 +280,31 @@ router.get('/tickets', async (req, res) => {
     const data = rows.map(t => {
       const details = safeJsonParse(t.details, {});
       const bookingDetails = safeJsonParse(t.booking_details, {});
+      const bookingPassengers = safeJsonParse(t.booking_passengers, []);
       const legs = bookingDetails.legs || bookingDetails.segments || [];
-      const passengers = bookingDetails.passengers || [];
+      const passengers = Array.isArray(bookingPassengers) ? bookingPassengers : (bookingDetails.passengers || []);
       return {
         id: t.id, bookingId: t.booking_id, bookingRef: t.booking_ref || bookingDetails.bookingRef,
         ticketNo: t.ticket_no, pnr: t.pnr, airlinePnr: details.airlinePnr || bookingDetails.airlinePnr,
         status: t.status, bookingStatus: t.booking_status, pdfUrl: t.pdf_url,
         issuedAt: t.issued_at, bookingDate: t.booking_date,
-        source: t.source || bookingDetails.source,
+        source: bookingDetails.source || bookingDetails.provider,
         totalAmount: t.total_amount, currency: bookingDetails.currency || 'BDT',
-        // Flight info
         airline: details.airline || bookingDetails.airline || bookingDetails.airlineName,
         airlineCode: details.airlineCode || bookingDetails.airlineCode,
         flightNumber: details.flightNumber || bookingDetails.flightNumber,
         cabinClass: details.cabinClass || bookingDetails.cabinClass || bookingDetails.class,
-        // Route info
         origin: details.origin || bookingDetails.origin,
         destination: details.destination || bookingDetails.destination,
         departureTime: details.departureTime || bookingDetails.departureTime,
         arrivalTime: details.arrivalTime || bookingDetails.arrivalTime,
         duration: details.duration || bookingDetails.duration,
         stops: details.stops ?? bookingDetails.stops ?? 0,
-        // Extra details
         baggage: details.baggage || bookingDetails.baggage,
         handBaggage: details.handBaggage || bookingDetails.handBaggage,
         refundable: details.refundable ?? bookingDetails.refundable ?? false,
         aircraft: details.aircraft || bookingDetails.aircraft,
         terminal: details.terminal || bookingDetails.terminal,
-        // Passengers
         passengers: passengers.map(p => ({
           name: [p.title, p.firstName, p.lastName].filter(Boolean).join(' ') || p.name,
           type: p.type || p.travelerType || 'ADT',
@@ -317,7 +314,6 @@ router.get('/tickets', async (req, res) => {
           gender: p.gender,
           dob: p.dateOfBirth || p.dob,
         })),
-        // Legs for multi-segment
         legs: legs.map(l => ({
           origin: l.origin || l.departureAirport,
           destination: l.destination || l.arrivalAirport,
@@ -330,11 +326,9 @@ router.get('/tickets', async (req, res) => {
           terminal: l.terminal,
           baggage: l.baggage,
         })),
-        // Fare breakdown
         baseFare: bookingDetails.baseFare || bookingDetails.basePrice,
         taxes: bookingDetails.taxes || bookingDetails.taxAmount,
         serviceCharge: bookingDetails.serviceCharge || bookingDetails.serviceFee || 0,
-        // Policies
         cancellationPolicy: bookingDetails.cancellationPolicy,
         dateChangePolicy: bookingDetails.dateChangePolicy,
         details,
