@@ -598,7 +598,7 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
     params.set('adults', String(hotelGuests.adults));
     params.set('children', String(hotelGuests.children));
     params.set('rooms', String(hotelRooms));
-    navigate(`/hotels?${params.toString()}`);
+    navigate(`${routePrefix}/hotels?${params.toString()}`);
   };
 
   const handleVisaSearch = () => {
