@@ -903,7 +903,7 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
             </div>
 
             {tripType === "roundtrip" && (
-              <div className={`${compact ? 'lg:col-span-2' : 'md:col-span-2'} search-field border-b ${compact ? 'lg:border-b-0' : 'md:border-b-0'} flex-col items-start ${dateErrorClass("return")}`}>
+              <div className={`${compact ? 'lg:col-span-2' : 'md:col-span-2'} ${sf} border-b ${compact ? 'lg:border-b-0' : 'md:border-b-0'} flex-col items-start ${dateErrorClass("return")}`}>
                 <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1 flex items-center gap-1"><CalendarDays className="w-3 h-3" /> Return</div>
                 <Popover open={openDatePopover === "return"} onOpenChange={(o) => setOpenDatePopover(o ? "return" : null)}>
                   <PopoverTrigger className="w-full text-left">
