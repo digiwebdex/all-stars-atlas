@@ -1262,8 +1262,8 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
 
     // ====== eSIM ======
     esim: (
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-0 border border-border rounded-2xl bg-background shadow-sm">
-        <div className="md:col-span-4 search-field border-b md:border-b-0 flex-col items-start">
+      <div className={`grid grid-cols-1 ${bp}:grid-cols-12 gap-0 border border-border rounded-2xl bg-background shadow-sm`}>
+        <div className={`${bp}:col-span-4 search-field border-b ${bp}:border-b-0 flex-col items-start`}>
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Destination Country</div>
           <div className="flex items-center gap-2 w-full">
             <Wifi className="w-5 h-5 text-primary shrink-0" />
@@ -1271,50 +1271,31 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
               <Select value={esimCountry} onValueChange={setEsimCountry}>
                 <SelectTrigger className="border-0 p-0 h-auto text-sm font-bold shadow-none focus:ring-0"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="thailand">🇹🇭 Thailand</SelectItem>
-                  <SelectItem value="malaysia">🇲🇾 Malaysia</SelectItem>
-                  <SelectItem value="singapore">🇸🇬 Singapore</SelectItem>
-                  <SelectItem value="india">🇮🇳 India</SelectItem>
-                  <SelectItem value="uae">🇦🇪 UAE</SelectItem>
-                  <SelectItem value="turkey">🇹🇷 Turkey</SelectItem>
-                  <SelectItem value="uk">🇬🇧 United Kingdom</SelectItem>
-                  <SelectItem value="usa">🇺🇸 United States</SelectItem>
-                  <SelectItem value="japan">🇯🇵 Japan</SelectItem>
-                  <SelectItem value="south-korea">🇰🇷 South Korea</SelectItem>
-                  <SelectItem value="australia">🇦🇺 Australia</SelectItem>
-                  <SelectItem value="europe">🇪🇺 Europe (Multi)</SelectItem>
+                  <SelectItem value="thailand">🇹🇭 Thailand</SelectItem><SelectItem value="malaysia">🇲🇾 Malaysia</SelectItem><SelectItem value="singapore">🇸🇬 Singapore</SelectItem><SelectItem value="india">🇮🇳 India</SelectItem><SelectItem value="uae">🇦🇪 UAE</SelectItem><SelectItem value="turkey">🇹🇷 Turkey</SelectItem><SelectItem value="uk">🇬🇧 United Kingdom</SelectItem><SelectItem value="usa">🇺🇸 United States</SelectItem><SelectItem value="japan">🇯🇵 Japan</SelectItem><SelectItem value="south-korea">🇰🇷 South Korea</SelectItem><SelectItem value="australia">🇦🇺 Australia</SelectItem><SelectItem value="europe">🇪🇺 Europe (Multi)</SelectItem>
                 </SelectContent>
               </Select>
               <div className="text-[11px] text-muted-foreground">eSIM Data Plan</div>
             </div>
           </div>
         </div>
-        <div className="md:col-span-3 search-field border-b md:border-b-0 flex-col items-start">
+        <div className={`${bp}:col-span-3 search-field border-b ${bp}:border-b-0 flex-col items-start`}>
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Data Plan</div>
           <Select value={esimPlan} onValueChange={setEsimPlan}>
             <SelectTrigger className="border-0 p-0 h-auto text-sm font-bold shadow-none focus:ring-0"><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="1gb-7d">1 GB — 7 Days</SelectItem>
-              <SelectItem value="3gb-15d">3 GB — 15 Days</SelectItem>
-              <SelectItem value="5gb-30d">5 GB — 30 Days</SelectItem>
-              <SelectItem value="10gb-30d">10 GB — 30 Days</SelectItem>
-              <SelectItem value="unlimited-30d">Unlimited — 30 Days</SelectItem>
+              <SelectItem value="1gb-7d">1 GB — 7 Days</SelectItem><SelectItem value="3gb-15d">3 GB — 15 Days</SelectItem><SelectItem value="5gb-30d">5 GB — 30 Days</SelectItem><SelectItem value="10gb-30d">10 GB — 30 Days</SelectItem><SelectItem value="unlimited-30d">Unlimited — 30 Days</SelectItem>
             </SelectContent>
           </Select>
         </div>
-        <div className={`md:col-span-3 search-field border-b md:border-b-0 flex-col items-start ${dateErrorClass("esimDate")}`}>
+        <div className={`${bp}:col-span-3 search-field border-b ${bp}:border-b-0 flex-col items-start ${dateErrorClass("esimDate")}`}>
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Activation Date</div>
           <Popover open={openDatePopover === "esimDate"} onOpenChange={(o) => setOpenDatePopover(o ? "esimDate" : null)}>
-            <PopoverTrigger className="w-full text-left">
-              <DateDisplay date={esimDate} fallbackDay="—" fallbackMonth="Select" fallbackWeekday="Date" />
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <Calendar mode="single" selected={esimDate} onSelect={(d) => { setEsimDate(d); clearDateError("esimDate"); setOpenDatePopover(null); }} initialFocus className="pointer-events-auto" disabled={(date) => date < new Date()} />
-            </PopoverContent>
+            <PopoverTrigger className="w-full text-left"><DateDisplay date={esimDate} fallbackDay="—" fallbackMonth="Select" fallbackWeekday="Date" /></PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={esimDate} onSelect={(d) => { setEsimDate(d); clearDateError("esimDate"); setOpenDatePopover(null); }} initialFocus className="pointer-events-auto" disabled={(date) => date < new Date()} /></PopoverContent>
           </Popover>
         </div>
-        <div className="md:col-span-2 flex items-center justify-center p-3">
-          <Button onClick={handleEsimSearch} className="w-full h-12 md:h-full md:min-h-[56px] rounded-xl bg-secondary text-secondary-foreground hover:bg-secondary/90 text-base font-extrabold shadow-xl shadow-secondary/25 transition-all active:scale-[0.98]">
+        <div className={`${bp}:col-span-2 flex items-center justify-center p-3`}>
+          <Button onClick={handleEsimSearch} className={`w-full h-12 ${bp === 'md' ? 'md:h-full md:min-h-[56px]' : 'lg:h-full lg:min-h-[56px]'} rounded-xl bg-secondary text-secondary-foreground hover:bg-secondary/90 text-base font-extrabold shadow-xl shadow-secondary/25 transition-all active:scale-[0.98]`}>
             <Search className="w-5 h-5" />
           </Button>
         </div>
