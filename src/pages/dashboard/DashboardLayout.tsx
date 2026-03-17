@@ -254,7 +254,7 @@ const DashboardLayout = () => {
               className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-warning/10 border border-warning/20 hover:bg-warning/20 transition-colors cursor-pointer"
             >
               <Gift className="w-3.5 h-3.5 text-warning" />
-              <span className="text-xs font-bold text-warning">{pointsBalance} Points</span>
+              <span className="text-xs font-bold text-warning">{Math.round(pointsBalance).toLocaleString()} Points</span>
             </Link>
 
             <ThemeToggle />

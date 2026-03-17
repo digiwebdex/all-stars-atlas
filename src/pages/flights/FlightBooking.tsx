@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,7 +18,7 @@ import {
   AlertCircle, CheckCircle2, Timer, AlertTriangle, Package,
   ScanLine, Search, Share2, Save, Upload, X, Eye,
   Accessibility, Heart, Dog, Baby, MessageSquare, Star,
-  Armchair, Info,
+  Armchair, Info, Gift, Ticket, Copy, Check,
 } from "lucide-react";
 import { Link, useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import { usePrefixedNavigate } from "@/hooks/useRoutePrefix";
@@ -399,6 +400,42 @@ const FlightBooking = () => {
   const [bookingLoading, setBookingLoading] = useState(false);
   const [agreedTerms, setAgreedTerms] = useState(false);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("");
+
+  // ── Coupon / Reward Points ──
+  const [couponCode, setCouponCode] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; amount: number } | null>(null);
+  const [couponLoading, setCouponLoading] = useState(false);
+  const [couponCopied, setCouponCopied] = useState(false);
+
+  // Fetch user's available coupons for auto-suggest
+  const { data: userCoupons } = useQuery({
+    queryKey: ["rewards", "coupons"],
+    queryFn: () => api.get<any>("/rewards/coupons"),
+    staleTime: 30000,
+  });
+  const activeCoupons = (userCoupons as any)?.data?.filter((c: any) => c.status === "active") || [];
+
+  const handleApplyCoupon = async (code?: string) => {
+    const codeToApply = (code || couponCode).trim().toUpperCase();
+    if (!codeToApply) { toast({ title: "Enter Coupon Code", description: "Please enter or select a coupon code.", variant: "destructive" }); return; }
+    setCouponLoading(true);
+    try {
+      const result = await api.post<any>("/rewards/validate-coupon", { code: codeToApply });
+      if (result.valid) {
+        setAppliedCoupon({ code: result.code, amount: parseFloat(result.amount) });
+        setCouponCode(result.code);
+        toast({ title: "Coupon Applied! 🎉", description: `BDT ${parseFloat(result.amount).toLocaleString()} discount applied.` });
+      }
+    } catch (err: any) {
+      toast({ title: "Invalid Coupon", description: err.message || "Could not validate coupon.", variant: "destructive" });
+      setAppliedCoupon(null);
+    } finally { setCouponLoading(false); }
+  };
+
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponCode("");
+  };
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const navigate = usePrefixedNavigate();
   const { isAuthenticated } = useAuth();
@@ -735,7 +772,8 @@ const FlightBooking = () => {
 
   const serviceCharge = outboundFlight?.serviceCharge ?? 0;
   const perPaxPayable = isMultiCity ? multiCityPayable : (outboundCalc.payable + returnCalc.payable);
-  const grandTotal = (perPaxPayable * totalPaxCount) + serviceCharge + addOnTotal;
+  const couponDiscount = appliedCoupon ? Math.min(appliedCoupon.amount, (perPaxPayable * totalPaxCount) + serviceCharge + addOnTotal) : 0;
+  const grandTotal = (perPaxPayable * totalPaxCount) + serviceCharge + addOnTotal - couponDiscount;
 
   // Discount/AIT percentages for display
   const DISCOUNT_PCT = outboundFlight?.fareRules?.discount ?? 6.30;
@@ -916,6 +954,7 @@ const FlightBooking = () => {
         multiCityFlights: isMultiCity ? multiCityFlights : undefined,
         passengers, isRoundTrip, isMultiCity, isDomestic: domestic, payLater,
         paymentMethod: payLater ? "pay_later" : (selectedPaymentMethod || "card"), totalAmount: grandTotal, baseFare, taxes, serviceCharge,
+        couponCode: appliedCoupon?.code || undefined, couponDiscount: couponDiscount || undefined,
         addOns: {
           meal: mealOptions.find(m => m.id === selectedMeal)?.name || undefined,
           baggage: selectedBaggage.map(id => baggageOptions.find(b => b.id === id)?.name).filter(Boolean),
@@ -1797,6 +1836,90 @@ const FlightBooking = () => {
                   </Card>
                 )}
 
+                {/* ── Coupon / Reward Points Section ── */}
+                <Card className="border-warning/20 bg-warning/[0.02]">
+                  <CardContent className="pt-5 pb-5 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <Gift className="w-4 h-4 text-warning" />
+                      <h3 className="text-sm font-bold">Apply Reward Coupon</h3>
+                    </div>
+
+                    {appliedCoupon ? (
+                      <div className="flex items-center justify-between p-3 rounded-xl bg-accent/5 border border-accent/20">
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-lg bg-accent/20 flex items-center justify-center">
+                            <Ticket className="w-4 h-4 text-accent" />
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-mono font-bold text-sm">{appliedCoupon.code}</span>
+                              <Badge className="text-[9px] bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">Applied</Badge>
+                            </div>
+                            <p className="text-xs text-accent font-semibold">-৳{appliedCoupon.amount.toLocaleString()} discount</p>
+                          </div>
+                        </div>
+                        <Button variant="ghost" size="sm" onClick={handleRemoveCoupon} className="text-destructive hover:text-destructive hover:bg-destructive/10">
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <>
+                        {/* Auto-suggest available coupons */}
+                        {activeCoupons.length > 0 && (
+                          <div className="space-y-2">
+                            <p className="text-xs text-muted-foreground">Your available coupons:</p>
+                            <div className="space-y-1.5">
+                              {activeCoupons.slice(0, 3).map((c: any) => (
+                                <button
+                                  key={c.id}
+                                  onClick={() => handleApplyCoupon(c.code)}
+                                  className="w-full flex items-center justify-between p-2.5 rounded-lg border border-border hover:border-accent/40 hover:bg-accent/5 transition-colors text-left"
+                                >
+                                  <div className="flex items-center gap-2.5">
+                                    <div className="w-8 h-8 rounded-lg bg-warning/20 flex items-center justify-center">
+                                      <Ticket className="w-4 h-4 text-warning" />
+                                    </div>
+                                    <div>
+                                      <span className="font-mono font-bold text-xs">{c.code}</span>
+                                      <p className="text-[10px] text-muted-foreground">
+                                        BDT {parseFloat(c.amount).toLocaleString()} • Expires {c.expires_at ? new Date(c.expires_at).toLocaleDateString() : "Never"}
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <Badge variant="outline" className="text-[9px] text-accent border-accent/40">Apply</Badge>
+                                </button>
+                              ))}
+                            </div>
+                            <Separator className="my-2" />
+                          </div>
+                        )}
+                        {/* Manual coupon entry */}
+                        <div className="flex gap-2">
+                          <Input
+                            placeholder="Enter coupon code"
+                            value={couponCode}
+                            onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                            className="flex-1 font-mono text-sm"
+                          />
+                          <Button
+                            variant="outline"
+                            onClick={() => handleApplyCoupon()}
+                            disabled={couponLoading || !couponCode.trim()}
+                            className="shrink-0"
+                          >
+                            {couponLoading ? "Checking..." : "Apply"}
+                          </Button>
+                        </div>
+                        {activeCoupons.length === 0 && (
+                          <p className="text-[10px] text-muted-foreground">
+                            Earn reward points on every booking! Redeem points for coupons from your <Link to="/dashboard/rewards" className="text-accent hover:underline">Dashboard → Rewards</Link>.
+                          </p>
+                        )}
+                      </>
+                    )}
+                  </CardContent>
+                </Card>
+
                 <div className="flex items-start gap-2">
                   <Checkbox id="agree" className="mt-0.5" checked={agreedTerms} onCheckedChange={(v) => setAgreedTerms(!!v)} />
                   <label htmlFor="agree" className="text-xs text-muted-foreground">
@@ -1857,6 +1980,9 @@ const FlightBooking = () => {
                   <div className="flex justify-between"><span className="text-muted-foreground">Discount ({DISCOUNT_PCT}%)</span><span className="font-semibold text-accent">-৳{totalDiscount.toLocaleString()}</span></div>
                   <div className="flex justify-between"><span className="text-muted-foreground">AIT VAT ({AIT_VAT_PCT}%)</span><span className="font-semibold">৳{totalAitVat.toLocaleString()}</span></div>
                   <div className="flex justify-between"><span className="text-muted-foreground">Service Charge</span><span className="font-semibold">{serviceCharge > 0 ? `৳${serviceCharge}` : "Free"}</span></div>
+                  {couponDiscount > 0 && (
+                    <div className="flex justify-between"><span className="text-muted-foreground flex items-center gap-1"><Ticket className="w-3 h-3" /> Coupon</span><span className="font-semibold text-accent">-৳{couponDiscount.toLocaleString()}</span></div>
+                  )}
                 </div>
 
                 {addOnTotal > 0 && (
