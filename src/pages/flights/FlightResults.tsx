@@ -4365,14 +4365,14 @@ const FlightResults = () => {
                 {isRoundTrip && hasDirections ? (
                   <div className="space-y-2">
                     {/* Header: showing X round-trip combinations */}
-                    <div className="flex items-center gap-2 flex-wrap mb-1">
-                      <div className="flex items-center gap-1.5 bg-accent/10 text-accent rounded-lg px-2.5 py-1">
-                        <Plane className="w-3.5 h-3.5" /><span className="text-xs font-bold">Round Trip</span>
-                      </div>
-                      <span className="text-xs font-medium">{fromCode} ↔ {toCode}</span>
-                      <span className="text-[10px] text-muted-foreground">{filteredPairs.length} combinations</span>
-                      <span className="text-[10px] text-muted-foreground italic">(Fares include. AIT VAT)</span>
-                    </div>
+                     <div className="flex items-center gap-2 flex-wrap mb-1">
+                       <div className="flex items-center gap-1.5 bg-accent/10 text-accent rounded-lg px-2.5 py-1 shrink-0">
+                         <Plane className="w-3.5 h-3.5" /><span className="text-xs font-bold">Round Trip</span>
+                       </div>
+                       <span className="text-xs font-medium shrink-0">{fromCode} ↔ {toCode}</span>
+                       <span className="text-[10px] text-muted-foreground shrink-0">{filteredPairs.length} combinations</span>
+                       <span className="text-[10px] text-muted-foreground italic shrink-0">(Fares include. AIT VAT)</span>
+                     </div>
 
                     {filteredPairs.length === 0 ? (
                       <Card><CardContent className="py-8 text-center text-muted-foreground"><p>No round-trip flights found matching your filters</p></CardContent></Card>
