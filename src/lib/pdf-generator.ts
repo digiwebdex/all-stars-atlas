@@ -1205,8 +1205,8 @@ async function buildPremiumTicketDoc(ticket: TicketData): Promise<jsPDF> {
     doc.setTextColor(60);
     const depTerminal = seg.terminal ? `  •  Terminal ${seg.terminal}` : "";
     const arrTerminal = seg.arrivalTerminal ? `  •  Terminal ${seg.arrivalTerminal}` : "";
-    const depAirportFull = seg.originAirport || seg.originCity || seg.origin || "";
-    const arrAirportFull = seg.destinationAirport || seg.destinationCity || seg.destination || "";
+    const depAirportFull = seg.originCity || seg.origin || "";
+    const arrAirportFull = seg.destinationCity || seg.destination || "";
 
     // Draw a subtle route connector line
     const routeStartX = lm + 3;
