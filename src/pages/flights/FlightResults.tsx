@@ -2153,7 +2153,7 @@ const MultiCityFlightCard = ({
 }: {
   flight: any; cheapest: number; isExpanded: boolean; onToggleExpand: () => void;
 }) => {
-  const cardNavigate = useNavigate();
+  const cardNavigate = usePrefixedNavigate();
   const [cardSearchParams] = useSearchParams();
   const segments = flight.segments || [];
   const grossPrice = flight.price ?? 0;
