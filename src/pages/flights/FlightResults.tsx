@@ -881,8 +881,8 @@ const FareOptionsPanel = ({ flights, onBook, searchedCabin }: { flights: any[]; 
             )}
             <div ref={scrollRef} className="flex gap-3 overflow-x-auto scrollbar-none px-1">
               {fareOptions.map((opt, idx) => (
-                <div key={opt.id}
-                  className={`shrink-0 w-52 rounded-xl border transition-all hover:shadow-md ${
+              <div key={opt.id}
+                  className={`shrink-0 w-44 sm:w-52 rounded-xl border transition-all hover:shadow-md ${
                     opt.isBestValue ? "border-accent/40 bg-card shadow-sm" : "border-border bg-card"
                   }`}>
                   {/* Header */}
