@@ -1118,7 +1118,7 @@ const FlightBooking = () => {
   }
 
   return (
-      <div className="min-h-screen bg-muted/30 pt-24 sm:pt-36 lg:pt-48 pb-10">
+      <div className="min-h-screen bg-muted/30 pt-24 sm:pt-36 lg:pt-48 pb-10 overflow-x-hidden">
       <div className="container mx-auto px-4">
         {/* Session timer + Progress */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-6">

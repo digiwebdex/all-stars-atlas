@@ -3726,7 +3726,7 @@ const FlightResults = () => {
   }, [multiCityResults]);
 
   return (
-    <div className="min-h-screen bg-muted/30">
+    <div className="min-h-screen bg-muted/30 overflow-x-hidden">
       {/* ─── Compact Pill Modification Bar with Full Features ─── */}
       <div className="bg-card border-b border-border pt-14 sm:pt-24 lg:pt-32 pb-0">
         <div className="container mx-auto px-2 sm:px-4">
