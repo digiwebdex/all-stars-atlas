@@ -623,6 +623,54 @@ img, video {
       inset 0 -1px 0 hsl(0 0% 0% / 0.2);
   }
 
+  /* Clean sidebar items — ticketlagbe style */
+  .dash-sidebar-item {
+    @apply flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-200 cursor-pointer;
+    color: hsl(var(--foreground) / 0.7);
+  }
+
+  .dash-sidebar-item:hover {
+    background: hsl(var(--primary) / 0.06);
+    color: hsl(var(--foreground));
+  }
+
+  .dash-sidebar-item-active {
+    background: hsl(var(--primary) / 0.08);
+    color: hsl(var(--primary));
+    font-weight: 600;
+    border-left: 3px solid hsl(var(--primary));
+    padding-left: 9px;
+  }
+
+  .dash-sidebar-item-inactive {
+    color: hsl(var(--foreground) / 0.65);
+  }
+
+  .dash-sidebar-item-parent-active {
+    color: hsl(var(--primary));
+    font-weight: 600;
+  }
+
+  .dash-sidebar-child {
+    @apply flex items-center gap-2 px-2 py-1.5 rounded-md text-[13px] transition-all duration-200;
+  }
+
+  .dash-sidebar-child-active {
+    color: hsl(var(--primary));
+    font-weight: 600;
+    background: hsl(var(--primary) / 0.06);
+  }
+
+  .dash-sidebar-child-inactive {
+    color: hsl(var(--muted-foreground));
+  }
+
+  .dash-sidebar-child-inactive:hover {
+    color: hsl(var(--foreground));
+    background: hsl(var(--muted) / 0.5);
+  }
+
+  /* Keep old classes for admin layout */
   .sidebar-nav-item {
     @apply flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm transition-all duration-300;
     position: relative;
