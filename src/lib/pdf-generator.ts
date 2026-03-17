@@ -1120,10 +1120,10 @@ async function buildPremiumTicketDoc(ticket: TicketData): Promise<jsPDF> {
   doc.rect(lm, y, cw, 18);
 
   const timelineItems = [
-    { icon: "🏢", title: "Check in online, or", desc: "Arrive 3 hours before departure" },
-    { icon: "🧳", title: "90 minutes", desc: "Drop bags at check-in counter" },
-    { icon: "🔒", title: "60 minutes", desc: "Clear airport security" },
-    { icon: "🚶", title: "45 minutes", desc: "Arrive at boarding gate" },
+    { icon: "[1]", title: "Check in online, or", desc: "Arrive 3 hours before departure" },
+    { icon: "[2]", title: "90 minutes", desc: "Drop bags at check-in counter" },
+    { icon: "[3]", title: "60 minutes", desc: "Clear airport security" },
+    { icon: "[4]", title: "45 minutes", desc: "Arrive at boarding gate" },
   ];
   const tlColW = cw / 4;
   timelineItems.forEach((item, i) => {
