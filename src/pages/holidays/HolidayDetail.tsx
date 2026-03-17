@@ -15,7 +15,7 @@ import DataLoader from "@/components/DataLoader";
 
 const HolidayDetail = () => {
   const { id } = useParams();
-  const navigate = useNavigate();
+  const navigate = usePrefixedNavigate();
   const { isAuthenticated } = useAuth();
   const [authOpen, setAuthOpen] = useState(false);
   const [bookingLoading, setBookingLoading] = useState(false);
