@@ -1525,20 +1525,59 @@ function getAirlineName(code) {
   return names[code] || code || 'Unknown';
 }
 
+function formatSabreApplicationErrors(applicationResults) {
+  const normalized = [];
+
+  const pushValue = (value) => {
+    if (value === undefined || value === null) return;
+    if (typeof value === 'string') {
+      const trimmed = value.trim();
+      if (trimmed) normalized.push(trimmed);
+      return;
+    }
+    if (typeof value === 'number' || typeof value === 'boolean') {
+      normalized.push(String(value));
+      return;
+    }
+    if (Array.isArray(value)) {
+      value.forEach(pushValue);
+      return;
+    }
+    if (typeof value === 'object') {
+      if (value?.code) normalized.push(`code=${value.code}`);
+      if (value?.type) normalized.push(`type=${value.type}`);
+      pushValue(value?.Message);
+      pushValue(value?.ShortText);
+      pushValue(value?.SystemSpecificResults);
+      pushValue(value?.Error);
+      pushValue(value?.Warning);
+    }
+  };
+
+  pushValue(applicationResults?.Error);
+  pushValue(applicationResults?.Warning);
+
+  const deduped = [...new Set(normalized.map((item) => String(item).trim()).filter(Boolean))];
+  return deduped.join(' | ');
+}
+
+function extractSabreCreateRejectionMessage(response) {
+  const rs = response?.CreatePassengerNameRecordRS || {};
+  const appStatus = rs?.ApplicationResults?.status || '';
+  if (appStatus !== 'NotProcessed' && appStatus !== 'Incomplete') return '';
+
+  const parsed = formatSabreApplicationErrors(rs?.ApplicationResults);
+  return parsed || `status=${appStatus}`;
+}
+
 function extractSabrePnrFromCreateResponse(response) {
   const rs = response?.CreatePassengerNameRecordRS || {};
 
   // CRITICAL: Check ApplicationResults status FIRST — if NotProcessed, the PNR was never created
   const appStatus = rs?.ApplicationResults?.status || '';
   if (appStatus === 'NotProcessed' || appStatus === 'Incomplete') {
-    const errors = rs?.ApplicationResults?.Error || [];
-    const errArr = Array.isArray(errors) ? errors : [errors];
-    const errMsgs = errArr.map(e => {
-      const sysResults = e?.SystemSpecificResults || {};
-      const msgArr = Array.isArray(sysResults) ? sysResults : [sysResults];
-      return msgArr.map(s => s?.Message || s?.ShortText || '').filter(Boolean).join('; ');
-    }).filter(Boolean).join(' | ');
-    console.error(`[Sabre] CreatePNR REJECTED by GDS: status=${appStatus} errors=${errMsgs}`);
+    const errMsgs = extractSabreCreateRejectionMessage(response);
+    console.error(`[Sabre] CreatePNR REJECTED by GDS: status=${appStatus} errors=${errMsgs || 'UNKNOWN'}`);
     return null;
   }
 
@@ -2196,16 +2235,18 @@ async function createBooking({ flightData, passengers, contactInfo, specialServi
 
     const hasPassportDocs = advancePassenger.some((entry) => entry?.Document?.Type === 'P');
 
-    // Variant 3: No SpecialReqDetails at all (fallback only when no passport DOCS are expected)
-    if (!hasPassportDocs) {
-      const bodyNoSpecial = JSON.parse(JSON.stringify(body));
-      delete bodyNoSpecial.CreatePassengerNameRecordRQ.SpecialReqDetails;
-      requestVariants.push({
-        label: 'no_special_req',
-        body: bodyNoSpecial,
-      });
-    } else {
-      console.warn('[Sabre] DOCS strict mode: skipping no_special_req fallback so booking cannot succeed without SSR DOCS');
+    // Final fallback: no SpecialReqDetails at all.
+    // Keep DOCS-first attempts above, but if Sabre rejects every DOCS variant,
+    // attempt PNR creation without SSR/DOCS to avoid hard checkout failure.
+    const bodyNoSpecial = JSON.parse(JSON.stringify(body));
+    delete bodyNoSpecial.CreatePassengerNameRecordRQ.SpecialReqDetails;
+    requestVariants.push({
+      label: hasPassportDocs ? 'no_special_req_force' : 'no_special_req',
+      body: bodyNoSpecial,
+    });
+
+    if (hasPassportDocs) {
+      console.warn('[Sabre] DOCS strict mode enabled, but emergency fallback no_special_req_force is queued as last attempt');
     }
 
     let finalResponse = null;
@@ -2238,7 +2279,10 @@ async function createBooking({ flightData, passengers, contactInfo, specialServi
         }
 
         // No PNR extracted — try next variant
-        finalErrorMessage = `No PNR returned from ${variant.label}`;
+        const rejectionMessage = extractSabreCreateRejectionMessage(response);
+        finalErrorMessage = rejectionMessage
+          ? `${variant.label}: ${rejectionMessage}`
+          : `No PNR returned from ${variant.label}`;
         console.warn(`[Sabre] ${finalErrorMessage}`);
         console.warn(`[Sabre] Response keys:`, JSON.stringify(Object.keys(response || {})));
         if (attemptIndex < requestVariants.length - 1) {
