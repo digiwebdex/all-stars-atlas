@@ -1980,6 +1980,9 @@ const FlightBooking = () => {
                   <div className="flex justify-between"><span className="text-muted-foreground">Discount ({DISCOUNT_PCT}%)</span><span className="font-semibold text-accent">-৳{totalDiscount.toLocaleString()}</span></div>
                   <div className="flex justify-between"><span className="text-muted-foreground">AIT VAT ({AIT_VAT_PCT}%)</span><span className="font-semibold">৳{totalAitVat.toLocaleString()}</span></div>
                   <div className="flex justify-between"><span className="text-muted-foreground">Service Charge</span><span className="font-semibold">{serviceCharge > 0 ? `৳${serviceCharge}` : "Free"}</span></div>
+                  {couponDiscount > 0 && (
+                    <div className="flex justify-between"><span className="text-muted-foreground flex items-center gap-1"><Ticket className="w-3 h-3" /> Coupon</span><span className="font-semibold text-accent">-৳{couponDiscount.toLocaleString()}</span></div>
+                  )}
                 </div>
 
                 {addOnTotal > 0 && (
