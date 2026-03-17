@@ -281,7 +281,7 @@ export async function generateMoneyReceiptPDF(data: MoneyReceiptData) {
   doc.setFont("helvetica", "bold");
   doc.setTextColor(0);
   doc.text("Total Fair", totalsValueX - 45, y + 6, { align: "right" });
-  doc.text(`${data.totalAmount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}৳`, totalsValueX, y + 6, { align: "right" });
+  doc.text(`${data.totalAmount.toLocaleString("en-IN", { minimumFractionDigits: 2 })} BDT`, totalsValueX, y + 6, { align: "right" });
   y += totalsRowH;
 
   // Due
