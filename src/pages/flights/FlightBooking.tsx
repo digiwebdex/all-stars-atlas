@@ -954,6 +954,7 @@ const FlightBooking = () => {
         multiCityFlights: isMultiCity ? multiCityFlights : undefined,
         passengers, isRoundTrip, isMultiCity, isDomestic: domestic, payLater,
         paymentMethod: payLater ? "pay_later" : (selectedPaymentMethod || "card"), totalAmount: grandTotal, baseFare, taxes, serviceCharge,
+        couponCode: appliedCoupon?.code || undefined, couponDiscount: couponDiscount || undefined,
         addOns: {
           meal: mealOptions.find(m => m.id === selectedMeal)?.name || undefined,
           baggage: selectedBaggage.map(id => baggageOptions.find(b => b.id === id)?.name).filter(Boolean),
