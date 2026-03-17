@@ -58,13 +58,19 @@ const FlightStatusBadge = ({ airlineCode, flightNumber, date, compact = false }:
 
   const fetchStatus = async () => {
     setLoading(true);
+    setData(null);
     try {
       const result = await api.get<FlightStatusData>("/flights/status", {
         airlineCode, flightNumber: numericFlight, date,
       });
-      setData(result);
+      if (!result || typeof result !== 'object') {
+        setData({ success: false, error: "Empty response from flight status service" });
+      } else {
+        setData(result);
+      }
     } catch (err: any) {
-      setData({ success: false, error: err.message || "Status unavailable" });
+      const msg = err?.message || "Status unavailable";
+      setData({ success: false, error: msg.includes("JSON") ? "Flight status data not available for this route" : msg });
     } finally {
       setLoading(false);
     }

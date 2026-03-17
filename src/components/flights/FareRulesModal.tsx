@@ -63,17 +63,25 @@ const FareRulesModal = ({
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<FareRulesData | null>(null);
 
+  // Strip airline code prefix from flight number if present (e.g. "WY318" → "318")
+  const cleanFlightNum = String(flightNumber || "").replace(/^[A-Z]{2}/i, "");
+
   const fetchRules = async () => {
     if (data) return;
     setLoading(true);
     try {
       const result = await api.get<FareRulesData>("/flights/fare-rules", {
-        origin, destination, departureDate, airlineCode, flightNumber,
+        origin, destination, departureDate, airlineCode, flightNumber: cleanFlightNum,
         fareBasis: fareBasis || "", bookingClass,
       });
-      setData(result);
+      if (!result || typeof result !== 'object') {
+        setData({ success: false, error: "Empty response from fare rules service" });
+      } else {
+        setData(result);
+      }
     } catch (err: any) {
-      setData({ success: false, error: err.message || "Failed to fetch fare rules" });
+      const msg = err?.message || "Failed to fetch fare rules";
+      setData({ success: false, error: msg.includes("JSON") ? "Fare rules not available for this flight" : msg });
     } finally {
       setLoading(false);
     }
