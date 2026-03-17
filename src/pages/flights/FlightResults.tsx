@@ -4309,13 +4309,13 @@ const FlightResults = () => {
                     </div>
                   )}
                   <div className="space-y-3">
-                    <div className="flex items-center gap-3 mb-2">
-                      <div className="flex items-center gap-2 bg-accent/10 text-accent rounded-lg px-3 py-1.5">
+                    <div className="flex items-center gap-2 sm:gap-3 mb-2 flex-wrap">
+                      <div className="flex items-center gap-2 bg-accent/10 text-accent rounded-lg px-3 py-1.5 shrink-0">
                         <Plane className="w-4 h-4" /><span className="text-sm font-bold">Multi-City</span>
                       </div>
-                      <span className="text-sm font-medium">{multiCitySegments.map(s => s.from).join(" → ")} → {multiCitySegments[multiCitySegments.length - 1]?.to}</span>
-                      <span className="text-xs text-muted-foreground">{multiCityFlights.length} itineraries</span>
-                      <span className="text-xs text-muted-foreground italic">(Fares include. AIT VAT)</span>
+                      <span className="text-xs sm:text-sm font-medium truncate">{multiCitySegments.map(s => s.from).join(" → ")} → {multiCitySegments[multiCitySegments.length - 1]?.to}</span>
+                      <span className="text-xs text-muted-foreground shrink-0">{multiCityFlights.length} itineraries</span>
+                      <span className="text-[10px] text-muted-foreground italic shrink-0">(Fares include. AIT VAT)</span>
                     </div>
 
                     {multiCityFlights.length === 0 ? (
