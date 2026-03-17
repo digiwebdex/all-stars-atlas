@@ -1229,53 +1229,31 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
 
     // ====== CAR RENTAL ======
     cars: (
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-0 border border-border rounded-2xl bg-background shadow-sm">
-        <div className="md:col-span-3 search-field border-b md:border-b-0 flex-col items-start">
-          <CityInput
-            label="Pickup Location"
-            value={pickupCity}
-            onChange={setPickupCity}
-            cities={HOTEL_CITIES.filter(c => ["Dhaka", "Chittagong", "Cox's Bazar", "Sylhet", "Rajshahi", "Gazipur", "Rangpur", "Sreemangal"].includes(c))}
-            icon={<MapPin className="w-5 h-5 text-primary shrink-0" />}
-            placeholder="Pickup city..."
-          />
+      <div className={`grid grid-cols-1 ${bp}:grid-cols-12 gap-0 border border-border rounded-2xl bg-background shadow-sm`}>
+        <div className={`${bp}:col-span-3 search-field border-b ${bp}:border-b-0 flex-col items-start min-w-0`}>
+          <CityInput label="Pickup Location" value={pickupCity} onChange={setPickupCity} cities={HOTEL_CITIES.filter(c => ["Dhaka", "Chittagong", "Cox's Bazar", "Sylhet", "Rajshahi", "Gazipur", "Rangpur", "Sreemangal"].includes(c))} icon={<MapPin className="w-5 h-5 text-primary shrink-0" />} placeholder="Pickup city..." />
         </div>
-        <div className="md:col-span-3 search-field border-b md:border-b-0 flex-col items-start">
-          <CityInput
-            label="Drop-off Location"
-            value={dropoffCity}
-            onChange={setDropoffCity}
-            cities={HOTEL_CITIES.filter(c => ["Dhaka", "Chittagong", "Cox's Bazar", "Sylhet", "Rajshahi", "Gazipur", "Rangpur", "Sreemangal"].includes(c))}
-            icon={<MapPin className="w-5 h-5 text-secondary shrink-0" />}
-            placeholder="Drop-off city..."
-          />
+        <div className={`${bp}:col-span-3 search-field border-b ${bp}:border-b-0 flex-col items-start min-w-0`}>
+          <CityInput label="Drop-off Location" value={dropoffCity} onChange={setDropoffCity} cities={HOTEL_CITIES.filter(c => ["Dhaka", "Chittagong", "Cox's Bazar", "Sylhet", "Rajshahi", "Gazipur", "Rangpur", "Sreemangal"].includes(c))} icon={<MapPin className="w-5 h-5 text-secondary shrink-0" />} placeholder="Drop-off city..." />
         </div>
-        <div className="grid grid-cols-2 md:contents">
-          <div className={`md:col-span-2 search-field border-b md:border-b-0 border-r flex-col items-start ${dateErrorClass("pickupDate")}`}>
+        <div className={`grid grid-cols-2 ${bp}:contents`}>
+          <div className={`${bp}:col-span-2 search-field border-b ${bp}:border-b-0 border-r flex-col items-start ${dateErrorClass("pickupDate")}`}>
             <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Pickup Date</div>
             <Popover open={openDatePopover === "pickupDate"} onOpenChange={(o) => setOpenDatePopover(o ? "pickupDate" : null)}>
-              <PopoverTrigger className="w-full text-left">
-                <DateDisplay date={pickupDate} fallbackDay="—" fallbackMonth="Select" fallbackWeekday="Date" />
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar mode="single" selected={pickupDate} onSelect={(d) => { setPickupDate(d); clearDateError("pickupDate"); setOpenDatePopover(null); }} initialFocus className="pointer-events-auto" disabled={(date) => date < new Date()} />
-              </PopoverContent>
+              <PopoverTrigger className="w-full text-left"><DateDisplay date={pickupDate} fallbackDay="—" fallbackMonth="Select" fallbackWeekday="Date" /></PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={pickupDate} onSelect={(d) => { setPickupDate(d); clearDateError("pickupDate"); setOpenDatePopover(null); }} initialFocus className="pointer-events-auto" disabled={(date) => date < new Date()} /></PopoverContent>
             </Popover>
           </div>
-          <div className={`md:col-span-2 search-field border-b md:border-b-0 flex-col items-start ${dateErrorClass("dropoffDate")}`}>
+          <div className={`${bp}:col-span-2 search-field border-b ${bp}:border-b-0 flex-col items-start ${dateErrorClass("dropoffDate")}`}>
             <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Drop-off Date</div>
             <Popover open={openDatePopover === "dropoffDate"} onOpenChange={(o) => setOpenDatePopover(o ? "dropoffDate" : null)}>
-              <PopoverTrigger className="w-full text-left">
-                <DateDisplay date={dropoffDate} fallbackDay="—" fallbackMonth="Select" fallbackWeekday="Date" />
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar mode="single" selected={dropoffDate} onSelect={(d) => { setDropoffDate(d); clearDateError("dropoffDate"); setOpenDatePopover(null); }} initialFocus className="pointer-events-auto" disabled={(date) => date < (pickupDate || new Date())} />
-              </PopoverContent>
+              <PopoverTrigger className="w-full text-left"><DateDisplay date={dropoffDate} fallbackDay="—" fallbackMonth="Select" fallbackWeekday="Date" /></PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={dropoffDate} onSelect={(d) => { setDropoffDate(d); clearDateError("dropoffDate"); setOpenDatePopover(null); }} initialFocus className="pointer-events-auto" disabled={(date) => date < (pickupDate || new Date())} /></PopoverContent>
             </Popover>
           </div>
         </div>
-        <div className="md:col-span-2 flex items-center justify-center p-3">
-          <Button onClick={handleCarSearch} className="w-full h-12 md:h-full md:min-h-[56px] rounded-xl bg-secondary text-secondary-foreground hover:bg-secondary/90 text-base font-extrabold shadow-xl shadow-secondary/25 transition-all active:scale-[0.98]">
+        <div className={`${bp}:col-span-2 flex items-center justify-center p-3`}>
+          <Button onClick={handleCarSearch} className={`w-full h-12 ${bp === 'md' ? 'md:h-full md:min-h-[56px]' : 'lg:h-full lg:min-h-[56px]'} rounded-xl bg-secondary text-secondary-foreground hover:bg-secondary/90 text-base font-extrabold shadow-xl shadow-secondary/25 transition-all active:scale-[0.98]`}>
             <Search className="w-5 h-5" />
           </Button>
         </div>
