@@ -623,42 +623,42 @@ img, video {
       inset 0 -1px 0 hsl(0 0% 0% / 0.2);
   }
 
-  /* Clean admin layout styles */
+  /* Clean admin layout styles — theme-aware */
   .admin-topbar-clean {
-    background: hsl(224 25% 10%);
-    border-bottom: 1px solid hsl(224 20% 16%);
-    box-shadow: 0 2px 8px hsl(0 0% 0% / 0.3);
+    background: hsl(var(--card));
+    border-bottom: 1px solid hsl(var(--border));
+    box-shadow: 0 2px 8px hsl(var(--foreground) / 0.06);
   }
 
   .admin-sidebar-clean {
-    background: hsl(224 25% 10%);
-    border-right: 1px solid hsl(224 20% 16%);
+    background: hsl(var(--card));
+    border-right: 1px solid hsl(var(--border));
   }
 
   .admin-sidebar-item {
     @apply flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-200 cursor-pointer;
-    color: rgba(255, 255, 255, 0.55);
+    color: hsl(var(--foreground) / 0.55);
   }
 
   .admin-sidebar-item:hover {
-    background: rgba(255, 255, 255, 0.06);
-    color: rgba(255, 255, 255, 0.85);
+    background: hsl(var(--primary) / 0.06);
+    color: hsl(var(--foreground) / 0.85);
   }
 
   .admin-sidebar-item-active {
-    background: rgba(255, 255, 255, 0.08);
-    color: hsl(217 91% 65%);
+    background: hsl(var(--primary) / 0.08);
+    color: hsl(var(--primary));
     font-weight: 600;
-    border-left: 3px solid hsl(217 91% 65%);
+    border-left: 3px solid hsl(var(--primary));
     padding-left: 9px;
   }
 
   .admin-sidebar-item-inactive {
-    color: rgba(255, 255, 255, 0.5);
+    color: hsl(var(--foreground) / 0.5);
   }
 
   .admin-sidebar-item-parent-active {
-    color: hsl(217 91% 65%);
+    color: hsl(var(--primary));
     font-weight: 600;
   }
 
@@ -667,18 +667,18 @@ img, video {
   }
 
   .admin-sidebar-child-active {
-    color: hsl(217 91% 65%);
+    color: hsl(var(--primary));
     font-weight: 600;
-    background: rgba(255, 255, 255, 0.06);
+    background: hsl(var(--primary) / 0.06);
   }
 
   .admin-sidebar-child-inactive {
-    color: rgba(255, 255, 255, 0.4);
+    color: hsl(var(--muted-foreground));
   }
 
   .admin-sidebar-child-inactive:hover {
-    color: rgba(255, 255, 255, 0.7);
-    background: rgba(255, 255, 255, 0.04);
+    color: hsl(var(--foreground) / 0.7);
+    background: hsl(var(--primary) / 0.04);
   }
 
   /* Clean sidebar items — ticketlagbe style */

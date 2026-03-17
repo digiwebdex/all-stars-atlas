@@ -246,32 +246,32 @@ const AdminLayout = () => {
 
   return (
     <TooltipProvider delayDuration={0}>
-      <div className="min-h-screen bg-[hsl(224,20%,7%)]">
+      <div className="min-h-screen bg-background">
         {/* Admin Top Bar */}
         <header className="fixed top-0 left-0 right-0 z-50 h-14 admin-topbar-clean flex items-center px-4 md:px-6">
           <button
-            className="md:hidden mr-3 p-2 rounded-lg hover:bg-white/10 transition-colors text-white/70"
+            className="md:hidden mr-3 p-2 rounded-lg hover:bg-muted transition-colors text-muted-foreground"
             onClick={() => setSidebarOpen(!sidebarOpen)}
           >
             {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
           <Link to="/admin" className="flex items-center gap-3 mr-6">
-            <img src="/images/seven-trip-logo.png" alt="Seven Trip" className="h-8 w-auto brightness-0 invert" />
-            <span className="hidden sm:flex items-center gap-1.5 text-[11px] font-bold text-white/80 px-2 py-1 rounded-md bg-white/5 border border-white/10">
+            <img src="/images/seven-trip-logo.png" alt="Seven Trip" className="h-8 w-auto" />
+            <span className="hidden sm:flex items-center gap-1.5 text-[11px] font-bold text-muted-foreground px-2 py-1 rounded-md bg-muted border border-border">
               <Shield className="w-3 h-3" />
               Admin
             </span>
           </Link>
           <div className="ml-auto flex items-center gap-2 sm:gap-3">
-            <ThemeToggle className="text-white/40 hover:text-white hover:bg-white/10" />
-            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/8">
-              <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span className="text-xs text-white/50 font-medium">{user?.email || 'Admin'}</span>
+            <ThemeToggle className="text-muted-foreground hover:text-foreground hover:bg-muted" />
+            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted border border-border">
+              <div className="w-2 h-2 rounded-full bg-success animate-pulse" />
+              <span className="text-xs text-muted-foreground font-medium">{user?.email || 'Admin'}</span>
             </div>
             <Button
               variant="ghost"
               size="sm"
-              className="text-white/40 hover:text-white hover:bg-white/10"
+              className="text-muted-foreground hover:text-foreground hover:bg-muted"
               onClick={() => {
                 logout();
                 navigate("/admin/login", { replace: true });
@@ -289,21 +289,21 @@ const AdminLayout = () => {
             sidebarWidth
           )}>
             {/* Admin badge + collapse toggle */}
-            <div className="p-3 border-b border-white/8 flex items-center justify-between">
+            <div className="p-3 border-b border-border flex items-center justify-between">
               {!sidebarCollapsed && (
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-blue-500/20 to-violet-500/20 border border-white/10 flex items-center justify-center flex-shrink-0">
-                    <Shield className="w-4 h-4 text-blue-400" />
+                  <div className="w-9 h-9 rounded-lg bg-primary/10 border border-border flex items-center justify-center flex-shrink-0">
+                    <Shield className="w-4 h-4 text-primary" />
                   </div>
                   <div>
-                    <p className="text-sm font-semibold text-white/90">Admin Panel</p>
-                    <p className="text-[10px] text-white/40">Full Access</p>
+                    <p className="text-sm font-semibold text-foreground">Admin Panel</p>
+                    <p className="text-[10px] text-muted-foreground">Full Access</p>
                   </div>
                 </div>
               )}
               <button
                 onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                className="w-7 h-7 rounded-md flex items-center justify-center hover:bg-white/10 transition-colors text-white/40 hover:text-white/80 flex-shrink-0"
+                className="w-7 h-7 rounded-md flex items-center justify-center hover:bg-muted transition-colors text-muted-foreground hover:text-foreground flex-shrink-0"
                 title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
               >
                 {sidebarCollapsed ? <ChevronRight className="w-4 h-4" /> : <ArrowLeft className="w-4 h-4" />}
@@ -340,7 +340,7 @@ const AdminLayout = () => {
           <main className={cn("flex-1 p-4 md:p-6 lg:p-8 transition-all duration-300 ease-in-out", mainMargin)}>
             <Suspense fallback={
               <div className="flex items-center justify-center py-20">
-                <div className="w-7 h-7 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                <div className="w-7 h-7 border-2 border-primary border-t-transparent rounded-full animate-spin" />
               </div>
             }>
               <motion.div
