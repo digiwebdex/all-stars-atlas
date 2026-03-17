@@ -6,7 +6,7 @@ import PageProgressBar from "@/components/PageProgressBar";
 
 const PublicLayout = () => {
   return (
-    <div className="min-h-screen flex flex-col overflow-x-hidden">
+    <div className="min-h-screen flex flex-col overflow-x-hidden max-w-[100vw]">
       <PageProgressBar />
       <Header />
       <main className="flex-1">
