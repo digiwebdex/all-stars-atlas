@@ -218,6 +218,10 @@ const App = () => (
                 <Route path="bank-list" element={<DashboardBankList />} />
                 <Route path="mfs-list" element={<DashboardMFSList />} />
                 <Route path="send-payment-request" element={<DashboardSendPaymentRequest />} />
+                <Route path="issue-with-balance" element={<DashboardIssueWithBalance />} />
+                <Route path="timeline" element={<DashboardTimeline />} />
+                <Route path="cancel-booking" element={<DashboardCancelBooking />} />
+                <Route path="voucher-download" element={<DashboardVoucherDownload />} />
                 {/* Service pages inside dashboard so user stays in dashboard shell */}
                 <Route path="flights" element={<FlightResults />} />
                 <Route path="flights/book" element={<FlightBooking />} />
