@@ -967,7 +967,7 @@ async function buildPremiumTicketDoc(ticket: TicketData): Promise<jsPDF> {
     doc.text(col.label, cx, y + 7);
     doc.setFontSize(9);
     doc.setFont("helvetica", "bold");
-    doc.setTextColor(col.label === "AIRLINES PNR" ? [200, 80, 0] as any : 20);
+    if (col.label === "AIRLINES PNR") { doc.setTextColor(200, 80, 0); } else { doc.setTextColor(20); }
     doc.text(String(col.value || "--").toUpperCase(), cx, y + 14);
 
     // Vertical divider
@@ -1095,7 +1095,7 @@ async function buildPremiumTicketDoc(ticket: TicketData): Promise<jsPDF> {
       doc.setTextColor(100);
       doc.setFont("helvetica", "normal");
       doc.text(label as string, c1X + 3, ay);
-      doc.setTextColor(label === "Status" ? [0, 130, 0] as any : 30);
+      if (label === "Status") { doc.setTextColor(0, 130, 0); } else { doc.setTextColor(30); }
       doc.setFont("helvetica", "bold");
       doc.text(String(val), c1X + 3, ay + 4);
       ay += 7;
