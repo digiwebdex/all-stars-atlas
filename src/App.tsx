@@ -89,6 +89,10 @@ const DashboardSSRHistory = lazy(() => import("@/pages/dashboard/DashboardSSRHis
 const DashboardBankList = lazy(() => import("@/pages/dashboard/DashboardBankList"));
 const DashboardMFSList = lazy(() => import("@/pages/dashboard/DashboardMFSList"));
 const DashboardSendPaymentRequest = lazy(() => import("@/pages/dashboard/DashboardSendPaymentRequest"));
+const DashboardIssueWithBalance = lazy(() => import("@/pages/dashboard/DashboardIssueWithBalance"));
+const DashboardTimeline = lazy(() => import("@/pages/dashboard/DashboardTimeline"));
+const DashboardCancelBooking = lazy(() => import("@/pages/dashboard/DashboardCancelBooking"));
+const DashboardVoucherDownload = lazy(() => import("@/pages/dashboard/DashboardVoucherDownload"));
 
 // Admin
 const AdminLogin = lazy(() => import("@/pages/admin/AdminLogin"));
