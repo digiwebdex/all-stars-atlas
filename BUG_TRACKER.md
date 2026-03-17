@@ -32,6 +32,9 @@
 | C13 | v2.1 | All listing pages empty | Frontend expected `.flights`/`.hotels`, backend sends `.data` | Added fallback: `apiData.data \|\| apiData.flights` | All pages empty |
 | C14 | v2.1 | Admin SQL GROUP BY error | `only_full_group_by` mode in MySQL 8 | Added all non-aggregated columns to GROUP BY | Admin dashboard error |
 | C15 | v2.1 | JSON.parse crashes | Unparseable JSON in DB columns | Created `safeJsonParse()` utility | Random 500 errors |
+| C16 | v4.1.6 | E-ticket PDF shows garbled text (`Ø<ßâ`, `Ø>Ýó`) | jsPDF default Helvetica font cannot render Unicode emojis/symbols | Replaced all non-Latin-1 chars with ASCII alternatives (emojis→numbered, ৳→BDT, →→-) | E-ticket unreadable |
+| C17 | v4.1.6 | Flight Status crashes with "Unexpected end of JSON input" | Sabre FLIFO returns empty body for some routes | `sabreRequest()` handles empty/non-JSON responses gracefully | Flight status modal crashes |
+| C18 | v4.1.6 | Fare Rules title shows duplicated airline code (`WYWY318`) | `cleanFlightNum()` not stripping airline prefix from flight number | Added `cleanFlightNum()` utility to strip prefix before display | Fare rules modal displays wrong title |
 
 ---
 
