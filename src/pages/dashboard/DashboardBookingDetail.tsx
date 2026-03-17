@@ -352,14 +352,29 @@ const DashboardBookingDetail = () => {
                     </div>
                   </div>
 
-                  {/* Layover */}
-                  {i < arr.length - 1 && (
-                    <div className="flex items-center justify-center py-3 bg-muted/20 border-t border-dashed border-border">
-                      <span className="text-xs text-muted-foreground bg-card px-4 py-1 rounded-full border border-border">
-                        Change of plane · Layover in {AIRPORTS.find(a => a.code === leg.destination?.toUpperCase())?.city || leg.destination}
-                      </span>
-                    </div>
-                  )}
+                  {/* Layover with duration */}
+                  {i < arr.length - 1 && (() => {
+                    const nextLeg = arr[i + 1];
+                    let layoverStr = "";
+                    if (leg.arrivalTime && nextLeg.departureTime) {
+                      const arrMs = new Date(leg.arrivalTime).getTime();
+                      const depMs = new Date(nextLeg.departureTime).getTime();
+                      const diffMin = Math.round((depMs - arrMs) / 60000);
+                      if (diffMin > 0 && diffMin < 2880) {
+                        const h = Math.floor(diffMin / 60);
+                        const m = diffMin % 60;
+                        layoverStr = h > 0 ? `${h}h ${m > 0 ? `${m}m` : ""}` : `${m}m`;
+                      }
+                    }
+                    const city = AIRPORTS.find(a => a.code === leg.destination?.toUpperCase())?.city || leg.destination;
+                    return (
+                      <div className="flex items-center justify-center py-3 bg-muted/20 border-t border-dashed border-border">
+                        <span className="text-xs text-muted-foreground bg-card px-4 py-1 rounded-full border border-border">
+                          Change of plane · Layover in {city}{layoverStr ? ` · ${layoverStr}` : ""}
+                        </span>
+                      </div>
+                    );
+                  })()}
                 </div>
               ))}
             </div>
