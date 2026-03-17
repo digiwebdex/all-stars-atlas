@@ -146,15 +146,20 @@ const DashboardTickets = () => {
     );
   });
 
-  const downloadPDF = (ticket: any) => {
-    generateTicketPDF({
-      ...ticket,
-      gdsPnr: ticket.pnr,
-      airlinePnr: ticket.airlinePnr,
-      bookingRef: ticket.bookingRef || ticket.id,
-      source: ticket.source,
-    });
-    toast({ title: "Downloaded", description: `E-Ticket-${ticket.pnr || ticket.ticketNo}.pdf saved` });
+  const downloadPDF = async (ticket: any) => {
+    try {
+      await generateTicketPDF({
+        ...ticket,
+        gdsPnr: ticket.pnr,
+        airlinePnr: ticket.airlinePnr,
+        bookingRef: ticket.bookingRef || ticket.id,
+        source: ticket.source,
+      });
+      toast({ title: "Downloaded", description: `E-Ticket PDF saved` });
+    } catch (err: any) {
+      console.error("PDF generation error:", err);
+      toast({ title: "Download Failed", description: "Could not generate PDF. Please try again.", variant: "destructive" });
+    }
   };
 
   const handleVoid = async (ticket: any) => {
@@ -351,7 +356,19 @@ const DashboardTickets = () => {
                         <Button size="sm" className="text-xs gap-1.5 h-8 font-bold" onClick={() => downloadPDF(ticket)}>
                           <Download className="w-3.5 h-3.5" /> Download
                         </Button>
-                        <Button variant="outline" size="sm" className="text-xs gap-1.5 h-8" onClick={() => printTicketPDF(ticket)}>
+                        <Button variant="outline" size="sm" className="text-xs gap-1.5 h-8" onClick={async () => {
+                          try {
+                            await printTicketPDF({
+                              ...ticket,
+                              gdsPnr: ticket.pnr,
+                              airlinePnr: ticket.airlinePnr,
+                              bookingRef: ticket.bookingRef || ticket.id,
+                              source: ticket.source,
+                            });
+                          } catch {
+                            toast({ title: "Print Failed", description: "Could not generate PDF for printing.", variant: "destructive" });
+                          }
+                        }}>
                           <Printer className="w-3.5 h-3.5" /> Print
                         </Button>
 

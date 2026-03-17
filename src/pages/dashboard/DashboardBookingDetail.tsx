@@ -219,36 +219,41 @@ const DashboardBookingDetail = () => {
     navigate("/dashboard/payments");
   };
 
-  const handleDownloadTicket = () => {
+  const handleDownloadTicket = async () => {
     if (!booking) return;
-    const getCity = (code: string) => { const ap = AIRPORTS.find(a => a.code === code?.toUpperCase()); return ap ? `${ap.city}, ${ap.country}` : ""; };
-    const buildSeg = (f: any) => ({
-      airline: f?.airline || "Seven Trip", airlineCode: f?.airlineCode || "", flightNumber: f?.flightNumber || "",
-      origin: f?.origin || "", originCity: f?.originCity || getCity(f?.origin),
-      destination: f?.destination || "", destinationCity: f?.destinationCity || getCity(f?.destination),
-      departureTime: f?.departureTime || "", arrivalTime: f?.arrivalTime || "", duration: f?.duration || "",
-      cabinClass: f?.cabinClass || "Economy", aircraft: f?.aircraft || f?.legs?.[0]?.aircraft || "",
-      terminal: f?.terminal || "", arrivalTerminal: f?.arrivalTerminal || "",
-      baggage: f?.baggage || "20Kg", status: "Confirmed", meal: f?.meal || "Meals",
-      distance: f?.distance || null, emission: f?.emission || null,
-    });
-    const outbound = booking.details?.outbound;
-    const returnFlt = booking.returnFlight || booking.details?.return;
-    generateTicketPDF({
-      id: booking.id, pnr: booking.pnr !== "—" ? booking.pnr : undefined,
-      gdsPnr: booking.gdsBookingId || booking.pnr !== "—" ? booking.pnr : undefined,
-      airlinePnr: booking.airlinePnr || undefined,
-      bookingRef: booking.id,
-      source: booking.source,
-      airline: booking.airline || "Seven Trip", flightNo: booking.flightNumber || "",
-      from: booking.origin || "", to: booking.destination || "",
-      date: booking.departureTime || booking.date, time: booking.departureTime || "",
-      passenger: booking.paxNames?.[0] || "Traveller", seat: "—", class: booking.cabinClass || "Economy",
-      isRoundTrip: booking.isRoundTrip,
-      outbound: outbound ? [buildSeg(outbound)] : [], returnSegments: returnFlt ? [buildSeg(returnFlt)] : [],
-      passengers: booking.passengers?.map((p: any) => ({ title: p.title || "", firstName: p.firstName || "", lastName: p.lastName || "", passport: p.passport || "", seat: "" })) || [],
-    });
-    toast({ title: "Downloaded", description: "E-Ticket PDF saved" });
+    try {
+      const getCity = (code: string) => { const ap = AIRPORTS.find(a => a.code === code?.toUpperCase()); return ap ? `${ap.city}, ${ap.country}` : ""; };
+      const buildSeg = (f: any) => ({
+        airline: f?.airline || "Seven Trip", airlineCode: f?.airlineCode || "", flightNumber: f?.flightNumber || "",
+        origin: f?.origin || "", originCity: f?.originCity || getCity(f?.origin),
+        destination: f?.destination || "", destinationCity: f?.destinationCity || getCity(f?.destination),
+        departureTime: f?.departureTime || "", arrivalTime: f?.arrivalTime || "", duration: f?.duration || "",
+        cabinClass: f?.cabinClass || "Economy", aircraft: f?.aircraft || f?.legs?.[0]?.aircraft || "",
+        terminal: f?.terminal || "", arrivalTerminal: f?.arrivalTerminal || "",
+        baggage: f?.baggage || "20Kg", status: "Confirmed", meal: f?.meal || "Meals",
+        distance: f?.distance || null, emission: f?.emission || null,
+      });
+      const outbound = booking.details?.outbound;
+      const returnFlt = booking.returnFlight || booking.details?.return;
+      await generateTicketPDF({
+        id: booking.id, pnr: booking.pnr !== "—" ? booking.pnr : undefined,
+        gdsPnr: booking.gdsBookingId || booking.pnr !== "—" ? booking.pnr : undefined,
+        airlinePnr: booking.airlinePnr || undefined,
+        bookingRef: booking.id,
+        source: booking.source,
+        airline: booking.airline || "Seven Trip", flightNo: booking.flightNumber || "",
+        from: booking.origin || "", to: booking.destination || "",
+        date: booking.departureTime || booking.date, time: booking.departureTime || "",
+        passenger: booking.paxNames?.[0] || "Traveller", seat: "—", class: booking.cabinClass || "Economy",
+        isRoundTrip: booking.isRoundTrip,
+        outbound: outbound ? [buildSeg(outbound)] : [], returnSegments: returnFlt ? [buildSeg(returnFlt)] : [],
+        passengers: booking.passengers?.map((p: any) => ({ title: p.title || "", firstName: p.firstName || "", lastName: p.lastName || "", passport: p.passport || "", seat: "" })) || [],
+      });
+      toast({ title: "Downloaded", description: "E-Ticket PDF saved" });
+    } catch (err: any) {
+      console.error("PDF generation error:", err);
+      toast({ title: "Download Failed", description: "Could not generate PDF. Please try again.", variant: "destructive" });
+    }
   };
 
   const logo = booking ? getAirlineLogo(booking.airlineCode) : null;
