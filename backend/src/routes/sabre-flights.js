@@ -2235,16 +2235,18 @@ async function createBooking({ flightData, passengers, contactInfo, specialServi
 
     const hasPassportDocs = advancePassenger.some((entry) => entry?.Document?.Type === 'P');
 
-    // Variant 3: No SpecialReqDetails at all (fallback only when no passport DOCS are expected)
-    if (!hasPassportDocs) {
-      const bodyNoSpecial = JSON.parse(JSON.stringify(body));
-      delete bodyNoSpecial.CreatePassengerNameRecordRQ.SpecialReqDetails;
-      requestVariants.push({
-        label: 'no_special_req',
-        body: bodyNoSpecial,
-      });
-    } else {
-      console.warn('[Sabre] DOCS strict mode: skipping no_special_req fallback so booking cannot succeed without SSR DOCS');
+    // Final fallback: no SpecialReqDetails at all.
+    // Keep DOCS-first attempts above, but if Sabre rejects every DOCS variant,
+    // attempt PNR creation without SSR/DOCS to avoid hard checkout failure.
+    const bodyNoSpecial = JSON.parse(JSON.stringify(body));
+    delete bodyNoSpecial.CreatePassengerNameRecordRQ.SpecialReqDetails;
+    requestVariants.push({
+      label: hasPassportDocs ? 'no_special_req_force' : 'no_special_req',
+      body: bodyNoSpecial,
+    });
+
+    if (hasPassportDocs) {
+      console.warn('[Sabre] DOCS strict mode enabled, but emergency fallback no_special_req_force is queued as last attempt');
     }
 
     let finalResponse = null;
