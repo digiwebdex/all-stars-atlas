@@ -258,9 +258,9 @@ export async function generateMoneyReceiptPDF(data: MoneyReceiptData) {
     if (item) {
       doc.text(item.description, colDesc, y + 7, { maxWidth: colPax - colDesc - 5 });
       doc.text(String(item.pax), colPax, y + 7, { align: "center" });
-      doc.text(`${item.unitPrice.toLocaleString("en-IN", { minimumFractionDigits: 2 })}৳`, colUnit + 10, y + 7, { align: "center" });
+      doc.text(`${item.unitPrice.toLocaleString("en-IN", { minimumFractionDigits: 2 })} BDT`, colUnit + 10, y + 7, { align: "center" });
       doc.setFont("helvetica", "bold");
-      doc.text(`${item.totalPrice.toLocaleString("en-IN", { minimumFractionDigits: 2 })}৳`, colTotal - 4, y + 7, { align: "right" });
+      doc.text(`${item.totalPrice.toLocaleString("en-IN", { minimumFractionDigits: 2 })} BDT`, colTotal - 4, y + 7, { align: "right" });
       doc.setFont("helvetica", "normal");
     }
     y += rowH;
