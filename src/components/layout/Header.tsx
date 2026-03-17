@@ -189,6 +189,8 @@ const Header = () => {
           </div>
         </div>
       </header>
+
+      <LoginModal open={loginOpen} onOpenChange={setLoginOpen} />
     </>
   );
 };
