@@ -641,6 +641,8 @@ function normalizeSearchResponse(response, searchCity, checkIn, checkOut) {
 //  2. HOTEL DETAILS — SOAP HotelPropertyDescriptionLLSRQ
 // ══════════════════════════════════════════════
 async function getHotelDetails(hotelCode, checkIn, checkOut, adults, rooms) {
+  const enabled = await isHotelApiEnabled();
+  if (!enabled) return null;
   try {
     const sabreSoap = getSabreSoap();
     if (!sabreSoap.getHotelPropertyDescription) {
