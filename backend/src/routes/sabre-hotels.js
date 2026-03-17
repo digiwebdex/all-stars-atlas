@@ -281,8 +281,8 @@ async function sabreHotelRequest(config, endpoint, body, method = 'POST', timeou
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
           'Accept': 'application/json',
+          'Application-ID': config.appId,
         };
-        if (config.appId) headers['Application-ID'] = config.appId;
 
         console.log(`[Sabre Hotels] → ${method} ${url}`);
         const res = await fetch(url, {
@@ -301,8 +301,17 @@ async function sabreHotelRequest(config, endpoint, body, method = 'POST', timeou
         } catch {}
 
         if (!res.ok) {
+          let errBody = null;
+          try { errBody = responseText ? JSON.parse(responseText) : null; } catch {}
+          const errText = `${errBody?.message || ''} ${errBody?.errorCode || ''} ${responseText || ''}`.trim();
+
           console.warn(`[Sabre Hotels] ${domain.label} ${path}: HTTP ${res.status} — ${responseText.slice(0, 300)}`);
           errors.push(`${domain.label} ${path}: ${res.status}`);
+
+          if (/invalid\s+customerappid/i.test(errText)) {
+            disableHotelRest('Sabre returned Invalid CustomerAppId for CSL', 60);
+            throw new Error('Sabre Hotels REST rejected: Invalid CustomerAppId (configure valid CSL appId/customerAppId from Sabre)');
+          }
 
           // If 401/403, token is bad for this domain — skip remaining endpoints on it
           if (res.status === 401 || res.status === 403) {
