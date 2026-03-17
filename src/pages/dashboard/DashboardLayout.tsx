@@ -245,6 +245,21 @@ const SidebarNav = ({
           </Link>
         );
       })}
+      {/* Logout — bottom of sidebar */}
+      {!collapsed && (
+        <button
+          onClick={() => {
+            // Dispatch logout from parent
+            window.dispatchEvent(new Event('sidebar:logout'));
+          }}
+          className="dash-sidebar-item dash-sidebar-item-inactive mt-2 text-destructive hover:bg-destructive/10"
+        >
+          <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 bg-red-100 dark:bg-red-500/20">
+            <LogOut className="w-3.5 h-3.5 text-red-600" />
+          </div>
+          <span>Logout</span>
+        </button>
+      )}
     </nav>
   );
 };
