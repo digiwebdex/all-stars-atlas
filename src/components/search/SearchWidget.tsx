@@ -979,7 +979,7 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
             </Popover>
           </div>
         </div>
-        <div className={`${bp}:col-span-2 search-field border-b ${bp}:border-b-0 flex-col items-start`}>
+        <div className={`${bp}:col-span-2 ${sf} border-b ${bp}:border-b-0 flex-col items-start`}>
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Guests & Rooms</div>
           <Popover>
             <PopoverTrigger className="w-full text-left">
