@@ -266,16 +266,80 @@ router.post('/payments', async (req, res) => {
 // GET /dashboard/tickets
 router.get('/tickets', async (req, res) => {
   try {
-    const { status, page = 1, limit = 20 } = req.query;
-    let sql = 'SELECT * FROM tickets WHERE user_id = ?';
+    const { status, page = 1, limit = 20, search } = req.query;
+    let sql = `SELECT t.*, b.booking_ref, b.booking_type, b.status AS booking_status, 
+               b.total_amount, b.details AS booking_details, b.source, b.created_at AS booking_date
+               FROM tickets t 
+               LEFT JOIN bookings b ON t.booking_id = b.id 
+               WHERE t.user_id = ?`;
     const params = [req.user.sub];
-    if (status) { sql += ' AND status = ?'; params.push(status); }
-    sql += ' ORDER BY issued_at DESC';
+    if (status) { sql += ' AND t.status = ?'; params.push(status); }
+    if (search) { sql += ' AND (t.pnr LIKE ? OR t.ticket_no LIKE ? OR t.id LIKE ? OR b.booking_ref LIKE ?)'; const s = `%${search}%`; params.push(s, s, s, s); }
+    sql += ' ORDER BY t.issued_at DESC';
     const [rows] = await db.query(sql, params);
-    const data = rows.map(t => ({
-      id: t.id, bookingId: t.booking_id, ticketNo: t.ticket_no, pnr: t.pnr,
-      status: t.status, pdfUrl: t.pdf_url, details: safeJsonParse(t.details, {}), issuedAt: t.issued_at,
-    }));
+    const data = rows.map(t => {
+      const details = safeJsonParse(t.details, {});
+      const bookingDetails = safeJsonParse(t.booking_details, {});
+      const legs = bookingDetails.legs || bookingDetails.segments || [];
+      const passengers = bookingDetails.passengers || [];
+      return {
+        id: t.id, bookingId: t.booking_id, bookingRef: t.booking_ref || bookingDetails.bookingRef,
+        ticketNo: t.ticket_no, pnr: t.pnr, airlinePnr: details.airlinePnr || bookingDetails.airlinePnr,
+        status: t.status, bookingStatus: t.booking_status, pdfUrl: t.pdf_url,
+        issuedAt: t.issued_at, bookingDate: t.booking_date,
+        source: t.source || bookingDetails.source,
+        totalAmount: t.total_amount, currency: bookingDetails.currency || 'BDT',
+        // Flight info
+        airline: details.airline || bookingDetails.airline || bookingDetails.airlineName,
+        airlineCode: details.airlineCode || bookingDetails.airlineCode,
+        flightNumber: details.flightNumber || bookingDetails.flightNumber,
+        cabinClass: details.cabinClass || bookingDetails.cabinClass || bookingDetails.class,
+        // Route info
+        origin: details.origin || bookingDetails.origin,
+        destination: details.destination || bookingDetails.destination,
+        departureTime: details.departureTime || bookingDetails.departureTime,
+        arrivalTime: details.arrivalTime || bookingDetails.arrivalTime,
+        duration: details.duration || bookingDetails.duration,
+        stops: details.stops ?? bookingDetails.stops ?? 0,
+        // Extra details
+        baggage: details.baggage || bookingDetails.baggage,
+        handBaggage: details.handBaggage || bookingDetails.handBaggage,
+        refundable: details.refundable ?? bookingDetails.refundable ?? false,
+        aircraft: details.aircraft || bookingDetails.aircraft,
+        terminal: details.terminal || bookingDetails.terminal,
+        // Passengers
+        passengers: passengers.map(p => ({
+          name: [p.title, p.firstName, p.lastName].filter(Boolean).join(' ') || p.name,
+          type: p.type || p.travelerType || 'ADT',
+          ticketNo: p.ticketNo || p.ticketNumber,
+          seatNo: p.seatNo || p.seat,
+          passport: p.passportNumber || p.passport,
+          gender: p.gender,
+          dob: p.dateOfBirth || p.dob,
+        })),
+        // Legs for multi-segment
+        legs: legs.map(l => ({
+          origin: l.origin || l.departureAirport,
+          destination: l.destination || l.arrivalAirport,
+          departureTime: l.departureTime || l.departureDateTime,
+          arrivalTime: l.arrivalTime || l.arrivalDateTime,
+          flightNumber: l.flightNumber || l.flight,
+          airline: l.airline || l.airlineName || l.marketingCarrier,
+          duration: l.duration,
+          aircraft: l.aircraft || l.equipmentType,
+          terminal: l.terminal,
+          baggage: l.baggage,
+        })),
+        // Fare breakdown
+        baseFare: bookingDetails.baseFare || bookingDetails.basePrice,
+        taxes: bookingDetails.taxes || bookingDetails.taxAmount,
+        serviceCharge: bookingDetails.serviceCharge || bookingDetails.serviceFee || 0,
+        // Policies
+        cancellationPolicy: bookingDetails.cancellationPolicy,
+        dateChangePolicy: bookingDetails.dateChangePolicy,
+        details,
+      };
+    });
     res.json({ data, total: data.length, page: 1, limit: 50, totalPages: 1 });
   } catch (err) { console.error(err); res.status(500).json({ message: 'Something went wrong', status: 500 }); }
 });
