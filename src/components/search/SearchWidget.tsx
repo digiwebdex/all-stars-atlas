@@ -871,7 +871,7 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
           </div>
         ) : (
           <div className={`grid grid-cols-1 ${compact ? 'lg:grid-cols-12' : 'md:grid-cols-12'} gap-0 border border-border rounded-2xl bg-background shadow-sm overflow-hidden`}>
-            <div className={`${compact ? 'lg:col-span-3' : 'md:col-span-3'} search-field border-b ${compact ? 'lg:border-b-0' : 'md:border-b-0'} flex-col items-start min-w-0`}>
+            <div className={`${compact ? 'lg:col-span-3' : 'md:col-span-3'} ${sf} border-b ${compact ? 'lg:border-b-0' : 'md:border-b-0'} flex-col items-start min-w-0`}>
               <AirportInput label="From" value={fromAirport} onChange={setFromAirport} placeholder="Type city or airport..." airports={scopedFromAirports} icon={<PlaneTakeoff className="w-5 h-5" />} />
             </div>
 
