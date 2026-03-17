@@ -10,6 +10,8 @@ import { Suspense, useState } from "react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { AnimatePresence, motion } from "framer-motion";
 import DashboardBreadcrumb from "@/components/dashboard/DashboardBreadcrumb";
+import { useQuery } from "@tanstack/react-query";
+import { api } from "@/lib/api";
 
 type SidebarItem = {
   label: string;
