@@ -1,7 +1,7 @@
 # Seven Trip — Bug Tracker & Root Cause Analysis
 
 > Complete record of all bugs discovered and fixed during development.
-> Last updated: 2026-03-15 (v4.1.3)
+> Last updated: 2026-03-17 (v4.1.5)
 
 ---
 
@@ -43,7 +43,7 @@
 | M02 | v3.7.7 | Duration showing "NaN" | BDFare returns `"17h 50m"` not minutes | Regex parser for BDFare format |
 | M03 | v3.7.2 | Round-trip price filter wrong | Slider used per-direction price, filter used total | Both now use `roundTripPairs.totalPrice` |
 | M04 | v3.5.1 | International scope allowing domestic routes | Swap didn't re-validate against scope rules | Centralized `isScopeInvalidRoute()` validator |
-| M05 | v3.3 | Cabin class always showing Economy | Frontend override faked searched cabin on results | Show real API cabin class |
+| M05 | v3.3 | Cabin class always showing Economy | Frontend override faked searched cabin on results | Show real API cabin class; v4.1.5: derive cabin from booking class letter (J→Business, V→Economy) |
 | M06 | v3.3 | Taxes using hardcoded 12% | Frontend calculated tax instead of using GDS data | Use `flight.taxes` from API |
 | M07 | v3.0 | eSIM/Holiday/Medical/Car booking not persisted | Booking pages navigated to confirmation without API call | Added real `POST /xxx/book` calls |
 | M08 | v2.4 | Results pages showing data without search criteria | No validation on URL params | Added "No Search Criteria" guards |

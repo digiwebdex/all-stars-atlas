@@ -1,7 +1,7 @@
 # Seven Trip — Complete Development Analytics & Project History
 
-> Comprehensive analytical overview of the Seven Trip platform — from first commit to production v4.1.3.
-> Last updated: 2026-03-15 (v4.1.3)
+> Comprehensive analytical overview of the Seven Trip platform — from first commit to production v4.1.5.
+> Last updated: 2026-03-17 (v4.1.5)
 
 ---
 
@@ -20,8 +20,9 @@
 | **Complete Sabre GDS** | v4.0.0 | Mar 14, 2026 | 1 day | All 26 Sabre sections: void, refund, exchange, fare rules, FLIFO, stateless ancillaries, EMD, FF update |
 | **UI/UX Overhaul** | v4.1.0 | Mar 14, 2026 | 1 day | SearchWidget props refactor, compact pill bar, AnimatedFlightArc redesign, Sabre child/infant PTC fix, session timeout redirect |
 | **Documentation & Fixes** | v4.1.3 | Mar 15, 2026 | 1 day | Flight sorting/filter/responsiveness fixes, TTI payload docs, 20+ .md version bump |
+| **Cabin Class Accuracy** | v4.1.5 | Mar 17, 2026 | 1 day | Branded fare naming, cabin class derived from booking code, fare option ordering by searched cabin |
 
-**Total Development Time:** ~20 days (Mar 1–15, 2026)
+**Total Development Time:** ~22 days (Mar 1–17, 2026)
 
 ---
 

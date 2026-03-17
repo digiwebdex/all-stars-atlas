@@ -1,8 +1,8 @@
-# Seven Trip — Sabre GDS Feature Audit (v4.1.1)
+# Seven Trip — Sabre GDS Feature Audit (v4.1.5)
 
 > Complete gap analysis: what's implemented vs what's needed from Sabre sections 1–26.
-> Generated: 2026-03-15 | PCC: J4YL | EPR: 631470
-> **Status: ALL 26 SECTIONS IMPLEMENTED ✅ (v4.0.0) | v4.1.0: Child/Infant PTC codes fixed | v4.1.3: 100% Automated Probe Verified + TTI Payload Docs**
+> Generated: 2026-03-17 | PCC: J4YL | EPR: 631470
+> **Status: ALL 26 SECTIONS IMPLEMENTED ✅ (v4.0.0) | v4.1.0: Child/Infant PTC codes fixed | v4.1.5: Cabin class accuracy + branded fare naming**
 
 ---
 
