@@ -157,6 +157,13 @@ const DashboardLayout = () => {
   const { user, logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  // Fetch reward points balance
+  const { data: rewardsData } = useQuery({
+    queryKey: ["rewards", "balance"],
+    queryFn: () => api.get<any>("/rewards/balance"),
+  });
+  const pointsBalance = (rewardsData as any)?.balance ?? 0;
+
   return (
     <div className="min-h-screen bg-muted/30">
       {/* Top Bar */}
