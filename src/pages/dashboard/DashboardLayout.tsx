@@ -27,28 +27,14 @@ type SidebarItem = {
 
 const sidebarItems: SidebarItem[] = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard, iconColor: "text-blue-600", iconBg: "bg-blue-100 dark:bg-blue-500/20" },
-  {
-    label: "Booking Details",
-    href: "/dashboard/bookings",
-    icon: Ticket,
-    iconColor: "text-violet-600",
-    iconBg: "bg-violet-100 dark:bg-violet-500/20",
-    children: [
-      { label: "All Booking", href: "/dashboard/bookings" },
-      { label: "Hotel Booking", href: "/dashboard/bookings?type=hotel" },
-      { label: "Issue With Balance", href: "/dashboard/issue-with-balance" },
-      { label: "Timeline", href: "/dashboard/timeline" },
-      { label: "View SSR", href: "/dashboard/ssr-history" },
-      { label: "Cancel Booking", href: "/dashboard/cancel-booking" },
-      { label: "Voucher Download", href: "/dashboard/voucher-download" },
-    ],
-  },
+  { label: "All Booking", href: "/dashboard/bookings", icon: Ticket, iconColor: "text-violet-600", iconBg: "bg-violet-100 dark:bg-violet-500/20" },
+  { label: "Hotel Booking", href: "/dashboard/bookings?type=hotel", icon: Building2, iconColor: "text-teal-600", iconBg: "bg-teal-100 dark:bg-teal-500/20", badge: "new" },
   {
     label: "Booking History",
     href: "/dashboard/bookings",
     icon: Clock,
-    iconColor: "text-teal-600",
-    iconBg: "bg-teal-100 dark:bg-teal-500/20",
+    iconColor: "text-cyan-600",
+    iconBg: "bg-cyan-100 dark:bg-cyan-500/20",
     children: [
       { label: "Flight", href: "/dashboard/bookings?type=flight" },
       { label: "Void", href: "/dashboard/bookings?status=voided" },
@@ -77,6 +63,28 @@ const sidebarItems: SidebarItem[] = [
   { label: "Report", href: "/dashboard/report", icon: BarChart3, iconColor: "text-rose-600", iconBg: "bg-rose-100 dark:bg-rose-500/20" },
   { label: "My Profile", href: "/dashboard/settings", icon: Settings, iconColor: "text-slate-600", iconBg: "bg-slate-100 dark:bg-slate-500/20" },
   { label: "Reward Points", href: "/dashboard/rewards", icon: Gift, iconColor: "text-orange-600", iconBg: "bg-orange-100 dark:bg-orange-500/20" },
+  {
+    label: "Traveller",
+    href: "/dashboard/travellers",
+    icon: Users,
+    iconColor: "text-pink-600",
+    iconBg: "bg-pink-100 dark:bg-pink-500/20",
+    children: [
+      { label: "All Travellers", href: "/dashboard/travellers" },
+      { label: "Wishlist", href: "/dashboard/wishlist" },
+    ],
+  },
+  {
+    label: "Sub Users",
+    href: "/dashboard/sub-users",
+    icon: Users2,
+    iconColor: "text-indigo-600",
+    iconBg: "bg-indigo-100 dark:bg-indigo-500/20",
+    children: [
+      { label: "Manage Users", href: "/dashboard/sub-users" },
+    ],
+  },
+  { label: "Support", href: "/dashboard/support", icon: Headphones, iconColor: "text-emerald-600", iconBg: "bg-emerald-100 dark:bg-emerald-500/20" },
 ];
 
 const SidebarNav = ({
