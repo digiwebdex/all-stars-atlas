@@ -612,7 +612,7 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
     });
     params.set('date', format(visaDate, 'yyyy-MM-dd'));
     params.set('return', format(visaReturnDate, 'yyyy-MM-dd'));
-    navigate(`/visa?${params.toString()}`);
+    navigate(`${routePrefix}/visa?${params.toString()}`);
   };
 
   const handleHolidaySearch = () => {
