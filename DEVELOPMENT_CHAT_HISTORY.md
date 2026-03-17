@@ -10,9 +10,9 @@
 
 | Metric | Count |
 |--------|-------|
-| **Development Days** | 19 (Mar 1–14, 2026) |
-| **Total Versions Released** | 50+ |
-| **Bugs Discovered & Fixed** | 45 |
+| **Development Days** | 22 (Mar 1–17, 2026) |
+| **Total Versions Released** | 55+ |
+| **Bugs Discovered & Fixed** | 48 |
 | **GDS Providers Integrated** | 5 (TTI, BDFare, FlyHub, Sabre REST, Sabre SOAP) |
 | **Sabre Features** | 26/26 (100% coverage) |
 | **VPS Deployments** | 10 |
