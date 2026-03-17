@@ -1288,7 +1288,7 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
             </SelectContent>
           </Select>
         </div>
-        <div className={`${bp}:col-span-3 search-field border-b ${bp}:border-b-0 flex-col items-start ${dateErrorClass("esimDate")}`}>
+        <div className={`${bp}:col-span-3 ${sf} border-b ${bp}:border-b-0 flex-col items-start ${dateErrorClass("esimDate")}`}>
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Activation Date</div>
           <Popover open={openDatePopover === "esimDate"} onOpenChange={(o) => setOpenDatePopover(o ? "esimDate" : null)}>
             <PopoverTrigger className="w-full text-left"><DateDisplay date={esimDate} fallbackDay="—" fallbackMonth="Select" fallbackWeekday="Date" /></PopoverTrigger>
