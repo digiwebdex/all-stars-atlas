@@ -1,96 +1,150 @@
 import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, Ticket, CreditCard, Receipt, Users, Settings, LogOut, Plane, Menu, X,
-  Heart, FileText, Search, Clock, Smartphone, Sparkles, ChevronRight, Gift
+  Heart, FileText, Search, Clock, Smartphone, Gift, ChevronDown, ChevronRight, Phone, Mail
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { Suspense, useState } from "react";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import DashboardBreadcrumb from "@/components/dashboard/DashboardBreadcrumb";
 
-// Using inline gradient styles since Tailwind can't generate dynamic classes
-const sidebarGroups = [
-  {
-    label: "Main",
-    items: [
-      { label: "Overview", href: "/dashboard", icon: LayoutDashboard, gradient: "linear-gradient(135deg, #3b82f6, #4f46e5)" },
-      { label: "My Bookings", href: "/dashboard/bookings", icon: Ticket, gradient: "linear-gradient(135deg, #8b5cf6, #7c3aed)" },
-      { label: "E-Tickets", href: "/dashboard/tickets", icon: FileText, gradient: "linear-gradient(135deg, #06b6d4, #3b82f6)" },
-    ],
-  },
+type SidebarItem = {
+  label: string;
+  href: string;
+  icon: React.ElementType;
+  badge?: string;
+  children?: { label: string; href: string }[];
+};
+
+const sidebarItems: SidebarItem[] = [
+  { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { label: "My Bookings", href: "/dashboard/bookings", icon: Ticket },
+  { label: "E-Tickets", href: "/dashboard/tickets", icon: FileText },
   {
     label: "Finance",
-    items: [
-      { label: "Transactions", href: "/dashboard/transactions", icon: Receipt, gradient: "linear-gradient(135deg, #10b981, #059669)" },
-      { label: "E-Transactions", href: "/dashboard/e-transactions", icon: Smartphone, gradient: "linear-gradient(135deg, #14b8a6, #10b981)" },
-      { label: "Payments", href: "/dashboard/payments", icon: CreditCard, gradient: "linear-gradient(135deg, #f59e0b, #ea580c)" },
-      { label: "Invoices", href: "/dashboard/invoices", icon: FileText, gradient: "linear-gradient(135deg, #ec4899, #f43f5e)" },
-      { label: "Pay Later", href: "/dashboard/pay-later", icon: Clock, gradient: "linear-gradient(135deg, #d946ef, #ec4899)" },
+    href: "/dashboard/transactions",
+    icon: Receipt,
+    children: [
+      { label: "Transactions", href: "/dashboard/transactions" },
+      { label: "E-Transactions", href: "/dashboard/e-transactions" },
+      { label: "Payments", href: "/dashboard/payments" },
+      { label: "Invoices", href: "/dashboard/invoices" },
+      { label: "Pay Later", href: "/dashboard/pay-later" },
     ],
   },
-  {
-    label: "Personal",
-    items: [
-      { label: "Travellers", href: "/dashboard/travellers", icon: Users, gradient: "linear-gradient(135deg, #0ea5e9, #2563eb)" },
-      { label: "Wishlist", href: "/dashboard/wishlist", icon: Heart, gradient: "linear-gradient(135deg, #f43f5e, #dc2626)" },
-      { label: "Reward Points", href: "/dashboard/rewards", icon: Gift, gradient: "linear-gradient(135deg, #f59e0b, #d97706)" },
-      { label: "Search History", href: "/dashboard/search-history", icon: Search, gradient: "linear-gradient(135deg, #6366f1, #8b5cf6)" },
-      { label: "Settings", href: "/dashboard/settings", icon: Settings, gradient: "linear-gradient(135deg, #64748b, #475569)" },
-    ],
-  },
+  { label: "Travellers", href: "/dashboard/travellers", icon: Users },
+  { label: "Wishlist", href: "/dashboard/wishlist", icon: Heart },
+  { label: "Reward Points", href: "/dashboard/rewards", icon: Gift },
+  { label: "Search History", href: "/dashboard/search-history", icon: Search },
+  { label: "Settings", href: "/dashboard/settings", icon: Settings },
 ];
 
 const SidebarNav = ({ location, onNav }: { location: ReturnType<typeof useLocation>; onNav?: () => void }) => {
+  const [openMenus, setOpenMenus] = useState<Record<string, boolean>>(() => {
+    // Auto-open parent if child is active
+    const initial: Record<string, boolean> = {};
+    sidebarItems.forEach((item) => {
+      if (item.children?.some((c) => location.pathname.startsWith(c.href))) {
+        initial[item.label] = true;
+      }
+    });
+    return initial;
+  });
+
   const isActive = (href: string) => {
     if (href === "/dashboard") return location.pathname === "/dashboard";
     return location.pathname.startsWith(href);
   };
 
+  const toggleMenu = (label: string) => {
+    setOpenMenus((prev) => ({ ...prev, [label]: !prev[label] }));
+  };
+
   return (
-    <nav className="flex flex-col gap-1 px-2">
-      {sidebarGroups.map((group) => (
-        <div key={group.label}>
-          <p className="sidebar-group-label">{group.label}</p>
-          {group.items.map((item) => {
-            const active = isActive(item.href);
-            return (
-              <Link
-                key={item.href}
-                to={item.href}
-                onClick={onNav}
+    <nav className="flex flex-col gap-0.5 px-3 py-2">
+      {sidebarItems.map((item) => {
+        const hasChildren = !!item.children;
+        const isOpen = openMenus[item.label];
+        const active = !hasChildren && isActive(item.href);
+        const childActive = hasChildren && item.children?.some((c) => isActive(c.href));
+
+        if (hasChildren) {
+          return (
+            <div key={item.label}>
+              <button
+                onClick={() => toggleMenu(item.label)}
                 className={cn(
-                  "sidebar-nav-item group/nav",
-                  active ? "sidebar-nav-active" : "sidebar-nav-inactive"
+                  "dash-sidebar-item w-full",
+                  childActive && "dash-sidebar-item-parent-active"
                 )}
               >
-                <div
-                  className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-all duration-300 shadow-lg"
-                  style={{
-                    background: active ? "rgba(255,255,255,0.2)" : item.gradient,
-                    boxShadow: active ? "inset 0 2px 4px rgba(0,0,0,0.1)" : `0 4px 12px ${item.gradient.includes('#3b82f6') ? 'rgba(59,130,246,0.3)' : 'rgba(0,0,0,0.15)'}`,
-                  }}
-                >
-                  <item.icon className="w-4 h-4 text-white" />
-                </div>
-                <span className="font-medium text-[13px]">{item.label}</span>
-                {active && (
+                <item.icon className="w-[18px] h-[18px] flex-shrink-0" />
+                <span className="flex-1 text-left">{item.label}</span>
+                <ChevronDown
+                  className={cn(
+                    "w-4 h-4 transition-transform duration-200",
+                    isOpen && "rotate-180"
+                  )}
+                />
+              </button>
+              <AnimatePresence initial={false}>
+                {isOpen && (
                   <motion.div
-                    layoutId="user-sidebar-indicator"
-                    className="absolute right-2 w-1.5 h-1.5 rounded-full bg-white shadow-[0_0_8px_rgba(255,255,255,0.6)]"
-                    transition={{ type: "spring", stiffness: 400, damping: 25 }}
-                  />
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="overflow-hidden"
+                  >
+                    <div className="ml-6 border-l-2 border-border pl-3 py-1 flex flex-col gap-0.5">
+                      {item.children?.map((child) => {
+                        const cActive = isActive(child.href);
+                        return (
+                          <Link
+                            key={child.href}
+                            to={child.href}
+                            onClick={onNav}
+                            className={cn(
+                              "dash-sidebar-child",
+                              cActive ? "dash-sidebar-child-active" : "dash-sidebar-child-inactive"
+                            )}
+                          >
+                            <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: cActive ? "hsl(var(--primary))" : "hsl(var(--muted-foreground) / 0.3)" }} />
+                            {child.label}
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  </motion.div>
                 )}
-                {!active && (
-                  <ChevronRight className="w-3.5 h-3.5 ml-auto opacity-0 -translate-x-2 group-hover/nav:opacity-50 group-hover/nav:translate-x-0 transition-all duration-300" />
-                )}
-              </Link>
-            );
-          })}
-        </div>
-      ))}
+              </AnimatePresence>
+            </div>
+          );
+        }
+
+        return (
+          <Link
+            key={item.href}
+            to={item.href}
+            onClick={onNav}
+            className={cn(
+              "dash-sidebar-item",
+              active ? "dash-sidebar-item-active" : "dash-sidebar-item-inactive"
+            )}
+          >
+            <item.icon className="w-[18px] h-[18px] flex-shrink-0" />
+            <span>{item.label}</span>
+            {item.badge && (
+              <span className="ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-primary text-primary-foreground">
+                {item.badge}
+              </span>
+            )}
+          </Link>
+        );
+      })}
     </nav>
   );
 };
@@ -102,39 +156,55 @@ const DashboardLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="min-h-screen dashboard-mesh-bg">
-      {/* Floating orbs for depth */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
-        <div className="floating-orb absolute -top-20 -left-20 w-80 h-80 bg-[hsl(217,91%,50%)] opacity-[0.03]" />
-        <div className="floating-orb absolute top-1/2 -right-32 w-96 h-96 bg-[hsl(280,70%,55%)] opacity-[0.025]" style={{ animationDelay: '2s' }} />
-        <div className="floating-orb absolute -bottom-20 left-1/3 w-72 h-72 bg-[hsl(167,72%,41%)] opacity-[0.02]" style={{ animationDelay: '4s' }} />
-      </div>
-
+    <div className="min-h-screen bg-muted/30">
       {/* Top Bar */}
-      <header className="fixed top-0 left-0 right-0 z-50 h-16 dashboard-topbar flex items-center px-4 md:px-6">
+      <header className="fixed top-0 left-0 right-0 z-50 h-14 bg-card border-b border-border flex items-center px-4 md:px-6">
         <button
-          className="md:hidden mr-3 p-2 rounded-xl hover:bg-primary/10 transition-all duration-200 active:scale-95"
+          className="md:hidden mr-3 p-2 rounded-lg hover:bg-muted transition-colors"
           onClick={() => setSidebarOpen(!sidebarOpen)}
         >
           {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
         </button>
-        <Link to="/" className="flex items-center gap-2 mr-8">
+
+        <Link to="/" className="flex items-center gap-2 mr-6">
           <img
             src="/images/seven-trip-logo.png"
             alt="Seven Trip"
-            className="h-10 w-auto drop-shadow-[0_0_16px_rgba(29,106,229,0.4)]"
+            className="h-9 w-auto"
           />
         </Link>
+
+        {/* Support Info - Desktop */}
+        <div className="hidden lg:flex items-center gap-6 text-xs text-muted-foreground border-l border-border pl-6">
+          <div>
+            <p className="font-semibold text-foreground/70">Support & Reservation</p>
+            <div className="flex items-center gap-3 mt-0.5">
+              <span className="flex items-center gap-1"><Phone className="w-3 h-3" /> 09613001005</span>
+              <span className="flex items-center gap-1"><Mail className="w-3 h-3" /> support@seventrip.com</span>
+            </div>
+          </div>
+        </div>
+
         <div className="ml-auto flex items-center gap-2 sm:gap-3">
+          {/* Reward Points Badge */}
+          <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-warning/10 border border-warning/20">
+            <Gift className="w-3.5 h-3.5 text-warning" />
+            <span className="text-xs font-bold text-warning">Points</span>
+          </div>
+
           <ThemeToggle />
-          <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-gradient-to-r from-primary/10 to-accent/10 border border-primary/10">
-            <div className="w-2 h-2 rounded-full bg-success animate-pulse shadow-[0_0_8px_hsl(152,69%,41%)]" />
+
+          <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted border border-border">
+            <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center">
+              <Users className="w-3 h-3 text-primary" />
+            </div>
             <span className="text-xs text-muted-foreground font-medium">{user?.email || 'My Account'}</span>
           </div>
+
           <Button
             variant="ghost"
             size="sm"
-            className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all duration-200"
+            className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
             onClick={() => {
               logout();
               navigate("/");
@@ -145,22 +215,18 @@ const DashboardLayout = () => {
         </div>
       </header>
 
-      <div className="flex pt-16 relative z-10">
+      <div className="flex pt-14 relative">
         {/* Sidebar - Desktop */}
-        <aside className="hidden md:flex w-64 dashboard-sidebar fixed top-16 bottom-0 flex-col py-4 overflow-y-auto">
-          <div className="px-4 mb-4">
-            <div className="gradient-border-card p-3 bg-gradient-to-br from-primary/5 to-accent/5 rounded-xl">
-              <div className="flex items-center gap-3">
-                <div
-                  className="w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-lg"
-                  style={{ background: "linear-gradient(135deg, #3b82f6, #4f46e5)", boxShadow: "0 4px 16px rgba(59,130,246,0.3)" }}
-                >
-                  <Sparkles className="w-5 h-5" />
-                </div>
-                <div>
-                  <p className="text-sm font-bold">Premium</p>
-                  <p className="text-[10px] text-muted-foreground">Travel Member</p>
-                </div>
+        <aside className="hidden md:flex w-60 bg-card border-r border-border fixed top-14 bottom-0 flex-col overflow-y-auto">
+          {/* User Card */}
+          <div className="p-4 border-b border-border">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                <Users className="w-5 h-5 text-primary" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold truncate">{user?.name || user?.email?.split('@')[0] || 'User'}</p>
+                <p className="text-[11px] text-muted-foreground truncate">{user?.email || ''}</p>
               </div>
             </div>
           </div>
@@ -176,15 +242,15 @@ const DashboardLayout = () => {
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.2 }}
-                className="fixed inset-0 z-40 bg-foreground/30 backdrop-blur-md md:hidden"
+                className="fixed inset-0 z-40 bg-foreground/30 backdrop-blur-sm md:hidden"
                 onClick={() => setSidebarOpen(false)}
               />
               <motion.aside
-                initial={{ x: -280 }}
+                initial={{ x: -260 }}
                 animate={{ x: 0 }}
-                exit={{ x: -280 }}
+                exit={{ x: -260 }}
                 transition={{ type: "spring", stiffness: 350, damping: 30 }}
-                className="fixed top-16 left-0 bottom-0 z-50 w-64 dashboard-sidebar py-4 md:hidden overflow-y-auto"
+                className="fixed top-14 left-0 bottom-0 z-50 w-60 bg-card border-r border-border py-2 md:hidden overflow-y-auto"
               >
                 <SidebarNav location={location} onNav={() => setSidebarOpen(false)} />
               </motion.aside>
@@ -193,7 +259,7 @@ const DashboardLayout = () => {
         </AnimatePresence>
 
         {/* Content */}
-        <main className="flex-1 md:ml-64 p-4 md:p-6 lg:p-8">
+        <main className="flex-1 md:ml-60 p-4 md:p-6 lg:p-8">
           <DashboardBreadcrumb />
           <Suspense fallback={
             <div className="flex items-center justify-center py-20">
@@ -206,9 +272,9 @@ const DashboardLayout = () => {
           }>
             <motion.div
               key={location.pathname}
-              initial={{ opacity: 0, y: 12 }}
+              initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] as const }}
+              transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] as const }}
             >
               <Outlet />
             </motion.div>
