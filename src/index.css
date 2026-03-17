@@ -472,6 +472,16 @@ img, video {
     }
   }
 
+  /* When inside compact (dashboard) layout, grid uses lg: breakpoint */
+  @media (min-width: 1024px) {
+    .search-field-lg {
+      border-right: 1px solid hsl(var(--border) / 0.6);
+    }
+    .search-field-lg:last-child {
+      border-right: 0;
+    }
+  }
+
   .search-field:hover {
     background: hsl(var(--primary) / 0.03);
   }
