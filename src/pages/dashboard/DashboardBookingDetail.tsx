@@ -6,10 +6,12 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
   Plane, ArrowLeft, Copy, Download, CreditCard, Luggage, Shield,
   Users, Package, XCircle, AlertTriangle, Ban,
   FileText, Wallet, Clock, Eye, ChevronUp, ChevronDown, RefreshCw,
+  CheckCircle, Utensils, Armchair, Accessibility, Baby,
 } from "lucide-react";
 import { generateTicketPDF } from "@/lib/pdf-generator";
 import { AIRPORTS } from "@/lib/airports";
@@ -22,6 +24,7 @@ import BookingActions from "@/components/flights/BookingActions";
 import FlightStatusBadge from "@/components/flights/FlightStatusBadge";
 import FareRulesModal from "@/components/flights/FareRulesModal";
 import { formatApiDate, formatApiTime } from "@/lib/flight-time";
+import { useQuery } from "@tanstack/react-query";
 
 /* ── helpers ─────────────────────────────────────────── */
 const BD_AIRPORTS = ["DAC", "CXB", "CGP", "ZYL", "JSR", "RJH", "SPD", "BZL", "IRD", "TKR"];
