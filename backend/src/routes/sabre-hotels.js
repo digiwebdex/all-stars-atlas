@@ -58,7 +58,8 @@ async function getSabreConfig() {
       : pick(cfg.cert_client_secret, cfg.clientSecret, cfg.sandbox_client_secret, cfg.prod_client_secret);
 
     const basicAuth = isProd ? pick(cfg.prod_basic_auth) : pick(cfg.cert_basic_auth);
-    const appId = pick(cfg.appId, cfg.app_id, cfg.prod_client_id, cfg.cert_client_id, cfg.clientId);
+    // CSL App ID is a distinct credential from OAuth client_id
+    const appId = pick(cfg.appId, cfg.app_id, cfg.customerAppId, cfg.customer_app_id, cfg.cslAppId, cfg.csl_app_id);
 
     if (!clientId || !clientSecret) return null;
 
@@ -92,6 +93,19 @@ function clearSabreHotelConfigCache() { _configCache = null; _configCacheTime = 
 // - Existing, proven flight auth flow in sabre-flights.js (/v3/auth/token + password grant)
 let hotelTokenCache = { token: null, expiresAt: 0 };
 let platformTokenCache = { token: null, expiresAt: 0 };
+let hotelRestCircuit = { disabledUntil: 0, reason: '' };
+
+function disableHotelRest(reason, minutes = 30) {
+  hotelRestCircuit = {
+    disabledUntil: Date.now() + minutes * 60 * 1000,
+    reason: reason || 'unknown',
+  };
+  console.warn(`[Sabre Hotels] REST CSL temporarily disabled (${minutes}m): ${hotelRestCircuit.reason}`);
+}
+
+function isHotelRestDisabled() {
+  return Date.now() < (hotelRestCircuit.disabledUntil || 0);
+}
 
 function writeHotelAuthDebug(payload) {
   try {
@@ -244,6 +258,15 @@ async function sabreHotelRequest(config, endpoint, body, method = 'POST', timeou
 
   const errors = [];
 
+  if (isHotelRestDisabled()) {
+    throw new Error(`Sabre Hotels REST disabled temporarily: ${hotelRestCircuit.reason}`);
+  }
+
+  if (!config.appId) {
+    disableHotelRest('Missing CSL appId/customerAppId in api_sabre settings', 60);
+    throw new Error('Sabre Hotels REST skipped: missing CSL appId/customerAppId');
+  }
+
   for (const domain of domains) {
     const token = await getAccessToken(config, domain.tokenDomain);
     if (!token) {
@@ -258,8 +281,8 @@ async function sabreHotelRequest(config, endpoint, body, method = 'POST', timeou
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
           'Accept': 'application/json',
+          'Application-ID': config.appId,
         };
-        if (config.appId) headers['Application-ID'] = config.appId;
 
         console.log(`[Sabre Hotels] → ${method} ${url}`);
         const res = await fetch(url, {
@@ -278,8 +301,17 @@ async function sabreHotelRequest(config, endpoint, body, method = 'POST', timeou
         } catch {}
 
         if (!res.ok) {
+          let errBody = null;
+          try { errBody = responseText ? JSON.parse(responseText) : null; } catch {}
+          const errText = `${errBody?.message || ''} ${errBody?.errorCode || ''} ${responseText || ''}`.trim();
+
           console.warn(`[Sabre Hotels] ${domain.label} ${path}: HTTP ${res.status} — ${responseText.slice(0, 300)}`);
           errors.push(`${domain.label} ${path}: ${res.status}`);
+
+          if (/invalid\s+customerappid/i.test(errText)) {
+            disableHotelRest('Sabre returned Invalid CustomerAppId for CSL', 60);
+            throw new Error('Sabre Hotels REST rejected: Invalid CustomerAppId (configure valid CSL appId/customerAppId from Sabre)');
+          }
 
           // If 401/403, token is bad for this domain — skip remaining endpoints on it
           if (res.status === 401 || res.status === 403) {
@@ -365,71 +397,75 @@ async function searchHotels({ city, checkIn, checkOut, adults = 2, children = 0,
 
     // Strategy 1: Try REST CSL first (official Sabre approach — havail.sabre.com)
     const config = await getSabreConfig();
-    if (config && checkIn && checkOut) {
-      const roomCount = Math.max(1, parseInt(rooms || 1, 10) || 1);
-      const adultsPerRoom = Math.max(1, Math.ceil((parseInt(adults || 1, 10) || 1) / roomCount));
-      const childrenPerRoom = Math.max(0, Math.ceil((parseInt(children || 0, 10) || 0) / roomCount));
+    if (config && checkIn && checkOut && !isHotelRestDisabled()) {
+      if (!config.appId) {
+        disableHotelRest('Missing CSL appId/customerAppId in api_sabre settings', 60);
+      } else {
+        const roomCount = Math.max(1, parseInt(rooms || 1, 10) || 1);
+        const adultsPerRoom = Math.max(1, Math.ceil((parseInt(adults || 1, 10) || 1) / roomCount));
+        const childrenPerRoom = Math.max(0, Math.ceil((parseInt(children || 0, 10) || 0) / roomCount));
 
-      // Exact payload from Sabre official sample:
-      // https://github.com/SabreDevStudio/get-hotel-avail-v2-sample-nodejs/blob/master/app/hotelAvailabilityModel.js
-      const requestBody = {
-        GetHotelAvailRQ: {
-          SearchCriteria: {
-            OffSet: 1,
-            SortBy: 'TotalRate',
-            SortOrder: 'ASC',
-            PageSize: 50,
-            TierLabels: false,
-            GeoSearch: {
-              GeoRef: {
-                Radius: 50,
-                UOM: 'MI',
-                RefPoint: {
-                  Value: cityCode,
-                  ValueContext: 'CODE',
-                  RefPointType: '6',  // Sabre sample uses '6' (city)
+        // Exact payload from Sabre official sample:
+        // https://github.com/SabreDevStudio/get-hotel-avail-v2-sample-nodejs/blob/master/app/hotelAvailabilityModel.js
+        const requestBody = {
+          GetHotelAvailRQ: {
+            SearchCriteria: {
+              OffSet: 1,
+              SortBy: 'TotalRate',
+              SortOrder: 'ASC',
+              PageSize: 50,
+              TierLabels: false,
+              GeoSearch: {
+                GeoRef: {
+                  Radius: 50,
+                  UOM: 'MI',
+                  RefPoint: {
+                    Value: cityCode,
+                    ValueContext: 'CODE',
+                    RefPointType: '6',  // Sabre sample uses '6' (city)
+                  },
                 },
               },
-            },
-            RateInfoRef: {
-              ConvertedRateInfoOnly: false,
-              CurrencyCode: 'USD',
-              BestOnly: '2',
-              PrepaidQualifier: 'IncludePrepaid',
-              StayDateRange: {
-                StartDate: checkIn,
-                EndDate: checkOut,
+              RateInfoRef: {
+                ConvertedRateInfoOnly: false,
+                CurrencyCode: 'USD',
+                BestOnly: '2',
+                PrepaidQualifier: 'IncludePrepaid',
+                StayDateRange: {
+                  StartDate: checkIn,
+                  EndDate: checkOut,
+                },
+                Rooms: {
+                  Room: Array.from({ length: roomCount }, (_, idx) => ({
+                    Index: idx + 1,
+                    Adults: adultsPerRoom,
+                    Children: childrenPerRoom,
+                  })),
+                },
+                InfoSource: '100,110,112,113',  // 100=Sabre GDS, 110=Expedia, 112=Bedsonline, 113=Booking.com
               },
-              Rooms: {
-                Room: Array.from({ length: roomCount }, (_, idx) => ({
-                  Index: idx + 1,
-                  Adults: adultsPerRoom,
-                  Children: childrenPerRoom,
-                })),
+              HotelPref: {
+                SabreRating: {
+                  Min: String(minStars ? parseInt(minStars, 10) : 1),
+                  Max: String(maxStars ? parseInt(maxStars, 10) : 5),
+                },
               },
-              InfoSource: '100,110,112,113',  // 100=Sabre GDS, 110=Expedia, 112=Bedsonline, 113=Booking.com
-            },
-            HotelPref: {
-              SabreRating: {
-                Min: String(minStars ? parseInt(minStars, 10) : 1),
-                Max: String(maxStars ? parseInt(maxStars, 10) : 5),
+              ImageRef: {
+                Type: 'MEDIUM',
+                LanguageCode: 'EN',
               },
-            },
-            ImageRef: {
-              Type: 'MEDIUM',
-              LanguageCode: 'EN',
             },
           },
-        },
-      };
+        };
 
-      try {
-        console.log(`[Sabre Hotels] REST CSL search: city=${cityCode}, ${checkIn} → ${checkOut}, ${adultsPerRoom}A+${childrenPerRoom}C, ${roomCount} rooms`);
-        const restResponse = await sabreHotelRequest(config, '/v2.1.0/get/hotelavail', requestBody, 'POST', 30000);
-        hotels = normalizeSearchResponse(restResponse, city, checkIn, checkOut);
-        console.log(`[Sabre Hotels] REST CSL found ${hotels.length} hotels for ${city}`);
-      } catch (restErr) {
-        console.error('[Sabre Hotels] REST CSL failed:', restErr.message);
+        try {
+          console.log(`[Sabre Hotels] REST CSL search: city=${cityCode}, ${checkIn} → ${checkOut}, ${adultsPerRoom}A+${childrenPerRoom}C, ${roomCount} rooms`);
+          const restResponse = await sabreHotelRequest(config, '/v2.1.0/get/hotelavail', requestBody, 'POST', 30000);
+          hotels = normalizeSearchResponse(restResponse, city, checkIn, checkOut);
+          console.log(`[Sabre Hotels] REST CSL found ${hotels.length} hotels for ${city}`);
+        } catch (restErr) {
+          console.error('[Sabre Hotels] REST CSL failed:', restErr.message);
+        }
       }
     }
 

@@ -1055,6 +1055,19 @@ const HOTEL_DETAILS_ACTION_VARIANTS = [
   { label: 'mixed-2', service: 'HotelPropertyDescriptionRQ', action: 'HotelPropertyDescriptionLLSRQ', soapAction: 'HotelPropertyDescriptionLLSRQ' },
 ];
 
+let hotelLlsUnavailableUntil = 0;
+let hotelLlsUnavailableReason = '';
+
+function markHotelLlsUnavailable(reason, minutes = 30) {
+  hotelLlsUnavailableUntil = Date.now() + minutes * 60 * 1000;
+  hotelLlsUnavailableReason = reason || 'Unknown Hotel LLS error';
+  console.warn(`[Sabre SOAP] Hotel LLS temporarily disabled (${minutes}m): ${hotelLlsUnavailableReason}`);
+}
+
+function isHotelLlsUnavailable() {
+  return Date.now() < hotelLlsUnavailableUntil;
+}
+
 function isInvalidEbxmlAction(messageOrXml = '') {
   return /Action specified in EbxmlMessage does not exist|USG_INVALID_ACTION|Client\.InvalidAction/i.test(String(messageOrXml || ''));
 }
@@ -1068,6 +1081,11 @@ function isInvalidEbxmlAction(messageOrXml = '') {
 async function getHotelAvail(params, _retried = false) {
   const config = await getSabreConfig();
   if (!config) return [];
+
+  if (isHotelLlsUnavailable()) {
+    console.warn(`[Sabre SOAP] Hotel LLS skipped: ${hotelLlsUnavailableReason}`);
+    return [];
+  }
 
   let token, conversationId;
   try {
@@ -1154,6 +1172,8 @@ async function getHotelAvail(params, _retried = false) {
     console.log(`[Sabre SOAP] Hotel search: ${params.cityCode}, ${params.checkIn} → ${params.checkOut}, ${guestCount} guests`);
 
     let lastDiagnostics = null;
+    let invalidActionSeen = false;
+
     for (const actionVariant of HOTEL_AVAIL_ACTION_VARIANTS) {
       let actionRejected = false;
 
@@ -1187,6 +1207,7 @@ async function getHotelAvail(params, _retried = false) {
           }
 
           if (isInvalidEbxmlAction(faultMsg)) {
+            invalidActionSeen = true;
             actionRejected = true;
             console.error(`[Sabre SOAP] Hotel search invalid action (${attemptLabel}): ${faultMsg}`);
             break;
@@ -1223,6 +1244,11 @@ async function getHotelAvail(params, _retried = false) {
       if (actionRejected) {
         continue;
       }
+    }
+
+    if (invalidActionSeen) {
+      markHotelLlsUnavailable('Sabre returned InvalidAction for Hotel LLS actions (likely entitlement issue for current PCC)', 30);
+      return [];
     }
 
     if (lastDiagnostics?.messages?.length) {
