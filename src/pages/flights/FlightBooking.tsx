@@ -1098,7 +1098,7 @@ const FlightBooking = () => {
               {bookingResult.payLater && (
                 <div className="mt-4 space-y-3 text-left">
                   <p className="text-sm font-semibold">Select Payment Method</p>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {["bKash", "Nagad", "Visa/Master Card", "Bank Transfer"].map(m => (
                       <label key={m} className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${
                         selectedPaymentMethod === m ? "border-accent bg-accent/5" : "border-border hover:border-accent/40"
