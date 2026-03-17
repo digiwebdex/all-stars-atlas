@@ -262,30 +262,35 @@ const DashboardBookings = () => {
                           <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => e.stopPropagation()}><MoreHorizontal className="w-4 h-4" /></Button></DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/dashboard/bookings/${booking.id}`); }}><Eye className="w-4 h-4 mr-2" /> View Details</DropdownMenuItem>
-                            <DropdownMenuItem onClick={(e) => {
+                            <DropdownMenuItem onClick={async (e) => {
                               e.stopPropagation();
-                              const getCity = (code: string) => { const ap = AIRPORTS.find(a => a.code === code?.toUpperCase()); return ap ? `${ap.city}, ${ap.country}` : ""; };
-                              const outbound = booking.details?.outbound;
-                              const returnFlt = booking.details?.return;
-                              const buildSeg = (f: any) => ({
-                                airline: f?.airline || "Seven Trip", airlineCode: f?.airlineCode || "", flightNumber: f?.flightNumber || "",
-                                origin: f?.origin || "", originCity: f?.originCity || getCity(f?.origin),
-                                destination: f?.destination || "", destinationCity: f?.destinationCity || getCity(f?.destination),
-                                departureTime: f?.departureTime || "", arrivalTime: f?.arrivalTime || "", duration: f?.duration || "",
-                                cabinClass: f?.cabinClass || "Economy", aircraft: f?.aircraft || f?.legs?.[0]?.aircraft || "",
-                                terminal: f?.terminal || "", arrivalTerminal: f?.arrivalTerminal || "",
-                                baggage: f?.baggage || "20Kg", status: "Confirmed", meal: f?.meal || "Meals",
-                              });
-                              generateTicketPDF({
-                                id: booking.id, pnr: booking.pnr !== "—" ? booking.pnr : undefined, gdsPnr: booking.gdsBookingId || (booking.pnr !== "—" ? booking.pnr : undefined), airlinePnr: booking.airlinePnr || undefined, bookingRef: booking.id, source: booking.source,
-                                airline: booking.airline || "Seven Trip", flightNo: booking.flightNumber || "",
-                                from: booking.origin || "", to: booking.destination || "",
-                                date: booking.departureTime || booking.date, time: booking.departureTime || "",
-                                passenger: "Traveller", seat: "—", class: booking.cabinClass || "Economy",
-                                outbound: outbound ? [buildSeg(outbound)] : [], returnSegments: returnFlt ? [buildSeg(returnFlt)] : [],
-                                passengers: booking.passengers?.map((p: any) => ({ title: p.title || "", firstName: p.firstName || "", lastName: p.lastName || "", seat: "" })) || [],
-                              });
-                              toast({ title: "Downloaded", description: "E-Ticket PDF saved" });
+                              try {
+                                const getCity = (code: string) => { const ap = AIRPORTS.find(a => a.code === code?.toUpperCase()); return ap ? `${ap.city}, ${ap.country}` : ""; };
+                                const outbound = booking.details?.outbound;
+                                const returnFlt = booking.details?.return;
+                                const buildSeg = (f: any) => ({
+                                  airline: f?.airline || "Seven Trip", airlineCode: f?.airlineCode || "", flightNumber: f?.flightNumber || "",
+                                  origin: f?.origin || "", originCity: f?.originCity || getCity(f?.origin),
+                                  destination: f?.destination || "", destinationCity: f?.destinationCity || getCity(f?.destination),
+                                  departureTime: f?.departureTime || "", arrivalTime: f?.arrivalTime || "", duration: f?.duration || "",
+                                  cabinClass: f?.cabinClass || "Economy", aircraft: f?.aircraft || f?.legs?.[0]?.aircraft || "",
+                                  terminal: f?.terminal || "", arrivalTerminal: f?.arrivalTerminal || "",
+                                  baggage: f?.baggage || "20Kg", status: "Confirmed", meal: f?.meal || "Meals",
+                                });
+                                await generateTicketPDF({
+                                  id: booking.id, pnr: booking.pnr !== "—" ? booking.pnr : undefined, gdsPnr: booking.gdsBookingId || (booking.pnr !== "—" ? booking.pnr : undefined), airlinePnr: booking.airlinePnr || undefined, bookingRef: booking.id, source: booking.source,
+                                  airline: booking.airline || "Seven Trip", flightNo: booking.flightNumber || "",
+                                  from: booking.origin || "", to: booking.destination || "",
+                                  date: booking.departureTime || booking.date, time: booking.departureTime || "",
+                                  passenger: "Traveller", seat: "—", class: booking.cabinClass || "Economy",
+                                  outbound: outbound ? [buildSeg(outbound)] : [], returnSegments: returnFlt ? [buildSeg(returnFlt)] : [],
+                                  passengers: booking.passengers?.map((p: any) => ({ title: p.title || "", firstName: p.firstName || "", lastName: p.lastName || "", seat: "" })) || [],
+                                });
+                                toast({ title: "Downloaded", description: "E-Ticket PDF saved" });
+                              } catch (err) {
+                                console.error("PDF generation error:", err);
+                                toast({ title: "Download Failed", description: "Could not generate PDF.", variant: "destructive" });
+                              }
                             }}><FileText className="w-4 h-4 mr-2" /> Download E-Ticket</DropdownMenuItem>
                             {(booking.status === "on_hold") && (
                               <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handlePayNow(booking); }}>
