@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { setGoogleDriveClientId, getGoogleDriveClientId, isGoogleDriveConfigured } from "@/lib/google-drive";
 import { clearSocialConfigCache } from "@/lib/social-auth";
+import { SEARCH_TAB_LABELS, DEFAULT_SEARCH_TABS, type SearchTabConfig } from "@/hooks/useSearchTabConfig";
 
 // ── API Integrations Config ──
 const apiIntegrations = [
