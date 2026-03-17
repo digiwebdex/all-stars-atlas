@@ -4,9 +4,10 @@
 
 ---
 
-## 🔧 Hotfix Notes (v4.1.4)
+## 🔧 Latest Notes (v4.1.5)
 
-- **Quick-Sort Filters**: Cheapest/Fastest/Best top chips now re-sort flight results correctly using `sortRoundTripPairs()` for round-trips and `sortFlights()` for one-way, with deterministic tie-breakers and payable-fare-based pricing.
+- **v4.1.5** (2026-03-17): Cabin class accuracy — card labels derived from booking class letter (J→Business, V→Economy); branded fare naming (Economy Convenience, Business Saver, etc.); fare options sorted by searched cabin; cabin class guide banner on results page.
+- **v4.1.4**: Quick-Sort Filters — Cheapest/Fastest/Best top chips now re-sort flight results correctly using `sortRoundTripPairs()` for round-trips and `sortFlights()` for one-way, with deterministic tie-breakers and payable-fare-based pricing.
 - **v4.1.3**: Restored missing `getResponseStats` and `normalizeParams` helpers in `backend/src/routes/sabre-flights.js`; fixed fallback JSON decoding.
 
 ## Table of Contents
