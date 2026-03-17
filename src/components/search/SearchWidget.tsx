@@ -822,7 +822,7 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
                   <AirportInput label={`To (Flight ${index + 1})`} value={segment.to} onChange={(a) => updateSegment(index, 'to', a)} placeholder="Where to?" airports={getMultiCityToAirports(segment.from)} icon={<PlaneLanding className="w-5 h-5" />} />
                 </div>
 
-                <div className={`${compact ? 'lg:col-span-3' : 'md:col-span-3'} search-field border-b ${compact ? 'lg:border-b-0' : 'md:border-b-0'} flex-col items-start`}>
+                <div className={`${compact ? 'lg:col-span-3' : 'md:col-span-3'} ${sf} border-b ${compact ? 'lg:border-b-0' : 'md:border-b-0'} flex-col items-start`}>
                   <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1 flex items-center gap-1"><CalendarDays className="w-3 h-3" /> Departure</div>
                   <Popover open={openDatePopover === `mc-${index}`} onOpenChange={(o) => setOpenDatePopover(o ? `mc-${index}` : null)}>
                     <PopoverTrigger className="w-full text-left">
