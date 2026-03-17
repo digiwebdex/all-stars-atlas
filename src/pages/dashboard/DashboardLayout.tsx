@@ -316,6 +316,15 @@ const DashboardLayout = () => {
               <span className="text-xs font-bold text-warning">{Math.round(pointsBalance).toLocaleString()} Points</span>
             </Link>
 
+            {/* Wallet Balance Badge */}
+            <Link
+              to="/dashboard/wallet"
+              className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 transition-colors cursor-pointer"
+            >
+              <Wallet className="w-3.5 h-3.5 text-emerald-600" />
+              <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400">৳{Number(walletBalance).toLocaleString('en-BD', { minimumFractionDigits: 2 })}</span>
+            </Link>
+
             <ThemeToggle />
 
             <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted border border-border">
