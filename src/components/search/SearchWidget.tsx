@@ -618,7 +618,7 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
     if (!travelDate) { toast.error("Please select a travel date"); addDateError("travelDate"); return; }
     const params = new URLSearchParams({ destination: holidayDest });
     params.set('date', format(travelDate, 'yyyy-MM-dd'));
-    navigate(`${routePrefix}/holidays?${params.toString()}`);
+    navigate(`/holidays?${params.toString()}`);
   };
 
   const handleMedicalSearch = () => {
