@@ -271,8 +271,11 @@ const DashboardLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
-  // Sidebar logout event
-  import { useEffect } from "react";
+  useEffect(() => {
+    const handleLogout = () => { logout(); navigate("/"); };
+    window.addEventListener('sidebar:logout', handleLogout);
+    return () => window.removeEventListener('sidebar:logout', handleLogout);
+  }, [logout, navigate]);
 
   const sidebarWidth = sidebarCollapsed ? "w-[56px]" : "w-60";
   const mainMargin = sidebarCollapsed ? "md:ml-[56px]" : "md:ml-60";
