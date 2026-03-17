@@ -289,21 +289,21 @@ const AdminLayout = () => {
             sidebarWidth
           )}>
             {/* Admin badge + collapse toggle */}
-            <div className="p-3 border-b border-white/8 flex items-center justify-between">
+            <div className="p-3 border-b border-border flex items-center justify-between">
               {!sidebarCollapsed && (
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-blue-500/20 to-violet-500/20 border border-white/10 flex items-center justify-center flex-shrink-0">
-                    <Shield className="w-4 h-4 text-blue-400" />
+                  <div className="w-9 h-9 rounded-lg bg-primary/10 border border-border flex items-center justify-center flex-shrink-0">
+                    <Shield className="w-4 h-4 text-primary" />
                   </div>
                   <div>
-                    <p className="text-sm font-semibold text-white/90">Admin Panel</p>
-                    <p className="text-[10px] text-white/40">Full Access</p>
+                    <p className="text-sm font-semibold text-foreground">Admin Panel</p>
+                    <p className="text-[10px] text-muted-foreground">Full Access</p>
                   </div>
                 </div>
               )}
               <button
                 onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                className="w-7 h-7 rounded-md flex items-center justify-center hover:bg-white/10 transition-colors text-white/40 hover:text-white/80 flex-shrink-0"
+                className="w-7 h-7 rounded-md flex items-center justify-center hover:bg-muted transition-colors text-muted-foreground hover:text-foreground flex-shrink-0"
                 title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
               >
                 {sidebarCollapsed ? <ChevronRight className="w-4 h-4" /> : <ArrowLeft className="w-4 h-4" />}
