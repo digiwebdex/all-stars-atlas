@@ -1238,7 +1238,7 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
           <CityInput label="Drop-off Location" value={dropoffCity} onChange={setDropoffCity} cities={HOTEL_CITIES.filter(c => ["Dhaka", "Chittagong", "Cox's Bazar", "Sylhet", "Rajshahi", "Gazipur", "Rangpur", "Sreemangal"].includes(c))} icon={<MapPin className="w-5 h-5 text-secondary shrink-0" />} placeholder="Drop-off city..." />
         </div>
         <div className={`grid grid-cols-2 ${bp}:contents`}>
-          <div className={`${bp}:col-span-2 search-field border-b ${bp}:border-b-0 border-r flex-col items-start ${dateErrorClass("pickupDate")}`}>
+          <div className={`${bp}:col-span-2 ${sf} border-b ${bp}:border-b-0 border-r flex-col items-start ${dateErrorClass("pickupDate")}`}>
             <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Pickup Date</div>
             <Popover open={openDatePopover === "pickupDate"} onOpenChange={(o) => setOpenDatePopover(o ? "pickupDate" : null)}>
               <PopoverTrigger className="w-full text-left"><DateDisplay date={pickupDate} fallbackDay="—" fallbackMonth="Select" fallbackWeekday="Date" /></PopoverTrigger>
