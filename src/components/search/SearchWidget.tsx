@@ -657,7 +657,7 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
     params.set('number', rechargeNumber);
     params.set('amount', rechargeAmount);
     params.set('type', rechargeType);
-    navigate(`/recharge?${params.toString()}`);
+    navigate(`${routePrefix}/recharge?${params.toString()}`);
   };
 
   const handlePayBill = () => {
