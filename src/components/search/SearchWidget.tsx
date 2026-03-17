@@ -1361,43 +1361,34 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
 
     // ====== PAY BILL ======
     paybill: (
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-0 border border-border rounded-2xl bg-background shadow-sm">
-        <div className="md:col-span-3 search-field border-b md:border-b-0 flex-col items-start">
+      <div className={`grid grid-cols-1 ${bp}:grid-cols-12 gap-0 border border-border rounded-2xl bg-background shadow-sm`}>
+        <div className={`${bp}:col-span-3 search-field border-b ${bp}:border-b-0 flex-col items-start`}>
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Category</div>
           <div className="flex items-center gap-2 w-full">
             <Receipt className="w-5 h-5 text-primary shrink-0" />
             <Select value={billCategory} onValueChange={setBillCategory}>
-              <SelectTrigger className="border-0 p-0 h-auto text-sm font-bold shadow-none focus:ring-0">
-                <SelectValue placeholder="Select category" />
-              </SelectTrigger>
-              <SelectContent>
-                {BILL_CATEGORIES.map(cat => (
-                  <SelectItem key={cat} value={cat.toLowerCase().replace(/ /g, '-')}>{cat}</SelectItem>
-                ))}
-              </SelectContent>
+              <SelectTrigger className="border-0 p-0 h-auto text-sm font-bold shadow-none focus:ring-0"><SelectValue placeholder="Select category" /></SelectTrigger>
+              <SelectContent>{BILL_CATEGORIES.map(cat => (<SelectItem key={cat} value={cat.toLowerCase().replace(/ /g, '-')}>{cat}</SelectItem>))}</SelectContent>
             </Select>
           </div>
         </div>
-        <div className="md:col-span-3 search-field border-b md:border-b-0 flex-col items-start">
+        <div className={`${bp}:col-span-3 search-field border-b ${bp}:border-b-0 flex-col items-start`}>
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Biller Name</div>
-          <Input value={billerName} onChange={e => setBillerName(e.target.value)}
-            placeholder="e.g. DPDC, Titas Gas" className="border-0 p-0 h-auto text-sm font-bold shadow-none focus-visible:ring-0" />
+          <Input value={billerName} onChange={e => setBillerName(e.target.value)} placeholder="e.g. DPDC, Titas Gas" className="border-0 p-0 h-auto text-sm font-bold shadow-none focus-visible:ring-0" />
         </div>
-        <div className="md:col-span-2 search-field border-b md:border-b-0 flex-col items-start">
+        <div className={`${bp}:col-span-2 search-field border-b ${bp}:border-b-0 flex-col items-start`}>
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Account No.</div>
-          <Input value={accountNumber} onChange={e => setAccountNumber(e.target.value)}
-            placeholder="Account/Subscriber #" className="border-0 p-0 h-auto text-sm font-bold shadow-none focus-visible:ring-0" />
+          <Input value={accountNumber} onChange={e => setAccountNumber(e.target.value)} placeholder="Account/Subscriber #" className="border-0 p-0 h-auto text-sm font-bold shadow-none focus-visible:ring-0" />
         </div>
-        <div className="md:col-span-2 search-field border-b md:border-b-0 flex-col items-start">
+        <div className={`${bp}:col-span-2 search-field border-b ${bp}:border-b-0 flex-col items-start`}>
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Amount (৳)</div>
           <div className="flex items-center gap-2 w-full">
             <CreditCard className="w-4 h-4 text-secondary shrink-0" />
-            <Input value={billAmount} onChange={e => setBillAmount(e.target.value)}
-              placeholder="Amount" type="number" className="border-0 p-0 h-auto text-sm font-bold shadow-none focus-visible:ring-0" />
+            <Input value={billAmount} onChange={e => setBillAmount(e.target.value)} placeholder="Amount" type="number" className="border-0 p-0 h-auto text-sm font-bold shadow-none focus-visible:ring-0" />
           </div>
         </div>
-        <div className="md:col-span-2 flex items-center justify-center p-3">
-          <Button onClick={handlePayBill} className="w-full h-12 md:h-full md:min-h-[56px] rounded-xl bg-secondary text-secondary-foreground hover:bg-secondary/90 text-base font-extrabold shadow-xl shadow-secondary/25 transition-all active:scale-[0.98]">
+        <div className={`${bp}:col-span-2 flex items-center justify-center p-3`}>
+          <Button onClick={handlePayBill} className={`w-full h-12 ${bp === 'md' ? 'md:h-full md:min-h-[56px]' : 'lg:h-full lg:min-h-[56px]'} rounded-xl bg-secondary text-secondary-foreground hover:bg-secondary/90 text-base font-extrabold shadow-xl shadow-secondary/25 transition-all active:scale-[0.98]`}>
             <CreditCard className="w-5 h-5 mr-2" /> Pay
           </Button>
         </div>
