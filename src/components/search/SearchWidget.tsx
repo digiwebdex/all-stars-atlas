@@ -726,7 +726,7 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
             ))}
           </RadioGroup>
 
-          <div className="flex items-center gap-2 w-full sm:w-auto">
+          <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto scrollbar-none">
             <Popover>
               <PopoverTrigger asChild>
                 <Button variant="outline" size="sm" className="text-xs gap-1.5 h-8 rounded-lg font-semibold flex-1 sm:flex-none">
