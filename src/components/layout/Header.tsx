@@ -100,8 +100,8 @@ const Header = () => {
                 </DropdownMenu>
               ) : (
                 <>
-                  <Button variant="ghost" size="sm" asChild className={`font-semibold text-[13px] ${transparent ? "text-white/80 hover:bg-white/10 hover:text-white" : ""}`}>
-                    <Link to="/auth/login"><User className="w-4 h-4 mr-1.5" /> Login</Link>
+                  <Button variant="ghost" size="sm" onClick={() => setLoginOpen(true)} className={`font-semibold text-[13px] ${transparent ? "text-white/80 hover:bg-white/10 hover:text-white" : ""}`}>
+                    <LogIn className="w-4 h-4 mr-1.5" /> Login
                   </Button>
                   <Button size="sm" asChild className="font-bold text-[13px] shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-shadow">
                     <Link to="/auth/register">Sign Up</Link>
