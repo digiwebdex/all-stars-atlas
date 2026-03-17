@@ -945,7 +945,7 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
     // ====== HOTEL ======
     hotel: (
       <div className={`grid grid-cols-1 ${bp}:grid-cols-12 gap-0 border border-border rounded-2xl bg-background shadow-sm`}>
-        <div className={`${bp}:col-span-4 search-field border-b ${bp}:border-b-0 flex-col items-start min-w-0`}>
+        <div className={`${bp}:col-span-4 ${sf} border-b ${bp}:border-b-0 flex-col items-start min-w-0`}>
           <CityInput
             label="Destination"
             value={hotelCity}
