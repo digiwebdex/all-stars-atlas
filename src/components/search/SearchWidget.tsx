@@ -890,7 +890,7 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
               <AirportInput label="To" value={toAirport} onChange={setToAirport} placeholder="Where to?" airports={scopedToAirports} icon={<PlaneLanding className="w-5 h-5" />} />
             </div>
 
-            <div className={`${tripType === "roundtrip" ? "col-span-1 sm:col-span-1" : ""} ${compact ? 'lg:col-span-2' : 'md:col-span-2'} search-field border-b ${compact ? 'lg:border-b-0' : 'md:border-b-0'} flex-col items-start ${dateErrorClass("depart")}`}>
+            <div className={`${tripType === "roundtrip" ? "col-span-1 sm:col-span-1" : ""} ${compact ? 'lg:col-span-2' : 'md:col-span-2'} ${sf} border-b ${compact ? 'lg:border-b-0' : 'md:border-b-0'} flex-col items-start ${dateErrorClass("depart")}`}>
               <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1 flex items-center gap-1"><CalendarDays className="w-3 h-3" /> Departure</div>
               <Popover open={openDatePopover === "depart"} onOpenChange={(o) => setOpenDatePopover(o ? "depart" : null)}>
                 <PopoverTrigger className="w-full text-left">
