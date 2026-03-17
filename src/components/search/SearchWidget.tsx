@@ -670,7 +670,7 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
     params.set('biller', billerName);
     params.set('account', accountNumber);
     params.set('amount', billAmount);
-    navigate(`/paybill?${params.toString()}`);
+    navigate(`${routePrefix}/paybill?${params.toString()}`);
   };
 
   // ====== DATE DISPLAY HELPER ======
