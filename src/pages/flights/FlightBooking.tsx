@@ -20,6 +20,7 @@ import {
   Armchair, Info,
 } from "lucide-react";
 import { Link, useNavigate, useSearchParams, useLocation } from "react-router-dom";
+import { usePrefixedNavigate } from "@/hooks/useRoutePrefix";
 import { useCmsPageContent } from "@/hooks/useCmsContent";
 import { NATIONALITY_OPTIONS, COUNTRY_OPTIONS } from "@/lib/countries";
 import { useAuth } from "@/hooks/useAuth";
