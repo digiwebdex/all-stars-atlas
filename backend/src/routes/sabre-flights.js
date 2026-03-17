@@ -176,7 +176,9 @@ async function sabreRequest(config, endpoint, body, method = 'POST', timeoutMs =
     console.error(`[Sabre] API error on ${endpoint}: ${res.status} ${errText.slice(0, 1000)}`);
     throw new Error(`Sabre API ${res.status}: ${errText.slice(0, 500)}`);
   }
-  return res.json();
+  const text = await res.text();
+  if (!text || !text.trim()) return {};
+  try { return JSON.parse(text); } catch { return {}; }
 }
 
 // ── Flight Search (Bargain Finder Max) ──
