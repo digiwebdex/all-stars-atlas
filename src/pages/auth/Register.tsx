@@ -189,8 +189,8 @@ const Register = () => {
                   </div>
 
                   {idDocument ? (
-                    <div className="flex items-center gap-2 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-lg p-3">
-                      <FileText className="w-5 h-5 text-emerald-600 shrink-0" />
+                    <div className="flex items-center gap-2 bg-accent/5 border border-accent/20 rounded-lg p-3">
+                      <FileText className="w-5 h-5 text-accent shrink-0" />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium truncate">{idDocument.name}</p>
                         <p className="text-[10px] text-muted-foreground">{(idDocument.size / 1024).toFixed(0)} KB • {idDocType === "nid" ? "National ID" : "Passport"}</p>

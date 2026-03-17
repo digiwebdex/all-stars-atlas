@@ -52,7 +52,11 @@ const VisaServices = () => {
   return (
     <div className="min-h-screen bg-muted/30">
       {/* Hero */}
-      <section className="bg-card border-b border-border pt-36 lg:pt-48 pb-8">
+      <section className="relative bg-gradient-to-br from-primary/5 via-card to-accent/5 border-b border-border pt-36 lg:pt-48 pb-8 overflow-hidden">
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute top-1/3 right-0 w-72 h-72 bg-primary/5 rounded-full blur-[100px]" />
+          <div className="absolute bottom-0 left-1/4 w-48 h-48 bg-accent/5 rounded-full blur-[80px]" />
+        </div>
         <div className="container mx-auto px-4 relative">
           <div className="max-w-2xl mx-auto text-center">
             <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-foreground mb-4 tracking-tight">

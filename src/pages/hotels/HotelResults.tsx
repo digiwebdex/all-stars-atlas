@@ -195,8 +195,8 @@ const HotelResults = () => {
           className="mb-3"
         />
         <div className="flex justify-between text-xs font-semibold">
-          <span className="bg-muted px-2 py-1 rounded-lg">${priceRange[0].toLocaleString()}</span>
-          <span className="bg-muted px-2 py-1 rounded-lg">${priceRange[1].toLocaleString()}</span>
+          <span className="bg-muted px-2 py-1 rounded-lg">৳{priceRange[0].toLocaleString()}</span>
+          <span className="bg-muted px-2 py-1 rounded-lg">৳{priceRange[1].toLocaleString()}</span>
         </div>
       </div>
 
@@ -332,7 +332,7 @@ const HotelResults = () => {
 
               {/* Tags */}
               {hotel.isFreeCancellation && (
-                <p className="text-xs text-green-600 dark:text-green-400 font-semibold mt-2 flex items-center gap-1">
+                <p className="text-xs text-accent font-semibold mt-2 flex items-center gap-1">
                   <ShieldCheck className="w-3.5 h-3.5" /> Free cancellation
                 </p>
               )}
@@ -344,11 +344,11 @@ const HotelResults = () => {
                 <span className="flex items-center gap-1"><Moon className="w-3 h-3" /> {nights} night{nights > 1 ? 's' : ''}, {adults} adult{parseInt(adults) > 1 ? 's' : ''}</span>
               </div>
               <div className="text-right">
-                {hotel.originalPrice && <p className="text-xs text-muted-foreground line-through">${hotel.originalPrice.toLocaleString()}</p>}
-                <p className="text-xl sm:text-2xl font-black text-primary">${hotel.price?.toLocaleString()}</p>
+                {hotel.originalPrice && <p className="text-xs text-muted-foreground line-through">৳{hotel.originalPrice.toLocaleString()}</p>}
+                <p className="text-xl sm:text-2xl font-black text-primary">৳{hotel.price?.toLocaleString()}</p>
                 <p className="text-[10px] text-muted-foreground">per night</p>
                 {hotel.totalPrice > 0 && nights > 1 && (
-                  <p className="text-[11px] text-muted-foreground font-medium mt-0.5">${hotel.totalPrice.toLocaleString()} total</p>
+                  <p className="text-[11px] text-muted-foreground font-medium mt-0.5">৳{hotel.totalPrice.toLocaleString()} total</p>
                 )}
               </div>
             </div>
@@ -401,7 +401,7 @@ const HotelResults = () => {
                 ))}
               </div>
               {hotel.isFreeCancellation && (
-                <p className="text-[11px] text-green-600 dark:text-green-400 font-semibold flex items-center gap-1"><ShieldCheck className="w-3 h-3" /> Free cancellation</p>
+                <p className="text-[11px] text-accent font-semibold flex items-center gap-1"><ShieldCheck className="w-3 h-3" /> Free cancellation</p>
               )}
             </div>
             <div className="flex items-end justify-between pt-3 mt-3 border-t border-border/50">
@@ -412,7 +412,7 @@ const HotelResults = () => {
                 </div>
               )}
               <div className="text-right">
-                <p className="text-lg font-black text-primary">${hotel.price?.toLocaleString()}</p>
+                <p className="text-lg font-black text-primary">৳{hotel.price?.toLocaleString()}</p>
                 <p className="text-[10px] text-muted-foreground">{nights} night{nights > 1 ? 's' : ''}</p>
               </div>
             </div>

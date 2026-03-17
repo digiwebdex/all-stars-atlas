@@ -295,7 +295,7 @@ const HotelDetail = () => {
                             {/* Cancellation */}
                             <div className="mt-3">
                               {room.isRefundable ? (
-                                <p className="text-xs text-green-600 dark:text-green-400 font-semibold flex items-center gap-1">
+                                <p className="text-xs text-accent font-semibold flex items-center gap-1">
                                   <ShieldCheck className="w-3.5 h-3.5" /> Free cancellation
                                   {room.paymentDeadline && <span className="font-normal text-muted-foreground ml-1">before {room.paymentDeadline}</span>}
                                 </p>
@@ -423,7 +423,7 @@ const HotelDetail = () => {
                       </>
                     ) : hotel.price ? (
                       <>
-                        <p className="text-3xl font-black text-primary">${hotel.price?.toLocaleString()}</p>
+                        <p className="text-3xl font-black text-primary">৳{hotel.price?.toLocaleString()}</p>
                         <p className="text-xs text-muted-foreground">per night</p>
                       </>
                     ) : (
@@ -454,7 +454,7 @@ const HotelDetail = () => {
                   )}
 
                   {cheapestRoom?.isRefundable && (
-                    <p className="text-[11px] text-center text-green-600 dark:text-green-400 font-semibold flex items-center justify-center gap-1">
+                    <p className="text-[11px] text-center text-accent font-semibold flex items-center justify-center gap-1">
                       <ShieldCheck className="w-3.5 h-3.5" /> Free cancellation available
                     </p>
                   )}
