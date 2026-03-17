@@ -760,7 +760,7 @@ const FareOptionsPanel = ({ flights, onBook, searchedCabin }: { flights: any[]; 
         id: `option-${i}`,
         label,
         fareBasis: f.fareBasis || '',
-        bookingClass: f.bookingClass || f.cabinClass || primary.bookingClass || "",
+        bookingClass: f.bookingClass || f.cabinClass || (f.fareBasis ? f.fareBasis.charAt(0).toUpperCase() : '') || primary.bookingClass || "",
         handBaggage: f.handBaggage || primary.handBaggage || "7KG",
         checkedBaggage: f.baggage || f.checkedBaggage || primary.baggage || null,
         meal: mealStatus,
