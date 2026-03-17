@@ -1038,7 +1038,7 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
     // ====== VISA ======
     visa: (
       <div className={`grid grid-cols-1 sm:grid-cols-2 ${bp}:grid-cols-12 gap-0 border border-border rounded-2xl bg-background shadow-sm`}>
-        <div className={`sm:col-span-2 ${bp}:col-span-3 search-field border-b ${bp}:border-b-0 flex-col items-start`}>
+        <div className={`sm:col-span-2 ${bp}:col-span-3 ${sf} border-b ${bp}:border-b-0 flex-col items-start`}>
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Country</div>
           <div className="flex items-center gap-2 w-full">
             <span className="text-xl font-black text-primary">{VISA_COUNTRIES.find(c => c.code === visaCountry)?.flag || "🌍"}</span>
