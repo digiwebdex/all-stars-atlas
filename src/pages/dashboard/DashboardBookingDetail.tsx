@@ -275,18 +275,30 @@ const DashboardBookingDetail = () => {
             <ArrowLeft className="w-4 h-4 mr-1.5" /> Back to Bookings
           </Button>
 
-          {/* Header */}
-          <div className="bg-accent text-accent-foreground rounded-xl px-5 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <Plane className="w-6 h-6 shrink-0" />
-              <div>
-                <h1 className="text-lg font-bold">Booking: {booking.id}</h1>
-                <p className="text-xs text-accent-foreground/70">{booking.airline} · {booking.flightNumber} · {booking.origin} → {booking.destination}</p>
+          {/* Departure / Arrival Header Cards — green like reference */}
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div className="rounded-xl overflow-hidden border border-emerald-200 dark:border-emerald-800">
+              <div className="bg-emerald-500 px-5 py-2"><p className="text-xs font-bold text-white uppercase tracking-wider">Departure</p></div>
+              <div className="p-5 bg-card">
+                <div className="flex items-center justify-between">
+                  <span className="text-4xl font-black tracking-tight">{booking.origin}</span>
+                  <span className="text-2xl font-black text-muted-foreground">{fmtTime(booking.departureTime)}</span>
+                </div>
+                <p className="text-sm text-muted-foreground mt-2">{fmtDate(booking.departureTime)}</p>
+                {booking.legs[0]?.originTerminal && <p className="text-xs text-muted-foreground">Terminal {booking.legs[0].originTerminal}</p>}
               </div>
             </div>
-            <Badge className="bg-accent-foreground/20 text-accent-foreground border-0 text-xs w-fit">
-              {displayStatus(booking.status)}
-            </Badge>
+            <div className="rounded-xl overflow-hidden border border-emerald-200 dark:border-emerald-800">
+              <div className="bg-emerald-500 px-5 py-2"><p className="text-xs font-bold text-white uppercase tracking-wider">Arrival</p></div>
+              <div className="p-5 bg-card">
+                <div className="flex items-center justify-between">
+                  <span className="text-4xl font-black tracking-tight">{booking.destination}</span>
+                  <span className="text-2xl font-black text-muted-foreground">{fmtTime(booking.arrivalTime)}</span>
+                </div>
+                <p className="text-sm text-muted-foreground mt-2">{fmtDate(booking.arrivalTime)}</p>
+                {booking.legs[booking.legs.length - 1]?.destinationTerminal && <p className="text-xs text-muted-foreground">Terminal {booking.legs[booking.legs.length - 1].destinationTerminal}</p>}
+              </div>
+            </div>
           </div>
 
           {/* Payment deadline banner (inline under booking) */}
@@ -362,30 +374,12 @@ const DashboardBookingDetail = () => {
           {activeTab === "itinerary" && (
             <div className="space-y-4">
               {booking.isRoundTrip && (
-                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-accent/15 text-accent border border-accent/30 text-sm font-bold shadow-sm">
+                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-400/30 text-sm font-bold shadow-sm">
                   <Plane className="w-4 h-4" />
                   <span>Outbound: {booking.origin} → {booking.destination}</span>
-                  <span className="flight-date text-xs ml-1">· {fmtDate(booking.departureTime)}</span>
+                  <span className="text-xs ml-1">· {fmtDate(booking.departureTime)}</span>
                 </div>
               )}
-              <div className="grid sm:grid-cols-2 gap-4">
-                <div className="border border-border rounded-xl overflow-hidden">
-                  <div className="bg-accent px-4 py-2"><p className="text-xs font-bold text-accent-foreground uppercase">Departure</p></div>
-                  <div className="p-4 space-y-2">
-                    <div className="flex items-center justify-between"><span className="text-3xl font-black">{booking.origin}</span><span className="text-2xl font-black">{fmtTime(booking.departureTime)}</span></div>
-                    <p className="text-xs text-muted-foreground">{fmtDate(booking.departureTime)}</p>
-                    {booking.legs[0]?.originTerminal && <p className="text-xs text-muted-foreground">Terminal {booking.legs[0].originTerminal}</p>}
-                  </div>
-                </div>
-                <div className="border border-border rounded-xl overflow-hidden">
-                  <div className="bg-accent px-4 py-2"><p className="text-xs font-bold text-accent-foreground uppercase">Arrival</p></div>
-                  <div className="p-4 space-y-2">
-                    <div className="flex items-center justify-between"><span className="text-3xl font-black">{booking.destination}</span><span className="text-2xl font-black">{fmtTime(booking.arrivalTime)}</span></div>
-                    <p className="text-xs text-muted-foreground">{fmtDate(booking.arrivalTime)}</p>
-                    {booking.legs[booking.legs.length - 1]?.destinationTerminal && <p className="text-xs text-muted-foreground">Terminal {booking.legs[booking.legs.length - 1].destinationTerminal}</p>}
-                  </div>
-                </div>
-              </div>
 
               <div className="border border-border rounded-xl overflow-hidden">
                 <div className="bg-muted/30 px-4 py-2 border-b border-border"><p className="text-xs font-bold uppercase text-muted-foreground">Flight Details</p></div>
@@ -458,16 +452,22 @@ const DashboardBookingDetail = () => {
                   <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-400/30 text-sm font-bold shadow-sm">
                     <Plane className="w-4 h-4 rotate-180" />
                     <span>Return: {booking.returnFlight.origin} → {booking.returnFlight.destination}</span>
-                    <span className="flight-date text-xs ml-1">· {fmtDate(booking.returnFlight.departureTime)}</span>
+                    <span className="text-xs ml-1">· {fmtDate(booking.returnFlight.departureTime)}</span>
                   </div>
                   <div className="grid sm:grid-cols-2 gap-4">
-                    <div className="border border-border rounded-xl overflow-hidden">
-                      <div className="bg-warning/80 px-4 py-2"><p className="text-xs font-bold text-warning-foreground uppercase">Departure</p></div>
-                      <div className="p-4"><div className="flex items-center justify-between"><span className="text-3xl font-black">{booking.returnFlight.origin}</span><span className="text-2xl font-black">{fmtTime(booking.returnFlight.departureTime)}</span></div><p className="text-xs text-muted-foreground mt-1">{fmtDate(booking.returnFlight.departureTime)}</p></div>
+                    <div className="rounded-xl overflow-hidden border border-amber-200 dark:border-amber-800">
+                      <div className="bg-amber-500 px-5 py-2"><p className="text-xs font-bold text-white uppercase tracking-wider">Departure</p></div>
+                      <div className="p-5 bg-card">
+                        <div className="flex items-center justify-between"><span className="text-4xl font-black tracking-tight">{booking.returnFlight.origin}</span><span className="text-2xl font-black text-muted-foreground">{fmtTime(booking.returnFlight.departureTime)}</span></div>
+                        <p className="text-sm text-muted-foreground mt-2">{fmtDate(booking.returnFlight.departureTime)}</p>
+                      </div>
                     </div>
-                    <div className="border border-border rounded-xl overflow-hidden">
-                      <div className="bg-warning/80 px-4 py-2"><p className="text-xs font-bold text-warning-foreground uppercase">Arrival</p></div>
-                      <div className="p-4"><div className="flex items-center justify-between"><span className="text-3xl font-black">{booking.returnFlight.destination}</span><span className="text-2xl font-black">{fmtTime(booking.returnFlight.arrivalTime)}</span></div><p className="text-xs text-muted-foreground mt-1">{fmtDate(booking.returnFlight.arrivalTime)}</p></div>
+                    <div className="rounded-xl overflow-hidden border border-amber-200 dark:border-amber-800">
+                      <div className="bg-amber-500 px-5 py-2"><p className="text-xs font-bold text-white uppercase tracking-wider">Arrival</p></div>
+                      <div className="p-5 bg-card">
+                        <div className="flex items-center justify-between"><span className="text-4xl font-black tracking-tight">{booking.returnFlight.destination}</span><span className="text-2xl font-black text-muted-foreground">{fmtTime(booking.returnFlight.arrivalTime)}</span></div>
+                        <p className="text-sm text-muted-foreground mt-2">{fmtDate(booking.returnFlight.arrivalTime)}</p>
+                      </div>
                     </div>
                   </div>
                 </>
@@ -559,19 +559,19 @@ const DashboardBookingDetail = () => {
             </div>
           )}
 
-          {/* Action Buttons */}
+          {/* Action Buttons — colored like reference */}
           <Separator />
           <div className="flex flex-wrap gap-3">
             {(booking.status === "on_hold") && (
-              <Button className="bg-accent text-accent-foreground hover:bg-accent/90 font-bold" onClick={handlePayNow}>
+              <Button className="bg-emerald-500 hover:bg-emerald-600 text-white font-bold shadow-md" onClick={handlePayNow}>
                 <CreditCard className="w-4 h-4 mr-1.5" /> {!booking.isDomestic ? "Upload Docs & Pay" : "Pay Now"}
               </Button>
             )}
-            <Button variant="outline" onClick={handleDownloadTicket}>
+            <Button className="bg-emerald-500 hover:bg-emerald-600 text-white font-bold shadow-md" onClick={handleDownloadTicket}>
               <Download className="w-4 h-4 mr-1.5" /> Download E-Ticket
             </Button>
             {booking.pnr !== "—" && booking.type === "flight" && (
-              <Button variant="outline" onClick={() => navigate(`/dashboard/bookings/${booking.rawId}/extras`)}>
+              <Button variant="outline" className="font-bold" onClick={() => navigate(`/dashboard/bookings/${booking.rawId}/extras`)}>
                 <Package className="w-4 h-4 mr-1.5" /> Buy Extras
               </Button>
             )}
