@@ -1318,38 +1318,30 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
             </button>
           ))}
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-0 border border-border rounded-2xl bg-background shadow-sm">
-          <div className="md:col-span-3 search-field border-b md:border-b-0 flex-col items-start">
+        <div className={`grid grid-cols-1 ${bp}:grid-cols-12 gap-0 border border-border rounded-2xl bg-background shadow-sm`}>
+          <div className={`${bp}:col-span-3 search-field border-b ${bp}:border-b-0 flex-col items-start`}>
             <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Operator</div>
             <Select value={rechargeOperator} onValueChange={setRechargeOperator}>
-              <SelectTrigger className="border-0 p-0 h-auto text-sm font-bold shadow-none focus:ring-0">
-                <SelectValue placeholder="Select operator" />
-              </SelectTrigger>
-              <SelectContent>
-                {RECHARGE_OPERATORS.map(op => (
-                  <SelectItem key={op.id} value={op.id}>{op.logo} {op.name}</SelectItem>
-                ))}
-              </SelectContent>
+              <SelectTrigger className="border-0 p-0 h-auto text-sm font-bold shadow-none focus:ring-0"><SelectValue placeholder="Select operator" /></SelectTrigger>
+              <SelectContent>{RECHARGE_OPERATORS.map(op => (<SelectItem key={op.id} value={op.id}>{op.logo} {op.name}</SelectItem>))}</SelectContent>
             </Select>
           </div>
-          <div className="md:col-span-3 search-field border-b md:border-b-0 flex-col items-start">
+          <div className={`${bp}:col-span-3 search-field border-b ${bp}:border-b-0 flex-col items-start`}>
             <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Phone Number</div>
             <div className="flex items-center gap-2 w-full">
               <PhoneCall className="w-4 h-4 text-primary shrink-0" />
-              <Input value={rechargeNumber} onChange={e => setRechargeNumber(e.target.value)}
-                placeholder="01XXX-XXXXXX" className="border-0 p-0 h-auto text-sm font-bold shadow-none focus-visible:ring-0" />
+              <Input value={rechargeNumber} onChange={e => setRechargeNumber(e.target.value)} placeholder="01XXX-XXXXXX" className="border-0 p-0 h-auto text-sm font-bold shadow-none focus-visible:ring-0" />
             </div>
           </div>
-          <div className="md:col-span-3 search-field border-b md:border-b-0 flex-col items-start">
+          <div className={`${bp}:col-span-3 search-field border-b ${bp}:border-b-0 flex-col items-start`}>
             <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Amount (৳)</div>
             <div className="flex items-center gap-2 w-full">
               <Zap className="w-4 h-4 text-secondary shrink-0" />
-              <Input value={rechargeAmount} onChange={e => setRechargeAmount(e.target.value)}
-                placeholder="Enter amount" type="number" className="border-0 p-0 h-auto text-sm font-bold shadow-none focus-visible:ring-0" />
+              <Input value={rechargeAmount} onChange={e => setRechargeAmount(e.target.value)} placeholder="Enter amount" type="number" className="border-0 p-0 h-auto text-sm font-bold shadow-none focus-visible:ring-0" />
             </div>
           </div>
-          <div className="md:col-span-3 flex items-center justify-center p-3">
-            <Button onClick={handleRecharge} className="w-full h-12 md:h-full md:min-h-[56px] rounded-xl bg-secondary text-secondary-foreground hover:bg-secondary/90 text-base font-extrabold shadow-xl shadow-secondary/25 transition-all active:scale-[0.98]">
+          <div className={`${bp}:col-span-3 flex items-center justify-center p-3`}>
+            <Button onClick={handleRecharge} className={`w-full h-12 ${bp === 'md' ? 'md:h-full md:min-h-[56px]' : 'lg:h-full lg:min-h-[56px]'} rounded-xl bg-secondary text-secondary-foreground hover:bg-secondary/90 text-base font-extrabold shadow-xl shadow-secondary/25 transition-all active:scale-[0.98]`}>
               <Zap className="w-5 h-5 mr-2" /> Recharge
             </Button>
           </div>
