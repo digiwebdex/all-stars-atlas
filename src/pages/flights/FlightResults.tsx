@@ -793,7 +793,23 @@ const FareOptionsPanel = ({ flights, onBook }: { flights: any[]; onBook: (flight
     };
 
     if (fd.length > 1) {
-      const sorted = [...fd].sort((a: any, b: any) => (a.price || a.amount || 0) - (b.price || b.amount || 0));
+      // Sort: searched cabin class first, then by price
+      const searchedCab = (primary._searchedCabin || primary.cabinClass || 'economy').toLowerCase();
+      const getCabinForClass = (cls: string) => {
+        const c = cls.charAt(0).toUpperCase();
+        if ('CJDIZ'.includes(c)) return 'business';
+        if ('FAPR'.includes(c)) return 'first';
+        if ('WE'.includes(c)) return 'premium economy';
+        return 'economy';
+      };
+      const sorted = [...fd].sort((a: any, b: any) => {
+        const aCab = getCabinForClass(a.bookingClass || a.cabinClass || '');
+        const bCab = getCabinForClass(b.bookingClass || b.cabinClass || '');
+        const aMatch = aCab === searchedCab ? 0 : 1;
+        const bMatch = bCab === searchedCab ? 0 : 1;
+        if (aMatch !== bMatch) return aMatch - bMatch;
+        return (a.price || a.amount || 0) - (b.price || b.amount || 0);
+      });
       return sorted.map((f: any, i: number) => buildOption(f, i, false));
     } else if (fd.length === 1) {
       return [buildOption(fd[0], 0, true)];
