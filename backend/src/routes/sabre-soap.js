@@ -1055,6 +1055,19 @@ const HOTEL_DETAILS_ACTION_VARIANTS = [
   { label: 'mixed-2', service: 'HotelPropertyDescriptionRQ', action: 'HotelPropertyDescriptionLLSRQ', soapAction: 'HotelPropertyDescriptionLLSRQ' },
 ];
 
+let hotelLlsUnavailableUntil = 0;
+let hotelLlsUnavailableReason = '';
+
+function markHotelLlsUnavailable(reason, minutes = 30) {
+  hotelLlsUnavailableUntil = Date.now() + minutes * 60 * 1000;
+  hotelLlsUnavailableReason = reason || 'Unknown Hotel LLS error';
+  console.warn(`[Sabre SOAP] Hotel LLS temporarily disabled (${minutes}m): ${hotelLlsUnavailableReason}`);
+}
+
+function isHotelLlsUnavailable() {
+  return Date.now() < hotelLlsUnavailableUntil;
+}
+
 function isInvalidEbxmlAction(messageOrXml = '') {
   return /Action specified in EbxmlMessage does not exist|USG_INVALID_ACTION|Client\.InvalidAction/i.test(String(messageOrXml || ''));
 }
