@@ -256,7 +256,38 @@ const AdminSettings = () => {
         </CardContent>
       </Card>
 
-      {/* Payment Methods */}
+      {/* Search Services Visibility */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center"><Search className="w-5 h-5 text-primary" /></div>
+            <div><CardTitle className="text-lg">Search Services</CardTitle><CardDescription>Enable or disable search tabs shown on the homepage. Disabled services will be hidden from users.</CardDescription></div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {(Object.keys(SEARCH_TAB_LABELS) as (keyof SearchTabConfig)[]).map(key => {
+            const icons: Record<string, any> = { flight: Plane, hotel: Building2, holiday: Palmtree, visa: FileText, medical: Stethoscope, cars: Car, esim: Smartphone, recharge: PhoneCall, paybill: Receipt };
+            const Icon = icons[key] || Search;
+            return (
+              <div key={key} className="flex items-center justify-between py-2.5 px-3 rounded-lg border border-border hover:bg-muted/30 transition-colors">
+                <div className="flex items-center gap-3">
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${searchTabs[key] ? 'bg-primary/10' : 'bg-muted'}`}>
+                    <Icon className={`w-4 h-4 ${searchTabs[key] ? 'text-primary' : 'text-muted-foreground'}`} />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-semibold">{SEARCH_TAB_LABELS[key]}</p>
+                      <Badge variant={searchTabs[key] ? "default" : "secondary"} className="text-[10px] h-5">{searchTabs[key] ? "Visible" : "Hidden"}</Badge>
+                    </div>
+                  </div>
+                </div>
+                <Switch checked={searchTabs[key]} onCheckedChange={() => toggleSearchTab(key)} />
+              </div>
+            );
+          })}
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader>
           <div className="flex items-center gap-3">
