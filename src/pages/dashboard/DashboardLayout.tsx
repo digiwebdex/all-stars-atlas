@@ -18,18 +18,22 @@ type SidebarItem = {
   label: string;
   href: string;
   icon: React.ElementType;
+  iconColor: string;
+  iconBg: string;
   badge?: string;
   children?: { label: string; href: string }[];
 };
 
 const sidebarItems: SidebarItem[] = [
-  { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { label: "My Bookings", href: "/dashboard/bookings", icon: Ticket },
-  { label: "E-Tickets", href: "/dashboard/tickets", icon: FileText },
+  { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard, iconColor: "text-blue-600", iconBg: "bg-blue-100 dark:bg-blue-500/20" },
+  { label: "My Bookings", href: "/dashboard/bookings", icon: Ticket, iconColor: "text-violet-600", iconBg: "bg-violet-100 dark:bg-violet-500/20" },
+  { label: "E-Tickets", href: "/dashboard/tickets", icon: FileText, iconColor: "text-emerald-600", iconBg: "bg-emerald-100 dark:bg-emerald-500/20" },
   {
     label: "Finance",
     href: "/dashboard/transactions",
     icon: Receipt,
+    iconColor: "text-amber-600",
+    iconBg: "bg-amber-100 dark:bg-amber-500/20",
     children: [
       { label: "Transactions", href: "/dashboard/transactions" },
       { label: "E-Transactions", href: "/dashboard/e-transactions" },
@@ -38,11 +42,11 @@ const sidebarItems: SidebarItem[] = [
       { label: "Pay Later", href: "/dashboard/pay-later" },
     ],
   },
-  { label: "Travellers", href: "/dashboard/travellers", icon: Users },
-  { label: "Wishlist", href: "/dashboard/wishlist", icon: Heart },
-  { label: "Reward Points", href: "/dashboard/rewards", icon: Gift },
-  { label: "Search History", href: "/dashboard/search-history", icon: Search },
-  { label: "Settings", href: "/dashboard/settings", icon: Settings },
+  { label: "Travellers", href: "/dashboard/travellers", icon: Users, iconColor: "text-cyan-600", iconBg: "bg-cyan-100 dark:bg-cyan-500/20" },
+  { label: "Wishlist", href: "/dashboard/wishlist", icon: Heart, iconColor: "text-rose-500", iconBg: "bg-rose-100 dark:bg-rose-500/20" },
+  { label: "Reward Points", href: "/dashboard/rewards", icon: Gift, iconColor: "text-orange-600", iconBg: "bg-orange-100 dark:bg-orange-500/20" },
+  { label: "Search History", href: "/dashboard/search-history", icon: Search, iconColor: "text-indigo-600", iconBg: "bg-indigo-100 dark:bg-indigo-500/20" },
+  { label: "Settings", href: "/dashboard/settings", icon: Settings, iconColor: "text-slate-600", iconBg: "bg-slate-100 dark:bg-slate-500/20" },
 ];
 
 const SidebarNav = ({
@@ -95,7 +99,9 @@ const SidebarNav = ({
                       childActive ? "dash-sidebar-item-active" : "dash-sidebar-item-inactive"
                     )}
                   >
-                    <item.icon className="w-[18px] h-[18px] flex-shrink-0" />
+                    <div className={cn("w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0", item.iconBg)}>
+                      <item.icon className={cn("w-3.5 h-3.5", item.iconColor)} />
+                    </div>
                   </Link>
                 </TooltipTrigger>
                 <TooltipContent side="right">{item.label}</TooltipContent>
@@ -111,7 +117,9 @@ const SidebarNav = ({
                   childActive && "dash-sidebar-item-parent-active"
                 )}
               >
-                <item.icon className="w-[18px] h-[18px] flex-shrink-0" />
+                <div className={cn("w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0", item.iconBg)}>
+                  <item.icon className={cn("w-3.5 h-3.5", item.iconColor)} />
+                </div>
                 <span className="flex-1 text-left">{item.label}</span>
                 <ChevronDown
                   className={cn(
@@ -167,7 +175,9 @@ const SidebarNav = ({
                     active ? "dash-sidebar-item-active" : "dash-sidebar-item-inactive"
                   )}
                 >
-                  <item.icon className="w-[18px] h-[18px] flex-shrink-0" />
+                    <div className={cn("w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0", item.iconBg)}>
+                      <item.icon className={cn("w-3.5 h-3.5", item.iconColor)} />
+                    </div>
                 </Link>
               </TooltipTrigger>
               <TooltipContent side="right">{item.label}</TooltipContent>
@@ -185,7 +195,9 @@ const SidebarNav = ({
               active ? "dash-sidebar-item-active" : "dash-sidebar-item-inactive"
             )}
           >
-            <item.icon className="w-[18px] h-[18px] flex-shrink-0" />
+            <div className={cn("w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0", item.iconBg)}>
+              <item.icon className={cn("w-3.5 h-3.5", item.iconColor)} />
+            </div>
             <span>{item.label}</span>
             {item.badge && (
               <span className="ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-primary text-primary-foreground">
