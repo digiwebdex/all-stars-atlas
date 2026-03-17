@@ -196,6 +196,22 @@ const AdminSettings = () => {
     } catch { toast.error("Failed to save payment settings."); }
   };
 
+  const toggleSearchTab = async (key: keyof SearchTabConfig) => {
+    const updated = { ...searchTabs, [key]: !searchTabs[key] };
+    // Ensure at least one tab stays enabled
+    if (!Object.values(updated).some(Boolean)) {
+      toast.error("At least one search service must be enabled.");
+      return;
+    }
+    setSearchTabs(updated);
+    try {
+      await api.put('/admin/settings', { section: 'search_tabs', searchTabs: updated });
+      // Update localStorage cache for immediate frontend effect
+      try { localStorage.setItem('seventrip_search_tabs', JSON.stringify(updated)); } catch {}
+      toast.success(`${SEARCH_TAB_LABELS[key]} ${updated[key] ? 'enabled' : 'disabled'}`);
+    } catch { toast.error("Failed to save search tab settings."); }
+  };
+
   if (loading) {
     return (
       <div className="space-y-6 max-w-4xl">
