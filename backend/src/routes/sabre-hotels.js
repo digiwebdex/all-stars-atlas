@@ -58,7 +58,8 @@ async function getSabreConfig() {
       : pick(cfg.cert_client_secret, cfg.clientSecret, cfg.sandbox_client_secret, cfg.prod_client_secret);
 
     const basicAuth = isProd ? pick(cfg.prod_basic_auth) : pick(cfg.cert_basic_auth);
-    const appId = pick(cfg.appId, cfg.app_id, cfg.prod_client_id, cfg.cert_client_id, cfg.clientId);
+    // CSL App ID is a distinct credential from OAuth client_id
+    const appId = pick(cfg.appId, cfg.app_id, cfg.customerAppId, cfg.customer_app_id, cfg.cslAppId, cfg.csl_app_id);
 
     if (!clientId || !clientSecret) return null;
 
