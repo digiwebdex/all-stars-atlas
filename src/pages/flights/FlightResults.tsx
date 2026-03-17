@@ -760,7 +760,7 @@ const FareOptionsPanel = ({ flights, onBook, searchedCabin }: { flights: any[]; 
         id: `option-${i}`,
         label,
         fareBasis: f.fareBasis || '',
-        bookingClass: f.bookingClass || f.cabinClass || primary.bookingClass || "",
+        bookingClass: f.bookingClass || f.cabinClass || (f.fareBasis ? f.fareBasis.charAt(0).toUpperCase() : '') || primary.bookingClass || "",
         handBaggage: f.handBaggage || primary.handBaggage || "7KG",
         checkedBaggage: f.baggage || f.checkedBaggage || primary.baggage || null,
         meal: mealStatus,
@@ -909,7 +909,9 @@ const FareOptionsPanel = ({ flights, onBook, searchedCabin }: { flights: any[]; 
                               ? <span className="text-xs text-muted-foreground">Not included</span> 
                               : <span className="text-xs text-muted-foreground italic">Not provided</span>;
                       } else if (ft.key === "bookingClass") {
-                        display = <span className="text-xs font-bold text-foreground">{String(val || "—")}</span>;
+                        const bkCls = String(val || "");
+                        const cabLabel = ({ C: 'Business', J: 'Business', D: 'Business', I: 'Business', Z: 'Business', F: 'First', A: 'First', P: 'First', R: 'First', W: 'Prem Econ', E: 'Prem Econ' } as Record<string, string>)[bkCls.charAt(0)] || 'Economy';
+                        display = bkCls ? <span className="text-xs font-bold text-foreground">{bkCls.charAt(0)} <span className="font-normal text-muted-foreground">({cabLabel})</span></span> : <span className="text-xs text-muted-foreground">—</span>;
                       } else if (ft.key === "seatSelection") {
                         display = val === 'included'
                           ? <span className="text-xs font-medium text-accent">Included</span>
