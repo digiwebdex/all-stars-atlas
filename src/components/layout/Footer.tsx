@@ -155,6 +155,9 @@ const Footer = React.forwardRef<HTMLElement>((_, ref) => {
             <span className="flex items-center gap-1.5">⭐ Superbrands Award</span>
           </div>
         </div>
+        <div className="container mx-auto px-4 pb-4 text-center text-[10px] text-white/20">
+          Developed by <a href="https://digiwebdex.com" target="_blank" rel="noopener noreferrer" className="hover:text-white/40 transition-colors underline underline-offset-2">digiwebdex.com</a>
+        </div>
       </div>
     </footer>
   );
