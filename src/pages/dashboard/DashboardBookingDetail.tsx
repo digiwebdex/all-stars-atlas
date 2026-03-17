@@ -553,19 +553,19 @@ const DashboardBookingDetail = () => {
             </div>
           )}
 
-          {/* Action Buttons */}
+          {/* Action Buttons — colored like reference */}
           <Separator />
           <div className="flex flex-wrap gap-3">
             {(booking.status === "on_hold") && (
-              <Button className="bg-accent text-accent-foreground hover:bg-accent/90 font-bold" onClick={handlePayNow}>
+              <Button className="bg-emerald-500 hover:bg-emerald-600 text-white font-bold shadow-md" onClick={handlePayNow}>
                 <CreditCard className="w-4 h-4 mr-1.5" /> {!booking.isDomestic ? "Upload Docs & Pay" : "Pay Now"}
               </Button>
             )}
-            <Button variant="outline" onClick={handleDownloadTicket}>
+            <Button className="bg-emerald-500 hover:bg-emerald-600 text-white font-bold shadow-md" onClick={handleDownloadTicket}>
               <Download className="w-4 h-4 mr-1.5" /> Download E-Ticket
             </Button>
             {booking.pnr !== "—" && booking.type === "flight" && (
-              <Button variant="outline" onClick={() => navigate(`/dashboard/bookings/${booking.rawId}/extras`)}>
+              <Button variant="outline" className="font-bold" onClick={() => navigate(`/dashboard/bookings/${booking.rawId}/extras`)}>
                 <Package className="w-4 h-4 mr-1.5" /> Buy Extras
               </Button>
             )}
