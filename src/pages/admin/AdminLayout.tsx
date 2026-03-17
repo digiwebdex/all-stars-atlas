@@ -3,7 +3,7 @@ import {
   LayoutDashboard, Users, Ticket, CreditCard, FileText, Settings,
   BarChart3, Image, Globe, LogOut, Megaphone, Menu, X,
   PenLine, Mail, MapPin, Home, Search as SearchIcon, PanelBottom,
-  Shield, ChevronDown, DollarSign, Coins
+  Shield, ChevronDown, ChevronRight, DollarSign, Coins, ArrowLeft
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import { Suspense, useState } from "react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/hooks/useAuth";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 type SidebarItem = {
   label: string;
@@ -66,7 +67,15 @@ const sidebarItems: SidebarItem[] = [
   },
 ];
 
-const SidebarNav = ({ location, onNav }: { location: ReturnType<typeof useLocation>; onNav?: () => void }) => {
+const SidebarNav = ({
+  location,
+  onNav,
+  collapsed = false,
+}: {
+  location: ReturnType<typeof useLocation>;
+  onNav?: () => void;
+  collapsed?: boolean;
+}) => {
   const [openMenus, setOpenMenus] = useState<Record<string, boolean>>(() => {
     const initial: Record<string, boolean> = {};
     sidebarItems.forEach((item) => {
@@ -87,7 +96,7 @@ const SidebarNav = ({ location, onNav }: { location: ReturnType<typeof useLocati
   };
 
   return (
-    <nav className="flex flex-col gap-0.5 px-3 py-2">
+    <nav className="flex flex-col gap-0.5 px-2 py-2">
       {sidebarItems.map((item) => {
         const hasChildren = !!item.children;
         const isOpen = openMenus[item.label];
@@ -95,6 +104,25 @@ const SidebarNav = ({ location, onNav }: { location: ReturnType<typeof useLocati
         const childActive = hasChildren && item.children?.some((c) => isActive(c.href));
 
         if (hasChildren) {
+          if (collapsed) {
+            return (
+              <Tooltip key={item.label}>
+                <TooltipTrigger asChild>
+                  <Link
+                    to={item.href}
+                    onClick={onNav}
+                    className={cn(
+                      "admin-sidebar-item justify-center !px-0",
+                      childActive ? "admin-sidebar-item-active" : "admin-sidebar-item-inactive"
+                    )}
+                  >
+                    <item.icon className="w-[18px] h-[18px] flex-shrink-0" />
+                  </Link>
+                </TooltipTrigger>
+                <TooltipContent side="right">{item.label}</TooltipContent>
+              </Tooltip>
+            );
+          }
           return (
             <div key={item.label}>
               <button
@@ -151,6 +179,26 @@ const SidebarNav = ({ location, onNav }: { location: ReturnType<typeof useLocati
           );
         }
 
+        if (collapsed) {
+          return (
+            <Tooltip key={item.href}>
+              <TooltipTrigger asChild>
+                <Link
+                  to={item.href}
+                  onClick={onNav}
+                  className={cn(
+                    "admin-sidebar-item justify-center !px-0",
+                    active ? "admin-sidebar-item-active" : "admin-sidebar-item-inactive"
+                  )}
+                >
+                  <item.icon className="w-[18px] h-[18px] flex-shrink-0" />
+                </Link>
+              </TooltipTrigger>
+              <TooltipContent side="right">{item.label}</TooltipContent>
+            </Tooltip>
+          );
+        }
+
         return (
           <Link
             key={item.href}
@@ -175,105 +223,123 @@ const AdminLayout = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
+  const sidebarWidth = sidebarCollapsed ? "w-[56px]" : "w-60";
+  const mainMargin = sidebarCollapsed ? "md:ml-[56px]" : "md:ml-60";
 
   return (
-    <div className="min-h-screen bg-[hsl(224,20%,7%)]">
-      {/* Admin Top Bar */}
-      <header className="fixed top-0 left-0 right-0 z-50 h-14 admin-topbar-clean flex items-center px-4 md:px-6">
-        <button
-          className="md:hidden mr-3 p-2 rounded-lg hover:bg-white/10 transition-colors text-white/70"
-          onClick={() => setSidebarOpen(!sidebarOpen)}
-        >
-          {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-        </button>
-        <Link to="/admin" className="flex items-center gap-3 mr-6">
-          <img src="/images/seven-trip-logo.png" alt="Seven Trip" className="h-8 w-auto brightness-0 invert" />
-          <span className="hidden sm:flex items-center gap-1.5 text-[11px] font-bold text-white/80 px-2 py-1 rounded-md bg-white/5 border border-white/10">
-            <Shield className="w-3 h-3" />
-            Admin
-          </span>
-        </Link>
-        <div className="ml-auto flex items-center gap-2 sm:gap-3">
-          <ThemeToggle className="text-white/40 hover:text-white hover:bg-white/10" />
-          <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/8">
-            <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="text-xs text-white/50 font-medium">{user?.email || 'Admin'}</span>
-          </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-white/40 hover:text-white hover:bg-white/10"
-            onClick={() => {
-              logout();
-              navigate("/admin/login", { replace: true });
-            }}
+    <TooltipProvider delayDuration={0}>
+      <div className="min-h-screen bg-[hsl(224,20%,7%)]">
+        {/* Admin Top Bar */}
+        <header className="fixed top-0 left-0 right-0 z-50 h-14 admin-topbar-clean flex items-center px-4 md:px-6">
+          <button
+            className="md:hidden mr-3 p-2 rounded-lg hover:bg-white/10 transition-colors text-white/70"
+            onClick={() => setSidebarOpen(!sidebarOpen)}
           >
-            <LogOut className="w-4 h-4" />
-          </Button>
-        </div>
-      </header>
-
-      <div className="flex pt-14 relative">
-        {/* Desktop sidebar */}
-        <aside className="hidden md:flex w-60 admin-sidebar-clean fixed top-14 bottom-0 flex-col overflow-y-auto">
-          {/* Admin badge */}
-          <div className="p-4 border-b border-white/8">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-blue-500/20 to-violet-500/20 border border-white/10 flex items-center justify-center">
-                <Shield className="w-4 h-4 text-blue-400" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-white/90">Admin Panel</p>
-                <p className="text-[10px] text-white/40">Full Access</p>
-              </div>
+            {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </button>
+          <Link to="/admin" className="flex items-center gap-3 mr-6">
+            <img src="/images/seven-trip-logo.png" alt="Seven Trip" className="h-8 w-auto brightness-0 invert" />
+            <span className="hidden sm:flex items-center gap-1.5 text-[11px] font-bold text-white/80 px-2 py-1 rounded-md bg-white/5 border border-white/10">
+              <Shield className="w-3 h-3" />
+              Admin
+            </span>
+          </Link>
+          <div className="ml-auto flex items-center gap-2 sm:gap-3">
+            <ThemeToggle className="text-white/40 hover:text-white hover:bg-white/10" />
+            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/8">
+              <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="text-xs text-white/50 font-medium">{user?.email || 'Admin'}</span>
             </div>
-          </div>
-          <SidebarNav location={location} />
-        </aside>
-
-        {/* Mobile sidebar */}
-        <AnimatePresence>
-          {sidebarOpen && (
-            <>
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.2 }}
-                className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm md:hidden"
-                onClick={() => setSidebarOpen(false)}
-              />
-              <motion.aside
-                initial={{ x: -260 }}
-                animate={{ x: 0 }}
-                exit={{ x: -260 }}
-                transition={{ type: "spring", stiffness: 350, damping: 30 }}
-                className="fixed top-14 left-0 bottom-0 z-50 w-60 admin-sidebar-clean py-2 overflow-y-auto md:hidden"
-              >
-                <SidebarNav location={location} onNav={() => setSidebarOpen(false)} />
-              </motion.aside>
-            </>
-          )}
-        </AnimatePresence>
-
-        <main className="flex-1 md:ml-60 p-4 md:p-6 lg:p-8">
-          <Suspense fallback={
-            <div className="flex items-center justify-center py-20">
-              <div className="w-7 h-7 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-            </div>
-          }>
-            <motion.div
-              key={location.pathname}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] as const }}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-white/40 hover:text-white hover:bg-white/10"
+              onClick={() => {
+                logout();
+                navigate("/admin/login", { replace: true });
+              }}
             >
-              <Outlet />
-            </motion.div>
-          </Suspense>
-        </main>
+              <LogOut className="w-4 h-4" />
+            </Button>
+          </div>
+        </header>
+
+        <div className="flex pt-14 relative">
+          {/* Desktop sidebar */}
+          <aside className={cn(
+            "hidden md:flex admin-sidebar-clean fixed top-14 bottom-0 flex-col overflow-y-auto transition-all duration-300 ease-in-out",
+            sidebarWidth
+          )}>
+            {/* Admin badge + collapse toggle */}
+            <div className="p-3 border-b border-white/8 flex items-center justify-between">
+              {!sidebarCollapsed && (
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-blue-500/20 to-violet-500/20 border border-white/10 flex items-center justify-center flex-shrink-0">
+                    <Shield className="w-4 h-4 text-blue-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-white/90">Admin Panel</p>
+                    <p className="text-[10px] text-white/40">Full Access</p>
+                  </div>
+                </div>
+              )}
+              <button
+                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                className="w-7 h-7 rounded-md flex items-center justify-center hover:bg-white/10 transition-colors text-white/40 hover:text-white/80 flex-shrink-0"
+                title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+              >
+                {sidebarCollapsed ? <ChevronRight className="w-4 h-4" /> : <ArrowLeft className="w-4 h-4" />}
+              </button>
+            </div>
+            <SidebarNav location={location} collapsed={sidebarCollapsed} />
+          </aside>
+
+          {/* Mobile sidebar */}
+          <AnimatePresence>
+            {sidebarOpen && (
+              <>
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm md:hidden"
+                  onClick={() => setSidebarOpen(false)}
+                />
+                <motion.aside
+                  initial={{ x: -260 }}
+                  animate={{ x: 0 }}
+                  exit={{ x: -260 }}
+                  transition={{ type: "spring", stiffness: 350, damping: 30 }}
+                  className="fixed top-14 left-0 bottom-0 z-50 w-60 admin-sidebar-clean py-2 overflow-y-auto md:hidden"
+                >
+                  <SidebarNav location={location} onNav={() => setSidebarOpen(false)} />
+                </motion.aside>
+              </>
+            )}
+          </AnimatePresence>
+
+          <main className={cn("flex-1 p-4 md:p-6 lg:p-8 transition-all duration-300 ease-in-out", mainMargin)}>
+            <Suspense fallback={
+              <div className="flex items-center justify-center py-20">
+                <div className="w-7 h-7 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+              </div>
+            }>
+              <motion.div
+                key={location.pathname}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] as const }}
+              >
+                <Outlet />
+              </motion.div>
+            </Suspense>
+          </main>
+        </div>
       </div>
-    </div>
+    </TooltipProvider>
   );
 };
 
