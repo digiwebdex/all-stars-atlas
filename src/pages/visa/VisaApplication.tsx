@@ -30,7 +30,7 @@ interface UploadedDoc {
 
 const VisaApplication = () => {
   const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
+  const navigate = usePrefixedNavigate();
   const { isAuthenticated } = useAuth();
   const [authOpen, setAuthOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);

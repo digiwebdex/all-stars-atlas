@@ -20,7 +20,7 @@ const ESIMPurchase = () => {
   const country = searchParams.get("country") || "Thailand";
   const plan = searchParams.get("plan") || "3 GB";
   const [authOpen, setAuthOpen] = useState(false);
-  const navigate = useNavigate();
+  const navigate = usePrefixedNavigate();
   const { isAuthenticated } = useAuth();
   const { toast } = useToast();
   const { data: page, isLoading } = useCmsPageContent("/esim/purchase");

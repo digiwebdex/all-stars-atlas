@@ -43,7 +43,7 @@ const getRatingLabel = (r: number) => {
 
 const HotelDetail = () => {
   const { id } = useParams();
-  const navigate = useNavigate();
+  const navigate = usePrefixedNavigate();
   const [searchParams] = useSearchParams();
   const { isAuthenticated } = useAuth();
   const [authOpen, setAuthOpen] = useState(false);

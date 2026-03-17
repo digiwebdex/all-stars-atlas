@@ -19,7 +19,7 @@ import type { BookingFormField } from "@/lib/cms-defaults";
 const CarBooking = () => {
   const [step, setStep] = useState(1);
   const [authOpen, setAuthOpen] = useState(false);
-  const navigate = useNavigate();
+  const navigate = usePrefixedNavigate();
   const [searchParams] = useSearchParams();
   const { isAuthenticated } = useAuth();
   const { toast } = useToast();
