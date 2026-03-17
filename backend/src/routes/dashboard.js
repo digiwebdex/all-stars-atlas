@@ -977,4 +977,90 @@ router.post('/wallet/pay', async (req, res) => {
   }
 });
 
+// ── Wallet Deposit Request ──────────────────────────────
+router.post('/wallet/deposit', async (req, res) => {
+  try {
+    const userId = req.user.sub || req.user.id;
+    const { amount, method } = req.body;
+    if (!amount || amount < 10) {
+      return res.status(400).json({ message: 'Minimum deposit is ৳10' });
+    }
+    if (amount > 500000) {
+      return res.status(400).json({ message: 'Maximum single deposit is ৳500,000' });
+    }
+
+    const txnId = require('uuid').v4();
+    await db.query(
+      `INSERT INTO transactions (id, user_id, type, amount, description, status, created_at)
+       VALUES (?, ?, 'deposit', ?, ?, 'pending', NOW())`,
+      [txnId, userId, amount, `Wallet deposit via ${method || 'bank_transfer'} — pending approval`]
+    );
+
+    res.json({ success: true, message: 'Deposit request created', transactionId: txnId });
+  } catch (err) {
+    console.error('Wallet deposit error:', err);
+    res.status(500).json({ message: 'Failed to create deposit request' });
+  }
+});
+
+// ── Wallet Transfer ─────────────────────────────────────
+router.post('/wallet/transfer', async (req, res) => {
+  try {
+    const userId = req.user.sub || req.user.id;
+    const { recipientIdentifier, amount, note } = req.body;
+    if (!recipientIdentifier || !amount || amount < 1) {
+      return res.status(400).json({ message: 'Valid recipient and amount are required' });
+    }
+
+    // Check sender balance
+    const [balRows] = await db.query(
+      `SELECT 
+        COALESCE(SUM(CASE WHEN type IN ('credit','refund','deposit') AND status IN ('completed','approved') THEN amount ELSE 0 END), 0) -
+        COALESCE(SUM(CASE WHEN type IN ('debit','payment','withdrawal','transfer_out') AND status IN ('completed','approved') THEN ABS(amount) ELSE 0 END), 0) as balance
+      FROM transactions WHERE user_id = ?`,
+      [userId]
+    );
+    const balance = Number(balRows[0]?.balance || 0);
+    if (balance < amount) {
+      return res.status(400).json({ message: `Insufficient balance. Available: ৳${balance.toLocaleString()}` });
+    }
+
+    // Find recipient by email or phone
+    const [recipientRows] = await db.query(
+      `SELECT id, name, email FROM users WHERE email = ? OR phone = ? LIMIT 1`,
+      [recipientIdentifier, recipientIdentifier]
+    );
+    if (recipientRows.length === 0) {
+      return res.status(404).json({ message: 'Recipient not found. Please check email or phone number.' });
+    }
+    const recipient = recipientRows[0];
+    if (recipient.id === userId) {
+      return res.status(400).json({ message: 'Cannot transfer to yourself' });
+    }
+
+    const debitId = require('uuid').v4();
+    const creditId = require('uuid').v4();
+    const desc = note ? `Transfer: ${note}` : 'Wallet transfer';
+
+    // Debit sender
+    await db.query(
+      `INSERT INTO transactions (id, user_id, type, amount, description, status, created_at)
+       VALUES (?, ?, 'transfer_out', ?, ?, 'completed', NOW())`,
+      [debitId, userId, -Math.abs(amount), `${desc} → ${recipient.name || recipient.email}`]
+    );
+
+    // Credit recipient
+    await db.query(
+      `INSERT INTO transactions (id, user_id, type, amount, description, status, created_at)
+       VALUES (?, ?, 'transfer_in', ?, ?, 'completed', NOW())`,
+      [creditId, recipient.id, Math.abs(amount), `${desc} ← transfer received`]
+    );
+
+    res.json({ success: true, message: `৳${amount.toLocaleString()} transferred successfully` });
+  } catch (err) {
+    console.error('Wallet transfer error:', err);
+    res.status(500).json({ message: 'Transfer failed' });
+  }
+});
+
 module.exports = router;
