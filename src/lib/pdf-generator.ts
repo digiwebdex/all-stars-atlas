@@ -1089,7 +1089,7 @@ async function buildPremiumTicketDoc(ticket: TicketData): Promise<jsPDF> {
 
     // ── Direction heading (Departing / Returning) ──
     const fromCity = seg.originCity || seg.origin || "";
-    const fromCountry = seg.originCountry || "";
+    const fromCountry = "";
     if (si === 0 || (si > 0 && allSegments[si - 1].direction !== seg.direction)) {
       doc.setFontSize(11);
       doc.setFont("helvetica", "bold");
