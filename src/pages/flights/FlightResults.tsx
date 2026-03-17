@@ -2521,7 +2521,7 @@ const FlightCard = ({
           </div>
 
           {/* Price section */}
-          <div className="flex flex-col items-end justify-center gap-1 p-3 sm:p-4 sm:w-44 lg:w-52 shrink-0 border-t sm:border-t-0 sm:border-l border-border/50 bg-muted/20">
+          <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-1 sm:gap-1 p-3 sm:p-4 sm:w-44 lg:w-52 shrink-0 border-t sm:border-t-0 sm:border-l border-border/50 bg-muted/20">
             <div className="flex items-center gap-1.5">
               {grossPrice === cheapest && price > 0 && (
                 <Badge className="bg-accent/10 text-accent border-0 text-[8px] font-bold px-1.5 py-0">Cheapest</Badge>
