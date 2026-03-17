@@ -78,6 +78,12 @@ const DashboardPayLater = lazy(() => import("@/pages/dashboard/DashboardPayLater
 const DashboardInvoices = lazy(() => import("@/pages/dashboard/DashboardInvoices"));
 const DashboardRewards = lazy(() => import("@/pages/dashboard/DashboardRewards"));
 const PostBookingExtras = lazy(() => import("@/pages/dashboard/PostBookingExtras"));
+const DashboardAccountLedger = lazy(() => import("@/pages/dashboard/DashboardAccountLedger"));
+const DashboardReport = lazy(() => import("@/pages/dashboard/DashboardReport"));
+const DashboardSupport = lazy(() => import("@/pages/dashboard/DashboardSupport"));
+const DashboardSubUsers = lazy(() => import("@/pages/dashboard/DashboardSubUsers"));
+const DashboardInsurance = lazy(() => import("@/pages/dashboard/DashboardInsurance"));
+const DashboardPurchasedEsim = lazy(() => import("@/pages/dashboard/DashboardPurchasedEsim"));
 
 // Admin
 const AdminLogin = lazy(() => import("@/pages/admin/AdminLogin"));
@@ -192,6 +198,12 @@ const App = () => (
                 <Route path="invoices" element={<DashboardInvoices />} />
                 <Route path="rewards" element={<DashboardRewards />} />
                 <Route path="bookings/:id/extras" element={<PostBookingExtras />} />
+                <Route path="account-ledger" element={<DashboardAccountLedger />} />
+                <Route path="report" element={<DashboardReport />} />
+                <Route path="support" element={<DashboardSupport />} />
+                <Route path="sub-users" element={<DashboardSubUsers />} />
+                <Route path="insurance" element={<DashboardInsurance />} />
+                <Route path="purchased-esim" element={<DashboardPurchasedEsim />} />
                 {/* Service pages inside dashboard so user stays in dashboard shell */}
                 <Route path="flights" element={<FlightResults />} />
                 <Route path="flights/book" element={<FlightBooking />} />
