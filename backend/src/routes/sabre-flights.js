@@ -2279,7 +2279,10 @@ async function createBooking({ flightData, passengers, contactInfo, specialServi
         }
 
         // No PNR extracted — try next variant
-        finalErrorMessage = `No PNR returned from ${variant.label}`;
+        const rejectionMessage = extractSabreCreateRejectionMessage(response);
+        finalErrorMessage = rejectionMessage
+          ? `${variant.label}: ${rejectionMessage}`
+          : `No PNR returned from ${variant.label}`;
         console.warn(`[Sabre] ${finalErrorMessage}`);
         console.warn(`[Sabre] Response keys:`, JSON.stringify(Object.keys(response || {})));
         if (attemptIndex < requestVariants.length - 1) {
