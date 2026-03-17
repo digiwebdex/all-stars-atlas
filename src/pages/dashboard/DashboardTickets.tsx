@@ -146,15 +146,20 @@ const DashboardTickets = () => {
     );
   });
 
-  const downloadPDF = (ticket: any) => {
-    generateTicketPDF({
-      ...ticket,
-      gdsPnr: ticket.pnr,
-      airlinePnr: ticket.airlinePnr,
-      bookingRef: ticket.bookingRef || ticket.id,
-      source: ticket.source,
-    });
-    toast({ title: "Downloaded", description: `E-Ticket-${ticket.pnr || ticket.ticketNo}.pdf saved` });
+  const downloadPDF = async (ticket: any) => {
+    try {
+      await generateTicketPDF({
+        ...ticket,
+        gdsPnr: ticket.pnr,
+        airlinePnr: ticket.airlinePnr,
+        bookingRef: ticket.bookingRef || ticket.id,
+        source: ticket.source,
+      });
+      toast({ title: "Downloaded", description: `E-Ticket PDF saved` });
+    } catch (err: any) {
+      console.error("PDF generation error:", err);
+      toast({ title: "Download Failed", description: "Could not generate PDF. Please try again.", variant: "destructive" });
+    }
   };
 
   const handleVoid = async (ticket: any) => {
