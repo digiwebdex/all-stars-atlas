@@ -793,6 +793,13 @@ router.put('/settings', async (req, res) => {
       return res.json({ message: 'Notification preferences saved' });
     }
 
+    // Search tabs visibility
+    if (section === 'search_tabs' && req.body.searchTabs) {
+      const val = JSON.stringify(req.body.searchTabs);
+      await db.query('INSERT INTO system_settings (setting_key, setting_value) VALUES (?, ?) ON DUPLICATE KEY UPDATE setting_value = ?', ['search_tabs', val, val]);
+      return res.json({ message: 'Search tab settings saved' });
+    }
+
     // Markup config
     if (req.body.markup_config) {
       const val = JSON.stringify(req.body.markup_config);
