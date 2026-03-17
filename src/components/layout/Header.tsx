@@ -7,11 +7,12 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   Menu, User, Plane, Building2, FileText, Palmtree,
-  ChevronDown, Phone, Globe, Headphones, LogOut, LayoutDashboard, Settings, Ticket, Car, Receipt, Stethoscope
+  ChevronDown, Phone, Globe, Headphones, LogOut, LayoutDashboard, Settings, Ticket, Car, Receipt, Stethoscope, LogIn
 } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useAuth } from "@/hooks/useAuth";
 import { getPrefetchHandlers } from "@/lib/prefetch";
+import LoginModal from "@/components/LoginModal";
 
 const mainNav = [
   { label: "Flight", href: "/flights", icon: Plane },
@@ -21,6 +22,7 @@ const mainNav = [
 
 const Header = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [loginOpen, setLoginOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const location = useLocation();
   const isHome = location.pathname === "/";
@@ -98,8 +100,8 @@ const Header = () => {
                 </DropdownMenu>
               ) : (
                 <>
-                  <Button variant="ghost" size="sm" asChild className={`font-semibold text-[13px] ${transparent ? "text-white/80 hover:bg-white/10 hover:text-white" : ""}`}>
-                    <Link to="/auth/login"><User className="w-4 h-4 mr-1.5" /> Login</Link>
+                  <Button variant="ghost" size="sm" onClick={() => setLoginOpen(true)} className={`font-semibold text-[13px] ${transparent ? "text-white/80 hover:bg-white/10 hover:text-white" : ""}`}>
+                    <LogIn className="w-4 h-4 mr-1.5" /> Login
                   </Button>
                   <Button size="sm" asChild className="font-bold text-[13px] shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-shadow">
                     <Link to="/auth/register">Sign Up</Link>
@@ -169,8 +171,8 @@ const Header = () => {
                       </Button>
                     ) : (
                       <>
-                        <Button className="w-full h-11 font-bold" asChild>
-                          <Link to="/auth/login" onClick={() => setMobileOpen(false)}>Login</Link>
+                        <Button className="w-full h-11 font-bold" onClick={() => { setMobileOpen(false); setLoginOpen(true); }}>
+                          Login
                         </Button>
                         <Button variant="outline" className="w-full h-11" asChild>
                           <Link to="/auth/register" onClick={() => setMobileOpen(false)}>Create Account</Link>
@@ -187,6 +189,8 @@ const Header = () => {
           </div>
         </div>
       </header>
+
+      <LoginModal open={loginOpen} onOpenChange={setLoginOpen} />
     </>
   );
 };
