@@ -809,16 +809,16 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
         {tripType === "multicity" ? (
           <div className="space-y-3">
             {multiCitySegments.map((segment, index) => (
-              <div key={index} className="grid grid-cols-1 md:grid-cols-12 gap-0 border border-border rounded-2xl bg-background shadow-sm relative">
-                <div className="md:col-span-4 search-field border-b md:border-b-0 flex-col items-start">
+              <div key={index} className={`grid grid-cols-1 ${compact ? 'lg:grid-cols-12' : 'md:grid-cols-12'} gap-0 border border-border rounded-2xl bg-background shadow-sm relative`}>
+                <div className={`${compact ? 'lg:col-span-4' : 'md:col-span-4'} search-field border-b ${compact ? 'lg:border-b-0' : 'md:border-b-0'} flex-col items-start min-w-0`}>
                   <AirportInput label={`From (Flight ${index + 1})`} value={segment.from} onChange={(a) => updateSegment(index, 'from', a)} placeholder="Type city or airport..." airports={scopedMultiCityFromAirports} icon={<PlaneTakeoff className="w-5 h-5" />} />
                 </div>
 
-                <div className="md:col-span-4 search-field border-b md:border-b-0 flex-col items-start">
+                <div className={`${compact ? 'lg:col-span-4' : 'md:col-span-4'} search-field border-b ${compact ? 'lg:border-b-0' : 'md:border-b-0'} flex-col items-start min-w-0`}>
                   <AirportInput label={`To (Flight ${index + 1})`} value={segment.to} onChange={(a) => updateSegment(index, 'to', a)} placeholder="Where to?" airports={getMultiCityToAirports(segment.from)} icon={<PlaneLanding className="w-5 h-5" />} />
                 </div>
 
-                <div className="md:col-span-3 search-field border-b md:border-b-0 flex-col items-start">
+                <div className={`${compact ? 'lg:col-span-3' : 'md:col-span-3'} search-field border-b ${compact ? 'lg:border-b-0' : 'md:border-b-0'} flex-col items-start`}>
                   <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1 flex items-center gap-1"><CalendarDays className="w-3 h-3" /> Departure</div>
                   <Popover open={openDatePopover === `mc-${index}`} onOpenChange={(o) => setOpenDatePopover(o ? `mc-${index}` : null)}>
                     <PopoverTrigger className="w-full text-left">
@@ -828,7 +828,6 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
                       <Calendar mode="single" selected={segment.date} onSelect={(d) => { updateSegment(index, 'date', d); setOpenDatePopover(null); }} initialFocus className="pointer-events-auto" disabled={(date) => {
                         const today = new Date(); today.setHours(0,0,0,0);
                         if (date < today) return true;
-                        // Enforce: segment date must be >= previous segment's date
                         if (index > 0) {
                           const prevDate = multiCitySegments[index - 1]?.date;
                           if (prevDate) {
@@ -843,7 +842,7 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
                 </div>
 
                 {multiCitySegments.length > 2 && (
-                  <div className="md:col-span-1 flex items-center justify-center p-2">
+                  <div className={`${compact ? 'lg:col-span-1' : 'md:col-span-1'} flex items-center justify-center p-2`}>
                     <button
                       onClick={() => removeSegment(index)}
                       className="w-8 h-8 rounded-full border border-destructive/30 text-destructive hover:bg-destructive hover:text-destructive-foreground transition-all text-sm font-bold"
