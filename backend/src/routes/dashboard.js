@@ -911,4 +911,70 @@ router.post('/payment-requests', async (req, res) => {
   }
 });
 
+// ── Pay Booking With Wallet Balance ──────────────────────
+router.post('/wallet/pay', async (req, res) => {
+  try {
+    const userId = req.user.sub || req.user.id;
+    const { bookingId, amount } = req.body;
+    if (!bookingId || !amount || amount <= 0) {
+      return res.status(400).json({ message: 'Valid booking ID and amount are required' });
+    }
+
+    // Check wallet balance (credits - debits)
+    const [balRows] = await db.query(
+      `SELECT 
+        COALESCE(SUM(CASE WHEN type IN ('credit','refund','deposit') THEN amount ELSE 0 END), 0) -
+        COALESCE(SUM(CASE WHEN type IN ('debit','payment','withdrawal') THEN ABS(amount) ELSE 0 END), 0) as balance
+      FROM transactions WHERE user_id = ? AND status IN ('completed','approved')`,
+      [userId]
+    );
+    const balance = Number(balRows[0]?.balance || 0);
+
+    if (balance < amount) {
+      return res.status(400).json({ message: `Insufficient balance. Available: ৳${balance.toLocaleString()}, Required: ৳${amount.toLocaleString()}` });
+    }
+
+    // Verify booking exists and belongs to user
+    const [bookingRows] = await db.query(
+      `SELECT id, status, booking_ref FROM bookings WHERE id = ? AND user_id = ?`,
+      [bookingId, userId]
+    );
+    if (bookingRows.length === 0) {
+      return res.status(404).json({ message: 'Booking not found' });
+    }
+
+    const booking = bookingRows[0];
+    if (!['on_hold', 'pending', 'confirmed'].includes(booking.status)) {
+      return res.status(400).json({ message: 'Booking is not in a payable state' });
+    }
+
+    // Create debit transaction
+    const txnId = require('uuid').v4();
+    await db.query(
+      `INSERT INTO transactions (id, user_id, type, amount, description, status, created_at)
+       VALUES (?, ?, 'payment', ?, ?, 'completed', NOW())`,
+      [txnId, userId, -Math.abs(amount), `Wallet payment for booking ${booking.booking_ref || bookingId}`]
+    );
+
+    // Update booking status
+    await db.query(
+      `UPDATE bookings SET status = 'confirmed', payment_status = 'paid', updated_at = NOW() WHERE id = ?`,
+      [bookingId]
+    );
+
+    // Try auto-ticketing
+    try {
+      const { autoTicketAfterPayment } = require('../services/auto-ticket');
+      await autoTicketAfterPayment(bookingId);
+    } catch (ticketErr) {
+      console.error('Auto-ticket after wallet pay error:', ticketErr);
+    }
+
+    res.json({ success: true, message: 'Payment successful', transactionId: txnId });
+  } catch (err) {
+    console.error('Wallet pay error:', err);
+    res.status(500).json({ message: 'Payment failed' });
+  }
+});
+
 module.exports = router;
