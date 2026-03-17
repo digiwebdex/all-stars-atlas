@@ -687,6 +687,8 @@ router.get('/settings', async (req, res) => {
         try { settings.airline_markup_config = JSON.parse(r.setting_value); } catch {}
       } else if (r.setting_key === 'currency_rates') {
         try { settings.currency_rates = JSON.parse(r.setting_value); } catch {}
+      } else if (r.setting_key === 'search_tabs') {
+        try { settings.searchTabs = JSON.parse(r.setting_value); } catch {}
       } else {
         settings[r.setting_key] = r.setting_value;
       }
