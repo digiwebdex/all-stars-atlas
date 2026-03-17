@@ -1327,7 +1327,7 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
               <SelectContent>{RECHARGE_OPERATORS.map(op => (<SelectItem key={op.id} value={op.id}>{op.logo} {op.name}</SelectItem>))}</SelectContent>
             </Select>
           </div>
-          <div className={`${bp}:col-span-3 search-field border-b ${bp}:border-b-0 flex-col items-start`}>
+          <div className={`${bp}:col-span-3 ${sf} border-b ${bp}:border-b-0 flex-col items-start`}>
             <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Phone Number</div>
             <div className="flex items-center gap-2 w-full">
               <PhoneCall className="w-4 h-4 text-primary shrink-0" />
