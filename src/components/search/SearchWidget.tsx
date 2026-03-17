@@ -1466,23 +1466,23 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
   };
 
   return (
-    <div className={`${compact ? 'bg-card border border-border rounded-xl shadow-sm' : 'glass-card-hero rounded-2xl'} overflow-hidden`}>
+    <div className={`${compact ? 'bg-card border border-border rounded-xl shadow-sm' : 'glass-card-hero rounded-2xl'} overflow-hidden min-w-0 w-full`}>
       {/* Tabs */}
       {!flightOnly && (
-        <div className={`flex items-center justify-center gap-0 px-2 sm:px-4 overflow-x-auto scrollbar-none border-b border-border/40 -webkit-overflow-scrolling-touch ${compact ? 'pt-1.5 pb-0' : 'pt-2 sm:pt-3'}`}>
-          <div className="flex items-center justify-center gap-1 sm:gap-1.5 mx-auto">
+        <div className={`flex overflow-x-auto scrollbar-none border-b border-border/40 ${compact ? 'pt-1.5 pb-0' : 'pt-2 sm:pt-3'}`} style={{ WebkitOverflowScrolling: 'touch' }}>
+          <div className="flex items-center gap-1 sm:gap-1.5 mx-auto px-2 sm:px-4 min-w-max">
             {visibleTabs.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-1.5 sm:gap-2 whitespace-nowrap shrink-0 px-3 sm:px-4 ${compact ? 'py-1.5 text-xs' : 'py-2 sm:py-2.5 text-xs sm:text-sm'} font-semibold rounded-xl transition-all duration-200 cursor-pointer ${
+                className={`flex items-center gap-1.5 sm:gap-2 whitespace-nowrap shrink-0 px-2.5 sm:px-3.5 ${compact ? 'py-1.5 text-[11px]' : 'py-2 sm:py-2.5 text-xs sm:text-sm'} font-semibold rounded-xl transition-all duration-200 cursor-pointer ${
                   activeTab === tab.id
                     ? "text-primary bg-gradient-to-r from-primary/10 to-[hsl(280,70%,55%,0.06)] border border-primary/20 shadow-md shadow-primary/10"
                     : "text-muted-foreground hover:text-foreground hover:bg-muted/60 border border-transparent"
                 }`}
               >
-                <tab.icon className={`w-4 h-4 ${activeTab === tab.id ? 'text-primary' : ''}`} />
-                <span className="hidden xs:inline sm:inline">{tab.label}</span>
+                <tab.icon className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${activeTab === tab.id ? 'text-primary' : ''}`} />
+                <span>{tab.label}</span>
               </button>
             ))}
           </div>
@@ -1490,7 +1490,7 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
       )}
 
       {/* Content */}
-      <div className={compact ? "p-2 sm:p-3" : "p-3 sm:p-4 md:p-6"}>
+      <div className={`min-w-0 ${compact ? "p-2 sm:p-3" : "p-3 sm:p-4 md:p-6"}`}>
         <AnimatePresence mode="wait">
           <motion.div
             key={flightOnly ? "flight" : activeTab}
@@ -1498,6 +1498,7 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -4 }}
             transition={{ duration: 0.12 }}
+            className="min-w-0"
           >
             {flightOnly ? tabContent["flight"] : tabContent[activeTab]}
           </motion.div>
