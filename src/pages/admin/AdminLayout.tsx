@@ -265,7 +265,7 @@ const AdminLayout = () => {
           <div className="ml-auto flex items-center gap-2 sm:gap-3">
             <ThemeToggle className="text-muted-foreground hover:text-foreground hover:bg-muted" />
             <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted border border-border">
-              <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <div className="w-2 h-2 rounded-full bg-success animate-pulse" />
               <span className="text-xs text-muted-foreground font-medium">{user?.email || 'Admin'}</span>
             </div>
             <Button
