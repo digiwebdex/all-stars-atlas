@@ -10,6 +10,8 @@ import { Suspense, useState } from "react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { AnimatePresence, motion } from "framer-motion";
 import DashboardBreadcrumb from "@/components/dashboard/DashboardBreadcrumb";
+import { useQuery } from "@tanstack/react-query";
+import { api } from "@/lib/api";
 
 type SidebarItem = {
   label: string;
@@ -155,6 +157,13 @@ const DashboardLayout = () => {
   const { user, logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  // Fetch reward points balance
+  const { data: rewardsData } = useQuery({
+    queryKey: ["rewards", "balance"],
+    queryFn: () => api.get<any>("/rewards/balance"),
+  });
+  const pointsBalance = (rewardsData as any)?.balance ?? 0;
+
   return (
     <div className="min-h-screen bg-muted/30">
       {/* Top Bar */}
@@ -187,10 +196,13 @@ const DashboardLayout = () => {
 
         <div className="ml-auto flex items-center gap-2 sm:gap-3">
           {/* Reward Points Badge */}
-          <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-warning/10 border border-warning/20">
+          <Link
+            to="/dashboard/rewards"
+            className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-warning/10 border border-warning/20 hover:bg-warning/20 transition-colors cursor-pointer"
+          >
             <Gift className="w-3.5 h-3.5 text-warning" />
-            <span className="text-xs font-bold text-warning">Points</span>
-          </div>
+            <span className="text-xs font-bold text-warning">{pointsBalance} Points</span>
+          </Link>
 
           <ThemeToggle />
 
