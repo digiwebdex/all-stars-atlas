@@ -1,7 +1,8 @@
 import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, Ticket, CreditCard, Receipt, Users, Settings, LogOut, Plane, Menu, X,
-  Heart, FileText, Search, Clock, Smartphone, Gift, ChevronDown, ChevronRight, ChevronLeft, Phone, Mail, ArrowLeft
+  Heart, FileText, Search, Clock, Smartphone, Gift, ChevronDown, ChevronRight, ChevronLeft, Phone, Mail, ArrowLeft,
+  BookOpen, BarChart3, Headphones, Users2, ShieldCheck, CircleDollarSign
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
