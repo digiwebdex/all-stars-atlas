@@ -7,11 +7,12 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   Menu, User, Plane, Building2, FileText, Palmtree,
-  ChevronDown, Phone, Globe, Headphones, LogOut, LayoutDashboard, Settings, Ticket, Car, Receipt, Stethoscope
+  ChevronDown, Phone, Globe, Headphones, LogOut, LayoutDashboard, Settings, Ticket, Car, Receipt, Stethoscope, LogIn
 } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useAuth } from "@/hooks/useAuth";
 import { getPrefetchHandlers } from "@/lib/prefetch";
+import LoginModal from "@/components/LoginModal";
 
 const mainNav = [
   { label: "Flight", href: "/flights", icon: Plane },
