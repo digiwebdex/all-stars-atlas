@@ -19,7 +19,7 @@ import {
   Navigation, Package, Armchair, Briefcase,
 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Link, useSearchParams, useNavigate } from "react-router-dom";
+import { Link, useSearchParams, useNavigate, useLocation } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import AnimatedFlightArc from "@/components/flights/AnimatedFlightArc";
 import { useFlightSearch } from "@/hooks/useApiData";
