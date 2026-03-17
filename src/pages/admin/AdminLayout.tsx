@@ -246,7 +246,7 @@ const AdminLayout = () => {
 
   return (
     <TooltipProvider delayDuration={0}>
-      <div className="min-h-screen bg-[hsl(224,20%,7%)]">
+      <div className="min-h-screen bg-background">
         {/* Admin Top Bar */}
         <header className="fixed top-0 left-0 right-0 z-50 h-14 admin-topbar-clean flex items-center px-4 md:px-6">
           <button
