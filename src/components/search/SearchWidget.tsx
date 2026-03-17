@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { useRoutePrefix } from "@/hooks/useRoutePrefix";
+import { usePrefixedNavigate } from "@/hooks/useRoutePrefix";
 import { TREATMENT_TYPES, RECHARGE_OPERATORS, BILL_CATEGORIES } from "@/lib/constants";
 
 
