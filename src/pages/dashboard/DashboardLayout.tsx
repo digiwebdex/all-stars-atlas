@@ -7,7 +7,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
-import { Suspense, useState } from "react";
+import { Suspense, useState, useEffect } from "react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { AnimatePresence, motion } from "framer-motion";
 import DashboardBreadcrumb from "@/components/dashboard/DashboardBreadcrumb";
@@ -27,28 +27,14 @@ type SidebarItem = {
 
 const sidebarItems: SidebarItem[] = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard, iconColor: "text-blue-600", iconBg: "bg-blue-100 dark:bg-blue-500/20" },
-  {
-    label: "Booking Details",
-    href: "/dashboard/bookings",
-    icon: Ticket,
-    iconColor: "text-violet-600",
-    iconBg: "bg-violet-100 dark:bg-violet-500/20",
-    children: [
-      { label: "All Booking", href: "/dashboard/bookings" },
-      { label: "Hotel Booking", href: "/dashboard/bookings?type=hotel" },
-      { label: "Issue With Balance", href: "/dashboard/issue-with-balance" },
-      { label: "Timeline", href: "/dashboard/timeline" },
-      { label: "View SSR", href: "/dashboard/ssr-history" },
-      { label: "Cancel Booking", href: "/dashboard/cancel-booking" },
-      { label: "Voucher Download", href: "/dashboard/voucher-download" },
-    ],
-  },
+  { label: "All Booking", href: "/dashboard/bookings", icon: Ticket, iconColor: "text-violet-600", iconBg: "bg-violet-100 dark:bg-violet-500/20" },
+  { label: "Hotel Booking", href: "/dashboard/bookings?type=hotel", icon: Building2, iconColor: "text-teal-600", iconBg: "bg-teal-100 dark:bg-teal-500/20", badge: "new" },
   {
     label: "Booking History",
     href: "/dashboard/bookings",
     icon: Clock,
-    iconColor: "text-teal-600",
-    iconBg: "bg-teal-100 dark:bg-teal-500/20",
+    iconColor: "text-cyan-600",
+    iconBg: "bg-cyan-100 dark:bg-cyan-500/20",
     children: [
       { label: "Flight", href: "/dashboard/bookings?type=flight" },
       { label: "Void", href: "/dashboard/bookings?status=voided" },
@@ -77,6 +63,28 @@ const sidebarItems: SidebarItem[] = [
   { label: "Report", href: "/dashboard/report", icon: BarChart3, iconColor: "text-rose-600", iconBg: "bg-rose-100 dark:bg-rose-500/20" },
   { label: "My Profile", href: "/dashboard/settings", icon: Settings, iconColor: "text-slate-600", iconBg: "bg-slate-100 dark:bg-slate-500/20" },
   { label: "Reward Points", href: "/dashboard/rewards", icon: Gift, iconColor: "text-orange-600", iconBg: "bg-orange-100 dark:bg-orange-500/20" },
+  {
+    label: "Traveller",
+    href: "/dashboard/travellers",
+    icon: Users,
+    iconColor: "text-pink-600",
+    iconBg: "bg-pink-100 dark:bg-pink-500/20",
+    children: [
+      { label: "All Travellers", href: "/dashboard/travellers" },
+      { label: "Wishlist", href: "/dashboard/wishlist" },
+    ],
+  },
+  {
+    label: "Sub Users",
+    href: "/dashboard/sub-users",
+    icon: Users2,
+    iconColor: "text-indigo-600",
+    iconBg: "bg-indigo-100 dark:bg-indigo-500/20",
+    children: [
+      { label: "Manage Users", href: "/dashboard/sub-users" },
+    ],
+  },
+  { label: "Support", href: "/dashboard/support", icon: Headphones, iconColor: "text-emerald-600", iconBg: "bg-emerald-100 dark:bg-emerald-500/20" },
 ];
 
 const SidebarNav = ({
@@ -237,6 +245,21 @@ const SidebarNav = ({
           </Link>
         );
       })}
+      {/* Logout — bottom of sidebar */}
+      {!collapsed && (
+        <button
+          onClick={() => {
+            // Dispatch logout from parent
+            window.dispatchEvent(new Event('sidebar:logout'));
+          }}
+          className="dash-sidebar-item dash-sidebar-item-inactive mt-2 text-destructive hover:bg-destructive/10"
+        >
+          <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 bg-red-100 dark:bg-red-500/20">
+            <LogOut className="w-3.5 h-3.5 text-red-600" />
+          </div>
+          <span>Logout</span>
+        </button>
+      )}
     </nav>
   );
 };
@@ -247,6 +270,12 @@ const DashboardLayout = () => {
   const { user, logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
+  useEffect(() => {
+    const handleLogout = () => { logout(); navigate("/"); };
+    window.addEventListener('sidebar:logout', handleLogout);
+    return () => window.removeEventListener('sidebar:logout', handleLogout);
+  }, [logout, navigate]);
 
   const sidebarWidth = sidebarCollapsed ? "w-[56px]" : "w-60";
   const mainMargin = sidebarCollapsed ? "md:ml-[56px]" : "md:ml-60";
