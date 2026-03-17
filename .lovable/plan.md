@@ -55,7 +55,7 @@ These files MUST be kept in sync with every code change.
 - ✅ **BDFare proxy** (`backend/src/routes/bdf-flights.js`) — Additional GDS with normalized output
 - ✅ **Parallel multi-provider search** via `Promise.allSettled` with deduplication
 
-## ✅ Phase 3: Customer Dashboard (Complete — 12 Pages)
+## ✅ Phase 3: Customer Dashboard (Complete — 15+ Pages)
 
 - ✅ Dashboard home with stats, charts, upcoming trip, quick actions
 - ✅ My Bookings with 12 status filters, e-ticket download, status actions
