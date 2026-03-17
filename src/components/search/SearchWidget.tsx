@@ -1231,7 +1231,7 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
     // ====== CAR RENTAL ======
     cars: (
       <div className={`grid grid-cols-1 ${bp}:grid-cols-12 gap-0 border border-border rounded-2xl bg-background shadow-sm`}>
-        <div className={`${bp}:col-span-3 search-field border-b ${bp}:border-b-0 flex-col items-start min-w-0`}>
+        <div className={`${bp}:col-span-3 ${sf} border-b ${bp}:border-b-0 flex-col items-start min-w-0`}>
           <CityInput label="Pickup Location" value={pickupCity} onChange={setPickupCity} cities={HOTEL_CITIES.filter(c => ["Dhaka", "Chittagong", "Cox's Bazar", "Sylhet", "Rajshahi", "Gazipur", "Rangpur", "Sreemangal"].includes(c))} icon={<MapPin className="w-5 h-5 text-primary shrink-0" />} placeholder="Pickup city..." />
         </div>
         <div className={`${bp}:col-span-3 search-field border-b ${bp}:border-b-0 flex-col items-start min-w-0`}>
