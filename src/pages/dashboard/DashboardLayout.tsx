@@ -195,7 +195,9 @@ const SidebarNav = ({
               active ? "dash-sidebar-item-active" : "dash-sidebar-item-inactive"
             )}
           >
-            <item.icon className="w-[18px] h-[18px] flex-shrink-0" />
+            <div className={cn("w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0", item.iconBg)}>
+              <item.icon className={cn("w-3.5 h-3.5", item.iconColor)} />
+            </div>
             <span>{item.label}</span>
             {item.badge && (
               <span className="ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-primary text-primary-foreground">
