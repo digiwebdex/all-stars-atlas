@@ -257,9 +257,9 @@ const DashboardBookingDetail = () => {
           </div>
 
           {booking.status === "on_hold" && (
-            <Link to="/dashboard/ssr-history" className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-destructive/30 text-destructive text-sm font-medium hover:bg-destructive/5">
+            <Button variant="ghost" className="inline-flex items-center gap-2 px-3 py-1.5 text-destructive text-sm font-medium hover:bg-destructive/5" onClick={() => setSsrOpen(true)}>
               <AlertTriangle className="w-4 h-4" /> View SSR to check the actual booking time limit
-            </Link>
+            </Button>
           )}
 
           {/* ━━ Booking Info Bar (7 cols) ━━ */}
