@@ -1334,7 +1334,7 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
               <Input value={rechargeNumber} onChange={e => setRechargeNumber(e.target.value)} placeholder="01XXX-XXXXXX" className="border-0 p-0 h-auto text-sm font-bold shadow-none focus-visible:ring-0" />
             </div>
           </div>
-          <div className={`${bp}:col-span-3 search-field border-b ${bp}:border-b-0 flex-col items-start`}>
+          <div className={`${bp}:col-span-3 ${sf} border-b ${bp}:border-b-0 flex-col items-start`}>
             <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Amount (৳)</div>
             <div className="flex items-center gap-2 w-full">
               <Zap className="w-4 h-4 text-secondary shrink-0" />
