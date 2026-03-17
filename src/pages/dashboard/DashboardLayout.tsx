@@ -268,6 +268,13 @@ const DashboardLayout = () => {
   });
   const pointsBalance = (rewardsData as any)?.balance ?? 0;
 
+  // Fetch wallet balance
+  const { data: walletData } = useQuery({
+    queryKey: ["dashboard", "wallet-balance"],
+    queryFn: () => api.get<any>("/dashboard/wallet"),
+  });
+  const walletBalance = (walletData as any)?.balance ?? 0;
+
   return (
     <TooltipProvider delayDuration={0}>
       <div className="min-h-screen bg-muted/30">
