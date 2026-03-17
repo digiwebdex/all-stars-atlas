@@ -794,7 +794,7 @@ const FareOptionsPanel = ({ flights, onBook, searchedCabin }: { flights: any[]; 
 
     if (fd.length > 1) {
       // Sort: searched cabin class first, then by price
-      const searchedCab = (primary._searchedCabin || primary.cabinClass || 'economy').toLowerCase();
+      const searchedCab = (searchedCabin || primary.cabinClass || 'economy').toLowerCase();
       const getCabinForClass = (cls: string) => {
         const c = cls.charAt(0).toUpperCase();
         if ('CJDIZ'.includes(c)) return 'business';
