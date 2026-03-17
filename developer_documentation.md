@@ -887,7 +887,13 @@ Interactive seat selection with:
 ### Cabin Class Handling
 
 - Cabin class (Economy/Business/First/Premium Economy) is sent to all GDS providers (TTI, BDFare, FlyHub, Sabre, etc.).
-- The UI displays the **searched cabin class**, not the raw GDS fare basis code.
+- The UI displays the **actual cabin derived from the GDS booking class letter**, not the searched cabin:
+  - `V, H, Q, L, K, T, N, S, G, X, U, O, B, M, Y` → **Economy** (with branded tiers like "Economy Convenience", "Economy Saver")
+  - `C, J, D, I, Z` → **Business** (branded: "Business Saver", "Business Flex", etc.)
+  - `F, A, P, R` → **First** (branded: "First Class", "First Saver")
+  - `W, E` → **Premium Economy**
+- Fare options in "View Round-Trip Prices" are sorted with the **searched cabin first**, then other cabins by price.
+- An informational banner explains cabin classes and booking codes to users on the results page.
 
 ### Passenger Validation (FlightBooking.tsx)
 

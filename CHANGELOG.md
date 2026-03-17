@@ -2,6 +2,24 @@
 
 All notable changes to this project are documented in this file.
 
+## [4.1.5] — 2026-03-17 — Cabin Class Accuracy & Branded Fare Naming
+
+### Fixed — Cabin Class Display
+- **Card cabin label** now derives the correct cabin from the GDS booking class letter (e.g., J → "Business - J Class" instead of "Economy - J Class")
+- Mapping: `C/J/D/I/Z` → Business, `F/A/P/R` → First, `W/E` → Premium Economy, all others → Economy
+- This is the GDS truth — no client-side overriding of API data
+
+### Added — Branded Fare Naming
+- Fare variants in "View Round-Trip Prices" now display branded names (e.g., "Economy Convenience", "Business Saver") instead of generic "Fare Option 1/2/3"
+- `deriveFareBrandName()` utility maps booking class letters to meaningful tier names
+- Searched cabin class fares are sorted first; other cabin upsells/downsells shown after
+
+### Added — Cabin Class Guide
+- Informational banner on flight results page explaining cabin classes and booking codes
+- Helps users understand what V, H, J, C, F class letters mean
+
+---
+
 ## [4.1.4] — 2026-03-15 — Quick-Sort Filters Fix (Cheapest/Fastest/Best)
 
 ### Fixed — Quick-Sort Filters
