@@ -21,7 +21,7 @@ const Privacy = () => {
 
   return (
     <div className="min-h-screen bg-muted/30">
-      <section className="bg-card border-b border-border pt-36 lg:pt-48 pb-16">
+      <section className="relative bg-gradient-to-br from-primary/5 via-card to-accent/5 border-b border-border pt-36 lg:pt-48 pb-16 overflow-hidden">
         <div className="container mx-auto px-4 relative text-center">
           <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-foreground mb-3 tracking-tight">{hero.title}</h1>
           <p className="text-muted-foreground text-sm sm:text-base">{hero.subtitle}</p>
