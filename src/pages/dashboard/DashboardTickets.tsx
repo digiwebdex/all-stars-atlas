@@ -76,8 +76,62 @@ const DashboardTickets = () => {
   const [actionLoading, setActionLoading] = useState(false);
 
   const { data, isLoading, error, refetch } = useDashboardTickets({ search: search || undefined });
+  const { data: bookingsData, isLoading: bookingsLoading } = useDashboardBookings();
   const resolved = (data as any) || {};
-  const allTickets = resolved?.data || resolved?.tickets || [];
+  const rawTickets = resolved?.data || resolved?.tickets || [];
+
+  // Fallback: if tickets table is empty, derive ticket-like objects from bookings (including cancelled)
+  const allTickets = useMemo(() => {
+    if (rawTickets.length > 0) return rawTickets;
+    // Build from bookings data
+    const bookings = (bookingsData as any)?.data || [];
+    if (!bookings.length) return [];
+    return bookings
+      .filter((b: any) => b.pnr && b.pnr !== '—' && b.pnr.trim().length > 0)
+      .map((b: any) => {
+        const details = typeof b.details === 'string' ? (() => { try { return JSON.parse(b.details); } catch { return {}; } })() : (b.details || {});
+        const paxRaw = typeof b.passengerInfo === 'string' ? (() => { try { let p = JSON.parse(b.passengerInfo); if (typeof p === 'string') p = JSON.parse(p); return Array.isArray(p) ? p : [p]; } catch { return []; } })() : (Array.isArray(b.passengerInfo) ? b.passengerInfo : []);
+        const ob = details.outbound || details;
+        return {
+          id: b.bookingRef || b.id,
+          bookingRef: b.bookingRef,
+          pnr: b.pnr || details.gdsPnr,
+          airlinePnr: details.airlinePnr,
+          ticketNo: details.ticketNumber || '',
+          status: b.status === 'on_hold' ? 'active' : (b.status || 'active'),
+          airline: ob.airline || ob.airlineName || details.airline || '',
+          airlineCode: ob.airlineCode || details.airlineCode || '',
+          flightNumber: ob.flightNumber || details.flightNumber || '',
+          origin: ob.origin || details.origin || '',
+          destination: ob.destination || details.destination || '',
+          departureTime: ob.departureTime || details.departureTime,
+          arrivalTime: ob.arrivalTime || details.arrivalTime,
+          duration: ob.duration || details.duration,
+          stops: ob.stops ?? details.stops ?? 0,
+          cabinClass: ob.cabinClass || details.cabinClass || 'Economy',
+          baggage: ob.baggage || details.baggage,
+          refundable: details.refundable ?? false,
+          issuedAt: b.bookedAt,
+          source: details.source || details.provider,
+          passengers: paxRaw.map((p: any) => ({
+            name: [p.title, p.firstName || p.first_name, p.lastName || p.last_name].filter(Boolean).join(' ') || p.name || '',
+            type: p.type || p.travelerType || 'ADT',
+          })),
+          legs: (details.legs || details.segments || []).map((l: any) => ({
+            origin: l.origin || l.departureAirport,
+            destination: l.destination || l.arrivalAirport,
+            departureTime: l.departureTime || l.departureDateTime,
+            arrivalTime: l.arrivalTime || l.arrivalDateTime,
+            flightNumber: l.flightNumber || l.flight,
+            airline: l.airline || l.airlineName,
+            duration: l.duration,
+          })),
+          baseFare: details.baseFare || details.basePrice,
+          taxes: details.taxes || details.taxAmount,
+          totalAmount: b.totalAmount || b.rawAmount,
+        };
+      });
+  }, [rawTickets, bookingsData]);
 
   const filtered = allTickets.filter((t: any) => {
     if (statusFilter !== "all" && t.status !== statusFilter) return false;
