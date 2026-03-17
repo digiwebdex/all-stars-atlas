@@ -4,7 +4,7 @@
 
 **Developed By:** MD FAYSAL MAHMUD  
 **Telegram:** [https://t.me/theblindsinner1](https://t.me/theblindsinner1)  
-**Agency:** [digiwebdex.com](https://digiwebdex.com)
+**WhatsApp:** +48571424883
 
 ---
 
