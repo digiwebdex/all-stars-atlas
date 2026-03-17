@@ -69,6 +69,11 @@ const DashboardHome = () => {
     <DataLoader isLoading={statsLoading && bookingsLoading} error={statsError || bookingsError} skeleton="dashboard" retry={statsRefetch}>
       <motion.div className="space-y-6" variants={container} initial="hidden" animate="show">
 
+        {/* Search Widget - like reference design */}
+        <motion.div variants={item} className="rounded-2xl bg-card border border-border shadow-sm overflow-hidden">
+          <SearchWidget />
+        </motion.div>
+
         <motion.div variants={item} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <h1 className="text-xl sm:text-2xl font-bold flex items-center gap-2">
@@ -84,11 +89,6 @@ const DashboardHome = () => {
             </h1>
             <p className="text-xs sm:text-sm text-muted-foreground mt-1">Here's your travel overview for today</p>
           </div>
-          <Button asChild className="w-full sm:w-auto bg-gradient-to-r from-primary to-indigo-600 hover:from-primary/90 hover:to-indigo-600/90 shadow-lg shadow-primary/25 border-0 group btn-elastic">
-            <Link to="/">
-              <Plane className="w-4 h-4 mr-1.5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" /> Book New Trip
-            </Link>
-          </Button>
         </motion.div>
 
         <div>
