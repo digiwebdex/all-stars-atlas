@@ -1082,6 +1082,11 @@ async function getHotelAvail(params, _retried = false) {
   const config = await getSabreConfig();
   if (!config) return [];
 
+  if (isHotelLlsUnavailable()) {
+    console.warn(`[Sabre SOAP] Hotel LLS skipped: ${hotelLlsUnavailableReason}`);
+    return [];
+  }
+
   let token, conversationId;
   try {
     ({ token, conversationId } = await createSession(config));
