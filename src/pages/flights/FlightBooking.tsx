@@ -400,6 +400,42 @@ const FlightBooking = () => {
   const [bookingLoading, setBookingLoading] = useState(false);
   const [agreedTerms, setAgreedTerms] = useState(false);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("");
+
+  // ── Coupon / Reward Points ──
+  const [couponCode, setCouponCode] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; amount: number } | null>(null);
+  const [couponLoading, setCouponLoading] = useState(false);
+  const [couponCopied, setCouponCopied] = useState(false);
+
+  // Fetch user's available coupons for auto-suggest
+  const { data: userCoupons } = useQuery({
+    queryKey: ["rewards", "coupons"],
+    queryFn: () => api.get<any>("/rewards/coupons"),
+    staleTime: 30000,
+  });
+  const activeCoupons = (userCoupons as any)?.data?.filter((c: any) => c.status === "active") || [];
+
+  const handleApplyCoupon = async (code?: string) => {
+    const codeToApply = (code || couponCode).trim().toUpperCase();
+    if (!codeToApply) { toast({ title: "Enter Coupon Code", description: "Please enter or select a coupon code.", variant: "destructive" }); return; }
+    setCouponLoading(true);
+    try {
+      const result = await api.post<any>("/rewards/validate-coupon", { code: codeToApply });
+      if (result.valid) {
+        setAppliedCoupon({ code: result.code, amount: parseFloat(result.amount) });
+        setCouponCode(result.code);
+        toast({ title: "Coupon Applied! 🎉", description: `BDT ${parseFloat(result.amount).toLocaleString()} discount applied.` });
+      }
+    } catch (err: any) {
+      toast({ title: "Invalid Coupon", description: err.message || "Could not validate coupon.", variant: "destructive" });
+      setAppliedCoupon(null);
+    } finally { setCouponLoading(false); }
+  };
+
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponCode("");
+  };
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const navigate = usePrefixedNavigate();
   const { isAuthenticated } = useAuth();
