@@ -57,7 +57,7 @@ const Header = () => {
         </div>
       </div>
 
-      <header className={`fixed left-0 right-0 z-50 transition-all duration-300 top-0 lg:top-8 ${
+      <header className={`fixed left-0 right-0 z-50 transition-all duration-300 top-0 lg:top-8 overflow-hidden ${
         transparent ? "bg-transparent" : "bg-card/98 backdrop-blur-2xl shadow-[0_1px_3px_hsl(var(--foreground)/0.06)] border-b border-border/50"
       }`}>
         <div className="container mx-auto px-4">
