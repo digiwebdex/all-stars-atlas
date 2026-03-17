@@ -332,7 +332,7 @@ const HotelResults = () => {
 
               {/* Tags */}
               {hotel.isFreeCancellation && (
-                <p className="text-xs text-green-600 dark:text-green-400 font-semibold mt-2 flex items-center gap-1">
+                <p className="text-xs text-accent font-semibold mt-2 flex items-center gap-1">
                   <ShieldCheck className="w-3.5 h-3.5" /> Free cancellation
                 </p>
               )}
