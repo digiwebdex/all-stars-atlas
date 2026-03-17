@@ -1804,7 +1804,7 @@ const FlightBooking = () => {
                   <Card>
                     <CardHeader><CardTitle className="text-sm sm:text-base flex items-center gap-2"><CreditCard className="w-5 h-5 text-accent" /> Payment (Required)</CardTitle></CardHeader>
                     <CardContent className="space-y-4">
-                      <div className="grid grid-cols-2 gap-3">
+                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         {["bKash", "Nagad", "Visa/Master Card", "Bank Transfer"].map((m) => (
                           <label key={m} className={`flex items-center gap-3 p-3 sm:p-4 rounded-xl border cursor-pointer transition-colors ${
                             selectedPaymentMethod === m ? "border-accent bg-accent/5" : "border-border hover:border-accent/40"
