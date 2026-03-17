@@ -9,6 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Car, ArrowRight, User, Shield } from "lucide-react";
 import { api } from "@/lib/api";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { usePrefixedNavigate } from "@/hooks/useRoutePrefix";
 import { useCmsPageContent } from "@/hooks/useCmsContent";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
