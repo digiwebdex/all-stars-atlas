@@ -17,13 +17,20 @@ async function ensurePointsAccount(userId) {
   );
 }
 
+function getAuthenticatedUserId(req) {
+  return req.user?.sub || req.user?.id || null;
+}
+
 // ── GET /rewards/balance — Current points balance ──
 router.get('/balance', authenticate, async (req, res) => {
   try {
-    await ensurePointsAccount(req.user.id);
+    const userId = getAuthenticatedUserId(req);
+    if (!userId) return res.status(401).json({ message: 'Authentication required' });
+
+    await ensurePointsAccount(userId);
     const [rows] = await db.query(
       'SELECT balance, total_earned, total_redeemed FROM user_points WHERE user_id = ?',
-      [req.user.id]
+      [userId]
     );
     res.json({ balance: rows[0]?.balance || 0, totalEarned: rows[0]?.total_earned || 0, totalRedeemed: rows[0]?.total_redeemed || 0 });
   } catch (err) {
@@ -35,6 +42,9 @@ router.get('/balance', authenticate, async (req, res) => {
 // ── GET /rewards/history — Points transaction history ──
 router.get('/history', authenticate, async (req, res) => {
   try {
+    const userId = getAuthenticatedUserId(req);
+    if (!userId) return res.status(401).json({ message: 'Authentication required' });
+
     const page = parseInt(req.query.page) || 1;
     const limit = Math.min(parseInt(req.query.limit) || 20, 100);
     const offset = (page - 1) * limit;
@@ -43,12 +53,12 @@ router.get('/history', authenticate, async (req, res) => {
       `SELECT pt.*, b.booking_ref FROM point_transactions pt
        LEFT JOIN bookings b ON pt.booking_id = b.id
        WHERE pt.user_id = ? ORDER BY pt.created_at DESC LIMIT ? OFFSET ?`,
-      [req.user.id, limit, offset]
+      [userId, limit, offset]
     );
 
     const [[{ total }]] = await db.query(
       'SELECT COUNT(*) as total FROM point_transactions WHERE user_id = ?',
-      [req.user.id]
+      [userId]
     );
 
     res.json({ data: rows, total, page, pages: Math.ceil(total / limit) });
@@ -61,9 +71,12 @@ router.get('/history', authenticate, async (req, res) => {
 // ── GET /rewards/coupons — User's coupons ──
 router.get('/coupons', authenticate, async (req, res) => {
   try {
+    const userId = getAuthenticatedUserId(req);
+    if (!userId) return res.status(401).json({ message: 'Authentication required' });
+
     const [rows] = await db.query(
       'SELECT * FROM reward_coupons WHERE user_id = ? ORDER BY created_at DESC',
-      [req.user.id]
+      [userId]
     );
     res.json({ data: rows });
   } catch (err) {
@@ -74,18 +87,23 @@ router.get('/coupons', authenticate, async (req, res) => {
 
 // ── POST /rewards/redeem — Generate a coupon from points ──
 router.post('/redeem', authenticate, async (req, res) => {
-  const { points } = req.body;
-  if (!points || points <= 0) return res.status(400).json({ message: 'Invalid points amount' });
+  const points = Number(req.body?.points);
+  if (!Number.isFinite(points) || points <= 0) {
+    return res.status(400).json({ message: 'Invalid points amount' });
+  }
+
+  const userId = getAuthenticatedUserId(req);
+  if (!userId) return res.status(401).json({ message: 'Authentication required' });
 
   const conn = await db.getConnection();
   try {
     await conn.beginTransaction();
-    await ensurePointsAccount(req.user.id);
+    await ensurePointsAccount(userId);
 
     // Lock and check balance
     const [[acct]] = await conn.query(
       'SELECT balance FROM user_points WHERE user_id = ? FOR UPDATE',
-      [req.user.id]
+      [userId]
     );
     if (!acct || acct.balance < points) {
       await conn.rollback();
@@ -100,19 +118,19 @@ router.post('/redeem', authenticate, async (req, res) => {
     // Create coupon
     const [couponResult] = await conn.query(
       'INSERT INTO reward_coupons (user_id, code, amount, points_used, expires_at) VALUES (?, ?, ?, ?, ?)',
-      [req.user.id, code, amount, points, expiresAt]
+      [userId, code, amount, points, expiresAt]
     );
 
     // Deduct points
     await conn.query(
       'UPDATE user_points SET balance = balance - ?, total_redeemed = total_redeemed + ? WHERE user_id = ?',
-      [points, points, req.user.id]
+      [points, points, userId]
     );
 
     // Log transaction
     await conn.query(
       'INSERT INTO point_transactions (user_id, type, amount, description, coupon_id) VALUES (?, "redeem", ?, ?, ?)',
-      [req.user.id, -points, `Redeemed ${points} points for coupon ${code}`, couponResult.insertId]
+      [userId, -points, `Redeemed ${points} points for coupon ${code}`, couponResult.insertId]
     );
 
     await conn.commit();
@@ -132,9 +150,12 @@ router.post('/validate-coupon', authenticate, async (req, res) => {
   if (!code) return res.status(400).json({ message: 'Coupon code required' });
 
   try {
+    const userId = getAuthenticatedUserId(req);
+    if (!userId) return res.status(401).json({ message: 'Authentication required' });
+
     const [rows] = await db.query(
       'SELECT * FROM reward_coupons WHERE code = ? AND user_id = ? AND status = "active"',
-      [code.toUpperCase().trim(), req.user.id]
+      [code.toUpperCase().trim(), userId]
     );
     if (rows.length === 0) return res.status(404).json({ message: 'Invalid or expired coupon' });
 
@@ -156,13 +177,16 @@ router.post('/apply-coupon', authenticate, async (req, res) => {
   const { code, bookingId } = req.body;
   if (!code || !bookingId) return res.status(400).json({ message: 'Code and bookingId required' });
 
+  const userId = getAuthenticatedUserId(req);
+  if (!userId) return res.status(401).json({ message: 'Authentication required' });
+
   const conn = await db.getConnection();
   try {
     await conn.beginTransaction();
 
     const [[coupon]] = await conn.query(
       'SELECT * FROM reward_coupons WHERE code = ? AND user_id = ? AND status = "active" FOR UPDATE',
-      [code.toUpperCase().trim(), req.user.id]
+      [code.toUpperCase().trim(), userId]
     );
     if (!coupon) { await conn.rollback(); return res.status(404).json({ message: 'Invalid coupon' }); }
     if (coupon.expires_at && new Date(coupon.expires_at) < new Date()) {
