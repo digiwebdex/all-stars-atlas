@@ -1122,8 +1122,8 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
     // ====== HOLIDAY ======
     holiday: (
       <div className="space-y-3">
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-0 border border-border rounded-2xl bg-background shadow-sm">
-          <div className="md:col-span-5 search-field border-b md:border-b-0 flex-col items-start">
+        <div className={`grid grid-cols-1 ${bp}:grid-cols-12 gap-0 border border-border rounded-2xl bg-background shadow-sm`}>
+          <div className={`${bp}:col-span-5 search-field border-b ${bp}:border-b-0 flex-col items-start`}>
             <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Destination</div>
             <div className="flex items-center gap-2 w-full">
               <span className="text-xl font-black text-primary">{HOLIDAY_DESTINATIONS.find(d => d.name === holidayDest)?.flag || "🌍"}</span>
@@ -1140,7 +1140,7 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
               </div>
             </div>
           </div>
-          <div className={`md:col-span-4 search-field border-b md:border-b-0 flex-col items-start ${dateErrorClass("travelDate")}`}>
+          <div className={`${bp}:col-span-4 search-field border-b ${bp}:border-b-0 flex-col items-start ${dateErrorClass("travelDate")}`}>
             <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Travel Date</div>
             <Popover open={openDatePopover === "travelDate"} onOpenChange={(o) => setOpenDatePopover(o ? "travelDate" : null)}>
               <PopoverTrigger className="w-full text-left">
@@ -1151,8 +1151,8 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
               </PopoverContent>
             </Popover>
           </div>
-          <div className="md:col-span-3 flex items-center justify-center p-3">
-            <Button onClick={handleHolidaySearch} className="w-full h-12 md:h-full md:min-h-[56px] rounded-xl bg-secondary text-secondary-foreground hover:bg-secondary/90 text-base font-extrabold shadow-xl shadow-secondary/25 transition-all active:scale-[0.98]">
+          <div className={`${bp}:col-span-3 flex items-center justify-center p-3`}>
+            <Button onClick={handleHolidaySearch} className={`w-full h-12 ${bp === 'md' ? 'md:h-full md:min-h-[56px]' : 'lg:h-full lg:min-h-[56px]'} rounded-xl bg-secondary text-secondary-foreground hover:bg-secondary/90 text-base font-extrabold shadow-xl shadow-secondary/25 transition-all active:scale-[0.98]`}>
               <Search className="w-5 h-5 mr-2" /> Search
             </Button>
           </div>
