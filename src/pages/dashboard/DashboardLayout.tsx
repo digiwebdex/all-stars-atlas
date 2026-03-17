@@ -7,7 +7,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
-import { Suspense, useState } from "react";
+import { Suspense, useState, useEffect } from "react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { AnimatePresence, motion } from "framer-motion";
 import DashboardBreadcrumb from "@/components/dashboard/DashboardBreadcrumb";
