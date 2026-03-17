@@ -111,6 +111,7 @@ const AdminSettings = () => {
         if (data.siteName) setGeneralForm(prev => ({ ...prev, siteName: data.siteName }));
         if (data.supportEmail) setGeneralForm(prev => ({ ...prev, supportEmail: data.supportEmail }));
         if (data.defaultCurrency) setGeneralForm(prev => ({ ...prev, currency: data.defaultCurrency }));
+        if (data.searchTabs) setSearchTabs(prev => ({ ...prev, ...data.searchTabs }));
 
         // Mark APIs as enabled if they have keys
         if (data.apiKeys) {
