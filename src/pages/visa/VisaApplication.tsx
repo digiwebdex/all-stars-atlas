@@ -14,6 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Globe, FileText, Upload, CheckCircle2, ArrowRight, Shield, User, Clock, Phone, MapPin, Briefcase, Heart, AlertTriangle, X, Loader2, File } from "lucide-react";
 import { Link, useSearchParams, useNavigate } from "react-router-dom";
+import { usePrefixedNavigate } from "@/hooks/useRoutePrefix";
 import { useAuth } from "@/hooks/useAuth";
 import AuthGateModal from "@/components/AuthGateModal";
 import { useCmsPageContent } from "@/hooks/useCmsContent";
