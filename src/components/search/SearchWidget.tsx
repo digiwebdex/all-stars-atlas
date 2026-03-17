@@ -818,7 +818,7 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
                   <AirportInput label={`From (Flight ${index + 1})`} value={segment.from} onChange={(a) => updateSegment(index, 'from', a)} placeholder="Type city or airport..." airports={scopedMultiCityFromAirports} icon={<PlaneTakeoff className="w-5 h-5" />} />
                 </div>
 
-                <div className={`${compact ? 'lg:col-span-4' : 'md:col-span-4'} search-field border-b ${compact ? 'lg:border-b-0' : 'md:border-b-0'} flex-col items-start min-w-0`}>
+                <div className={`${compact ? 'lg:col-span-4' : 'md:col-span-4'} ${sf} border-b ${compact ? 'lg:border-b-0' : 'md:border-b-0'} flex-col items-start min-w-0`}>
                   <AirportInput label={`To (Flight ${index + 1})`} value={segment.to} onChange={(a) => updateSegment(index, 'to', a)} placeholder="Where to?" airports={getMultiCityToAirports(segment.from)} icon={<PlaneLanding className="w-5 h-5" />} />
                 </div>
 
