@@ -340,7 +340,7 @@ const AdminLayout = () => {
           <main className={cn("flex-1 p-4 md:p-6 lg:p-8 transition-all duration-300 ease-in-out", mainMargin)}>
             <Suspense fallback={
               <div className="flex items-center justify-center py-20">
-                <div className="w-7 h-7 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                <div className="w-7 h-7 border-2 border-primary border-t-transparent rounded-full animate-spin" />
               </div>
             }>
               <motion.div
