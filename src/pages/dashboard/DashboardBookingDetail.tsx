@@ -230,8 +230,8 @@ const DashboardBookingDetail = () => {
               <Button className="bg-emerald-500 hover:bg-emerald-600 text-white font-bold shadow-sm"><Wallet className="w-4 h-4 mr-1.5" /> Issue With Balance</Button>
             </Link>
             <div className="ml-auto flex flex-wrap gap-2">
-              <Link to="/dashboard/timeline"><Button variant="outline" className="font-semibold border-2 border-foreground/80"><Clock className="w-4 h-4 mr-1.5" /> Timeline</Button></Link>
-              <Link to="/dashboard/ssr-history"><Button variant="outline" className="font-semibold border-2 border-foreground/80"><Eye className="w-4 h-4 mr-1.5" /> View SSR</Button></Link>
+              <Button variant="outline" className="font-semibold border-2 border-foreground/80" onClick={() => setTimelineOpen(true)}><Clock className="w-4 h-4 mr-1.5" /> Timeline</Button>
+              <Button variant="outline" className="font-semibold border-2 border-foreground/80" onClick={() => setSsrOpen(true)}><Eye className="w-4 h-4 mr-1.5" /> View SSR</Button>
               <Button variant="outline" className="font-semibold border-2 border-destructive text-destructive hover:bg-destructive/10" onClick={() => setCancelOpen(true)}><Ban className="w-4 h-4 mr-1.5" /> Cancel Booking</Button>
               <Button className="bg-amber-500 hover:bg-amber-600 text-white font-bold shadow-sm" onClick={handleDownload}><Download className="w-4 h-4 mr-1.5" /> Voucher Download</Button>
             </div>
