@@ -17,18 +17,22 @@ type SidebarItem = {
   label: string;
   href: string;
   icon: React.ElementType;
+  iconColor: string;
+  iconBg: string;
   badge?: string;
   children?: { label: string; href: string }[];
 };
 
 const sidebarItems: SidebarItem[] = [
-  { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
-  { label: "Bookings", href: "/admin/bookings", icon: Ticket },
-  { label: "Users", href: "/admin/users", icon: Users },
+  { label: "Dashboard", href: "/admin", icon: LayoutDashboard, iconColor: "text-blue-400", iconBg: "bg-blue-500/15" },
+  { label: "Bookings", href: "/admin/bookings", icon: Ticket, iconColor: "text-violet-400", iconBg: "bg-violet-500/15" },
+  { label: "Users", href: "/admin/users", icon: Users, iconColor: "text-cyan-400", iconBg: "bg-cyan-500/15" },
   {
     label: "Finance",
     href: "/admin/payments",
     icon: CreditCard,
+    iconColor: "text-emerald-400",
+    iconBg: "bg-emerald-500/15",
     children: [
       { label: "Payments", href: "/admin/payments" },
       { label: "Payment Approvals", href: "/admin/payment-approvals" },
@@ -41,6 +45,8 @@ const sidebarItems: SidebarItem[] = [
     label: "CMS",
     href: "/admin/cms/pages",
     icon: PenLine,
+    iconColor: "text-amber-400",
+    iconBg: "bg-amber-500/15",
     children: [
       { label: "All Pages", href: "/admin/cms/pages" },
       { label: "Booking Forms", href: "/admin/cms/booking-forms" },
@@ -58,6 +64,8 @@ const sidebarItems: SidebarItem[] = [
     label: "Services",
     href: "/admin/visa",
     icon: Globe,
+    iconColor: "text-rose-400",
+    iconBg: "bg-rose-500/15",
     children: [
       { label: "Visa", href: "/admin/visa" },
       { label: "Markup & Revenue", href: "/admin/markup" },
