@@ -943,8 +943,8 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
 
     // ====== HOTEL ======
     hotel: (
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-0 border border-border rounded-2xl bg-background shadow-sm">
-        <div className="md:col-span-4 search-field border-b md:border-b-0 flex-col items-start">
+      <div className={`grid grid-cols-1 ${bp}:grid-cols-12 gap-0 border border-border rounded-2xl bg-background shadow-sm`}>
+        <div className={`${bp}:col-span-4 search-field border-b ${bp}:border-b-0 flex-col items-start min-w-0`}>
           <CityInput
             label="Destination"
             value={hotelCity}
@@ -954,8 +954,8 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
             placeholder="Where are you going?"
           />
         </div>
-        <div className="grid grid-cols-2 md:contents">
-          <div className={`md:col-span-2 search-field border-b md:border-b-0 border-r md:border-r flex-col items-start ${dateErrorClass("checkIn")}`}>
+        <div className={`grid grid-cols-2 ${bp}:contents`}>
+          <div className={`${bp}:col-span-2 search-field border-b ${bp}:border-b-0 border-r ${bp}:border-r flex-col items-start ${dateErrorClass("checkIn")}`}>
             <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Check-in</div>
             <Popover open={openDatePopover === "checkIn"} onOpenChange={(o) => setOpenDatePopover(o ? "checkIn" : null)}>
               <PopoverTrigger className="w-full text-left">
@@ -966,7 +966,7 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
               </PopoverContent>
             </Popover>
           </div>
-          <div className={`md:col-span-2 search-field border-b md:border-b-0 flex-col items-start ${dateErrorClass("checkOut")}`}>
+          <div className={`${bp}:col-span-2 search-field border-b ${bp}:border-b-0 flex-col items-start ${dateErrorClass("checkOut")}`}>
             <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Check-out</div>
             <Popover open={openDatePopover === "checkOut"} onOpenChange={(o) => setOpenDatePopover(o ? "checkOut" : null)}>
               <PopoverTrigger className="w-full text-left">
@@ -978,7 +978,7 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
             </Popover>
           </div>
         </div>
-        <div className="md:col-span-2 search-field border-b md:border-b-0 flex-col items-start">
+        <div className={`${bp}:col-span-2 search-field border-b ${bp}:border-b-0 flex-col items-start`}>
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Guests & Rooms</div>
           <Popover>
             <PopoverTrigger className="w-full text-left">
@@ -1026,8 +1026,8 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
             </PopoverContent>
           </Popover>
         </div>
-        <div className="md:col-span-2 flex items-center justify-center p-3">
-          <Button onClick={handleHotelSearch} className="w-full h-12 md:h-full md:min-h-[56px] rounded-xl bg-secondary text-secondary-foreground hover:bg-secondary/90 text-base font-extrabold shadow-xl shadow-secondary/25 hover:shadow-secondary/40 transition-all active:scale-[0.98]">
+        <div className={`${bp}:col-span-2 flex items-center justify-center p-3`}>
+          <Button onClick={handleHotelSearch} className={`w-full h-12 ${bp === 'md' ? 'md:h-full md:min-h-[56px]' : 'lg:h-full lg:min-h-[56px]'} rounded-xl bg-secondary text-secondary-foreground hover:bg-secondary/90 text-base font-extrabold shadow-xl shadow-secondary/25 hover:shadow-secondary/40 transition-all active:scale-[0.98]`}>
             <Search className="w-5 h-5" />
           </Button>
         </div>
