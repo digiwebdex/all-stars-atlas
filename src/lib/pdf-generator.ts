@@ -529,9 +529,9 @@ async function buildInvoiceDoc(inv: InvoiceData): Promise<jsPDF> {
       if (item.quantity !== undefined) {
         doc.text(String(item.quantity), tableRight - 65, y + 7, { align: "center" });
       }
-      doc.text(`${item.unitPrice.toLocaleString("en-IN", { minimumFractionDigits: 2 })}৳`, tableRight - 38, y + 7, { align: "center" });
+      doc.text(`${item.unitPrice.toLocaleString("en-IN", { minimumFractionDigits: 2 })} BDT`, tableRight - 38, y + 7, { align: "center" });
       doc.setFont("helvetica", "bold");
-      doc.text(`${item.totalPrice.toLocaleString("en-IN", { minimumFractionDigits: 2 })}৳`, tableRight - 4, y + 7, { align: "right" });
+      doc.text(`${item.totalPrice.toLocaleString("en-IN", { minimumFractionDigits: 2 })} BDT`, tableRight - 4, y + 7, { align: "right" });
       doc.setFont("helvetica", "normal");
     }
     y += rowH;
