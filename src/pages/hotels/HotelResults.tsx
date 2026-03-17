@@ -401,7 +401,7 @@ const HotelResults = () => {
                 ))}
               </div>
               {hotel.isFreeCancellation && (
-                <p className="text-[11px] text-green-600 dark:text-green-400 font-semibold flex items-center gap-1"><ShieldCheck className="w-3 h-3" /> Free cancellation</p>
+                <p className="text-[11px] text-accent font-semibold flex items-center gap-1"><ShieldCheck className="w-3 h-3" /> Free cancellation</p>
               )}
             </div>
             <div className="flex items-end justify-between pt-3 mt-3 border-t border-border/50">
