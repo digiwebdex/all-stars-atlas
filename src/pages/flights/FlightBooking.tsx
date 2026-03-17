@@ -1157,7 +1157,7 @@ const FlightBooking = () => {
         )}
 
         <div className="grid lg:grid-cols-3 gap-4 sm:gap-6">
-          <div className="lg:col-span-2 space-y-4 sm:space-y-5">
+          <div className="lg:col-span-2 space-y-4 sm:space-y-5 min-w-0">
             {/* STEP 1: Flight Details */}
             {step === 1 && (
               <>
@@ -1804,7 +1804,7 @@ const FlightBooking = () => {
                   <Card>
                     <CardHeader><CardTitle className="text-sm sm:text-base flex items-center gap-2"><CreditCard className="w-5 h-5 text-accent" /> Payment (Required)</CardTitle></CardHeader>
                     <CardContent className="space-y-4">
-                      <div className="grid grid-cols-2 gap-3">
+                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         {["bKash", "Nagad", "Visa/Master Card", "Bank Transfer"].map((m) => (
                           <label key={m} className={`flex items-center gap-3 p-3 sm:p-4 rounded-xl border cursor-pointer transition-colors ${
                             selectedPaymentMethod === m ? "border-accent bg-accent/5" : "border-border hover:border-accent/40"
@@ -1930,17 +1930,17 @@ const FlightBooking = () => {
             )}
 
             {/* Navigation */}
-            <div className="flex gap-3">
-              {step > 1 && <Button variant="outline" onClick={() => setStep(step - 1)}>Back</Button>}
+            <div className="flex flex-wrap gap-3">
+              {step > 1 && <Button variant="outline" onClick={() => setStep(step - 1)} className="shrink-0">Back</Button>}
               {step < totalSteps ? (
-                <Button onClick={handleContinue} className="font-bold bg-accent text-accent-foreground hover:bg-accent/90">Continue <ArrowRight className="w-4 h-4 ml-1" /></Button>
+                <Button onClick={handleContinue} className="font-bold bg-accent text-accent-foreground hover:bg-accent/90 shrink-0">Continue <ArrowRight className="w-4 h-4 ml-1" /></Button>
               ) : isBiman ? (
-                <Button className="font-bold bg-accent text-accent-foreground hover:bg-accent/90 shadow-lg" onClick={handleConfirmBooking} disabled={bookingLoading}>
-                  {bookingLoading ? "Processing..." : <><Shield className="w-4 h-4 mr-1" /> Confirm & Pay ৳{grandTotal.toLocaleString()}</>}
+                <Button className="font-bold bg-accent text-accent-foreground hover:bg-accent/90 shadow-lg shrink-0 text-xs sm:text-sm" onClick={handleConfirmBooking} disabled={bookingLoading}>
+                  {bookingLoading ? "Processing..." : <><Shield className="w-4 h-4 mr-1 shrink-0" /> <span className="truncate">Confirm & Pay ৳{grandTotal.toLocaleString()}</span></>}
                 </Button>
               ) : (
-              <Button className="font-bold bg-accent text-accent-foreground hover:bg-accent/90 shadow-lg" onClick={handleConfirmBooking} disabled={bookingLoading}>
-                  {bookingLoading ? "Processing..." : <><CheckCircle2 className="w-4 h-4 mr-1" /> Book Now for Free</>}
+              <Button className="font-bold bg-accent text-accent-foreground hover:bg-accent/90 shadow-lg shrink-0 text-xs sm:text-sm" onClick={handleConfirmBooking} disabled={bookingLoading}>
+                  {bookingLoading ? "Processing..." : <><CheckCircle2 className="w-4 h-4 mr-1 shrink-0" /> Book Now for Free</>}
                 </Button>
               )}
             </div>

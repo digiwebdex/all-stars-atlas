@@ -2521,8 +2521,8 @@ const FlightCard = ({
           </div>
 
           {/* Price section */}
-          <div className="flex flex-col items-end justify-center gap-1 p-3 sm:p-4 sm:w-44 lg:w-52 shrink-0 border-t sm:border-t-0 sm:border-l border-border/50 bg-muted/20">
-            <div className="flex items-center gap-1.5">
+          <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-1 sm:gap-1 p-3 sm:p-4 sm:w-44 lg:w-52 shrink-0 border-t sm:border-t-0 sm:border-l border-border/50 bg-muted/20">
+            <div className="flex items-center gap-1.5 flex-wrap">
               {grossPrice === cheapest && price > 0 && (
                 <Badge className="bg-accent/10 text-accent border-0 text-[8px] font-bold px-1.5 py-0">Cheapest</Badge>
               )}
@@ -2532,11 +2532,11 @@ const FlightCard = ({
                 </Badge>
               )}
             </div>
-            <p className="text-lg sm:text-xl lg:text-2xl font-black leading-none whitespace-nowrap">BDT {price.toLocaleString()}</p>
+            <p className="text-lg sm:text-xl lg:text-2xl font-black leading-none whitespace-nowrap truncate">BDT {price.toLocaleString()}</p>
             {discount > 0 && (
               <p className="text-[11px] font-bold text-amber-500 line-through">BDT {grossPrice.toLocaleString()}</p>
             )}
-            <p className="text-[10px] text-muted-foreground">Price for {parseInt(new URLSearchParams(window.location.search).get("adults") || "1")} traveller{parseInt(new URLSearchParams(window.location.search).get("adults") || "1") > 1 ? "s" : ""}</p>
+            <p className="text-[10px] text-muted-foreground hidden sm:block">Price for {parseInt(new URLSearchParams(window.location.search).get("adults") || "1")} traveller{parseInt(new URLSearchParams(window.location.search).get("adults") || "1") > 1 ? "s" : ""}</p>
             <Popover open={showPriceBreakdown} onOpenChange={setShowPriceBreakdown}>
               <PopoverTrigger asChild>
                 <button className="text-[11px] sm:text-xs text-accent font-semibold flex items-center gap-1 hover:underline">
@@ -3730,7 +3730,7 @@ const FlightResults = () => {
       {/* ─── Compact Pill Modification Bar with Full Features ─── */}
       <div className="bg-card border-b border-border pt-16 sm:pt-24 lg:pt-32 pb-0">
         <div className="container mx-auto px-2 sm:px-4">
-          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 py-2 sm:py-2.5">
+          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 py-2 sm:py-2.5 overflow-x-auto scrollbar-none">
             {/* Trip Type pill — clickable to switch */}
             <Popover>
               <PopoverTrigger asChild>
@@ -4309,13 +4309,13 @@ const FlightResults = () => {
                     </div>
                   )}
                   <div className="space-y-3">
-                    <div className="flex items-center gap-3 mb-2">
-                      <div className="flex items-center gap-2 bg-accent/10 text-accent rounded-lg px-3 py-1.5">
+                    <div className="flex items-center gap-2 sm:gap-3 mb-2 flex-wrap">
+                      <div className="flex items-center gap-2 bg-accent/10 text-accent rounded-lg px-3 py-1.5 shrink-0">
                         <Plane className="w-4 h-4" /><span className="text-sm font-bold">Multi-City</span>
                       </div>
-                      <span className="text-sm font-medium">{multiCitySegments.map(s => s.from).join(" → ")} → {multiCitySegments[multiCitySegments.length - 1]?.to}</span>
-                      <span className="text-xs text-muted-foreground">{multiCityFlights.length} itineraries</span>
-                      <span className="text-xs text-muted-foreground italic">(Fares include. AIT VAT)</span>
+                      <span className="text-xs sm:text-sm font-medium truncate">{multiCitySegments.map(s => s.from).join(" → ")} → {multiCitySegments[multiCitySegments.length - 1]?.to}</span>
+                      <span className="text-xs text-muted-foreground shrink-0">{multiCityFlights.length} itineraries</span>
+                      <span className="text-[10px] text-muted-foreground italic shrink-0">(Fares include. AIT VAT)</span>
                     </div>
 
                     {multiCityFlights.length === 0 ? (
@@ -4365,14 +4365,14 @@ const FlightResults = () => {
                 {isRoundTrip && hasDirections ? (
                   <div className="space-y-2">
                     {/* Header: showing X round-trip combinations */}
-                    <div className="flex items-center gap-2 flex-wrap mb-1">
-                      <div className="flex items-center gap-1.5 bg-accent/10 text-accent rounded-lg px-2.5 py-1">
-                        <Plane className="w-3.5 h-3.5" /><span className="text-xs font-bold">Round Trip</span>
-                      </div>
-                      <span className="text-xs font-medium">{fromCode} ↔ {toCode}</span>
-                      <span className="text-[10px] text-muted-foreground">{filteredPairs.length} combinations</span>
-                      <span className="text-[10px] text-muted-foreground italic">(Fares include. AIT VAT)</span>
-                    </div>
+                     <div className="flex items-center gap-2 flex-wrap mb-1">
+                       <div className="flex items-center gap-1.5 bg-accent/10 text-accent rounded-lg px-2.5 py-1 shrink-0">
+                         <Plane className="w-3.5 h-3.5" /><span className="text-xs font-bold">Round Trip</span>
+                       </div>
+                       <span className="text-xs font-medium shrink-0">{fromCode} ↔ {toCode}</span>
+                       <span className="text-[10px] text-muted-foreground shrink-0">{filteredPairs.length} combinations</span>
+                       <span className="text-[10px] text-muted-foreground italic shrink-0">(Fares include. AIT VAT)</span>
+                     </div>
 
                     {filteredPairs.length === 0 ? (
                       <Card><CardContent className="py-8 text-center text-muted-foreground"><p>No round-trip flights found matching your filters</p></CardContent></Card>
