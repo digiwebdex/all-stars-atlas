@@ -3053,7 +3053,7 @@ function groupSimilarFlights(flights: any[]): { primary: any; similar: any[]; to
 const FlightResults = () => {
   const { data: page } = useCmsPageContent("/flights");
   const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
+  const navigate = usePrefixedNavigate();
   const [sortBy, setSortBy] = useState("best");
 
   // Fetch admin markup settings for fare calculation
