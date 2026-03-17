@@ -6,7 +6,7 @@ import { Switch } from "@/components/ui/switch";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { Settings, Globe, Mail, CreditCard, Shield, Bell, Database, Plug, Eye, EyeOff, Plus, Trash2, Building2, CloudUpload, ExternalLink, Info, Users, Loader2 } from "lucide-react";
+import { Settings, Globe, Mail, CreditCard, Shield, Bell, Database, Plug, Eye, EyeOff, Plus, Trash2, Building2, CloudUpload, ExternalLink, Info, Users, Loader2, Search, Plane, Palmtree, FileText, Stethoscope, Car, Smartphone, PhoneCall, Receipt } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { setGoogleDriveClientId, getGoogleDriveClientId, isGoogleDriveConfigured } from "@/lib/google-drive";
 import { clearSocialConfigCache } from "@/lib/social-auth";
+import { SEARCH_TAB_LABELS, DEFAULT_SEARCH_TABS, type SearchTabConfig } from "@/hooks/useSearchTabConfig";
 
 // ── API Integrations Config ──
 const apiIntegrations = [
@@ -95,6 +96,7 @@ const AdminSettings = () => {
   const [newBank, setNewBank] = useState<Partial<BankAccount>>({});
   const [showAddBank, setShowAddBank] = useState(false);
   const [generalForm, setGeneralForm] = useState({ siteName: 'Seven Trip', supportEmail: 'support@seven-trip.com', currency: 'bdt', language: 'en' });
+  const [searchTabs, setSearchTabs] = useState<SearchTabConfig>({ ...DEFAULT_SEARCH_TABS });
 
   // Load all settings from backend on mount
   useEffect(() => {
@@ -109,6 +111,7 @@ const AdminSettings = () => {
         if (data.siteName) setGeneralForm(prev => ({ ...prev, siteName: data.siteName }));
         if (data.supportEmail) setGeneralForm(prev => ({ ...prev, supportEmail: data.supportEmail }));
         if (data.defaultCurrency) setGeneralForm(prev => ({ ...prev, currency: data.defaultCurrency }));
+        if (data.searchTabs) setSearchTabs(prev => ({ ...prev, ...data.searchTabs }));
 
         // Mark APIs as enabled if they have keys
         if (data.apiKeys) {
@@ -193,6 +196,22 @@ const AdminSettings = () => {
     } catch { toast.error("Failed to save payment settings."); }
   };
 
+  const toggleSearchTab = async (key: keyof SearchTabConfig) => {
+    const updated = { ...searchTabs, [key]: !searchTabs[key] };
+    // Ensure at least one tab stays enabled
+    if (!Object.values(updated).some(Boolean)) {
+      toast.error("At least one search service must be enabled.");
+      return;
+    }
+    setSearchTabs(updated);
+    try {
+      await api.put('/admin/settings', { section: 'search_tabs', searchTabs: updated });
+      // Update localStorage cache for immediate frontend effect
+      try { localStorage.setItem('seventrip_search_tabs', JSON.stringify(updated)); } catch {}
+      toast.success(`${SEARCH_TAB_LABELS[key]} ${updated[key] ? 'enabled' : 'disabled'}`);
+    } catch { toast.error("Failed to save search tab settings."); }
+  };
+
   if (loading) {
     return (
       <div className="space-y-6 max-w-4xl">
@@ -237,7 +256,38 @@ const AdminSettings = () => {
         </CardContent>
       </Card>
 
-      {/* Payment Methods */}
+      {/* Search Services Visibility */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center"><Search className="w-5 h-5 text-primary" /></div>
+            <div><CardTitle className="text-lg">Search Services</CardTitle><CardDescription>Enable or disable search tabs shown on the homepage. Disabled services will be hidden from users.</CardDescription></div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {(Object.keys(SEARCH_TAB_LABELS) as (keyof SearchTabConfig)[]).map(key => {
+            const icons: Record<string, any> = { flight: Plane, hotel: Building2, holiday: Palmtree, visa: FileText, medical: Stethoscope, cars: Car, esim: Smartphone, recharge: PhoneCall, paybill: Receipt };
+            const Icon = icons[key] || Search;
+            return (
+              <div key={key} className="flex items-center justify-between py-2.5 px-3 rounded-lg border border-border hover:bg-muted/30 transition-colors">
+                <div className="flex items-center gap-3">
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${searchTabs[key] ? 'bg-primary/10' : 'bg-muted'}`}>
+                    <Icon className={`w-4 h-4 ${searchTabs[key] ? 'text-primary' : 'text-muted-foreground'}`} />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-semibold">{SEARCH_TAB_LABELS[key]}</p>
+                      <Badge variant={searchTabs[key] ? "default" : "secondary"} className="text-[10px] h-5">{searchTabs[key] ? "Visible" : "Hidden"}</Badge>
+                    </div>
+                  </div>
+                </div>
+                <Switch checked={searchTabs[key]} onCheckedChange={() => toggleSearchTab(key)} />
+              </div>
+            );
+          })}
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader>
           <div className="flex items-center gap-3">

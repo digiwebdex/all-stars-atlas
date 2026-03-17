@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { useSearchTabConfig } from "@/hooks/useSearchTabConfig";
 import { toast } from "sonner";
 import { AIRPORTS, type Airport } from "@/lib/airports";
 import { Button } from "@/components/ui/button";
@@ -254,7 +255,12 @@ interface SearchWidgetProps {
 
 const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidgetProps = {}) => {
   const navigate = usePrefixedNavigate();
-  const [activeTab, setActiveTab] = useState("flight");
+  const searchTabConfig = useSearchTabConfig();
+  const visibleTabs = useMemo(() => tabs.filter(t => searchTabConfig[t.id as keyof typeof searchTabConfig] !== false), [searchTabConfig]);
+  const [activeTab, setActiveTab] = useState(() => {
+    const first = tabs.find(t => searchTabConfig[t.id as keyof typeof searchTabConfig] !== false);
+    return first?.id || "flight";
+  });
 
   // Derive initial values from props
   const initFrom = initialFlightValues?.from ? AIRPORTS.find(a => a.code === initialFlightValues.from) || AIRPORTS[0] : AIRPORTS[0];
@@ -1464,8 +1470,8 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
       {/* Tabs */}
       {!flightOnly && (
         <div className={`flex items-center justify-center gap-0 px-2 sm:px-4 overflow-x-auto scrollbar-none border-b border-border/40 -webkit-overflow-scrolling-touch ${compact ? 'pt-1.5 pb-0' : 'pt-2 sm:pt-3'}`}>
-          <div className="flex items-center gap-1 sm:gap-1.5">
-            {tabs.map((tab) => (
+          <div className="flex items-center justify-center gap-1 sm:gap-1.5 mx-auto">
+            {visibleTabs.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}

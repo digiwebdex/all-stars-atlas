@@ -687,6 +687,8 @@ router.get('/settings', async (req, res) => {
         try { settings.airline_markup_config = JSON.parse(r.setting_value); } catch {}
       } else if (r.setting_key === 'currency_rates') {
         try { settings.currency_rates = JSON.parse(r.setting_value); } catch {}
+      } else if (r.setting_key === 'search_tabs') {
+        try { settings.searchTabs = JSON.parse(r.setting_value); } catch {}
       } else {
         settings[r.setting_key] = r.setting_value;
       }
@@ -708,6 +710,7 @@ router.get('/settings', async (req, res) => {
       paymentMethods: settings.paymentMethods || null,
       bankAccounts: settings.bankAccounts || null,
       notificationPrefs: settings.notifications || null,
+      searchTabs: settings.searchTabs || null,
     });
   } catch (err) { console.error(err); res.status(500).json({ message: 'Something went wrong', status: 500 }); }
 });
@@ -788,6 +791,13 @@ router.put('/settings', async (req, res) => {
       const val = JSON.stringify(notifications);
       await db.query('INSERT INTO system_settings (setting_key, setting_value) VALUES (?, ?) ON DUPLICATE KEY UPDATE setting_value = ?', ['notifications', val, val]);
       return res.json({ message: 'Notification preferences saved' });
+    }
+
+    // Search tabs visibility
+    if (section === 'search_tabs' && req.body.searchTabs) {
+      const val = JSON.stringify(req.body.searchTabs);
+      await db.query('INSERT INTO system_settings (setting_key, setting_value) VALUES (?, ?) ON DUPLICATE KEY UPDATE setting_value = ?', ['search_tabs', val, val]);
+      return res.json({ message: 'Search tab settings saved' });
     }
 
     // Markup config
