@@ -1,13 +1,15 @@
 /**
- * Sabre Hotel API Integration — SOAP-based (OTA_HotelAvailLLSRQ)
- * Uses session-based SOAP on webservices.platform.sabre.com (same as flights)
- * NOTE: CSL REST APIs (havail.sabre.com) require separate activation/credentials.
- *       This implementation uses the LLS SOAP APIs that work with existing PCC credentials.
+ * Sabre Hotel API Integration
  *
- * SOAP Services:
- *   OTA_HotelAvailLLSRQ v2.3.0           — Search hotels by city code
- *   HotelPropertyDescriptionLLSRQ v2.3.0  — Hotel details + room rates
- *   CreatePassengerNameRecordRQ v2.4.0     — PNR creation (REST, on platform.sabre.com)
+ * ⚠️ IMPORTANT: PCC J4YL is NOT provisioned for Sabre Hotel APIs as of 2026-03-17.
+ *   - REST CSL (havail.sabre.com): Returns "Invalid CustomerAppId" — no CSL subscription
+ *   - SOAP LLS (OTA_HotelAvailLLSRQ): Returns "Action does not exist" — Hotel LLS not enabled
+ *
+ * Set SABRE_HOTELS_ENABLED=true in system_settings (api_sabre.hotels_enabled) once Sabre
+ * activates hotel entitlements for PCC J4YL. Until then, all functions return empty results
+ * gracefully to avoid log spam and wasted API calls.
+ *
+ * To re-enable: UPDATE system_settings SET setting_value = JSON_SET(setting_value, '$.hotels_enabled', 'true') WHERE setting_key = 'api_sabre';
  */
 
 const db = require('../config/db');
@@ -385,7 +387,30 @@ function resolveCity(city) {
 // ══════════════════════════════════════════════
 //  1. HOTEL SEARCH — SOAP OTA_HotelAvailLLSRQ (uses existing PCC credentials)
 // ══════════════════════════════════════════════
+async function isHotelApiEnabled() {
+  const config = await getSabreConfig();
+  if (!config) return false;
+  // Check if hotels_enabled flag is explicitly set in api_sabre settings
+  try {
+    const [rows] = await db.query("SELECT setting_value FROM system_settings WHERE setting_key = 'api_sabre'");
+    if (rows.length === 0) return false;
+    const cfg = JSON.parse(rows[0].setting_value);
+    return cfg.hotels_enabled === 'true' || cfg.hotels_enabled === true;
+  } catch { return false; }
+}
+
 async function searchHotels({ city, checkIn, checkOut, adults = 2, children = 0, rooms = 1, minRate, maxRate, minStars, maxStars }) {
+  // Gate: skip all Sabre hotel API calls unless PCC is provisioned
+  const enabled = await isHotelApiEnabled();
+  if (!enabled) {
+    // Log once per startup, not every search
+    if (!searchHotels._loggedDisabled) {
+      console.log('[Sabre Hotels] Sabre hotel APIs disabled (PCC J4YL not provisioned). Set api_sabre.hotels_enabled=true to re-enable.');
+      searchHotels._loggedDisabled = true;
+    }
+    return [];
+  }
+
   const resolved = resolveCity(city);
   if (!resolved) { console.warn(`[Sabre Hotels] Could not resolve city: ${city}`); return []; }
 
@@ -405,55 +430,19 @@ async function searchHotels({ city, checkIn, checkOut, adults = 2, children = 0,
         const adultsPerRoom = Math.max(1, Math.ceil((parseInt(adults || 1, 10) || 1) / roomCount));
         const childrenPerRoom = Math.max(0, Math.ceil((parseInt(children || 0, 10) || 0) / roomCount));
 
-        // Exact payload from Sabre official sample:
-        // https://github.com/SabreDevStudio/get-hotel-avail-v2-sample-nodejs/blob/master/app/hotelAvailabilityModel.js
         const requestBody = {
           GetHotelAvailRQ: {
             SearchCriteria: {
-              OffSet: 1,
-              SortBy: 'TotalRate',
-              SortOrder: 'ASC',
-              PageSize: 50,
-              TierLabels: false,
-              GeoSearch: {
-                GeoRef: {
-                  Radius: 50,
-                  UOM: 'MI',
-                  RefPoint: {
-                    Value: cityCode,
-                    ValueContext: 'CODE',
-                    RefPointType: '6',  // Sabre sample uses '6' (city)
-                  },
-                },
-              },
+              OffSet: 1, SortBy: 'TotalRate', SortOrder: 'ASC', PageSize: 50, TierLabels: false,
+              GeoSearch: { GeoRef: { Radius: 50, UOM: 'MI', RefPoint: { Value: cityCode, ValueContext: 'CODE', RefPointType: '6' } } },
               RateInfoRef: {
-                ConvertedRateInfoOnly: false,
-                CurrencyCode: 'USD',
-                BestOnly: '2',
-                PrepaidQualifier: 'IncludePrepaid',
-                StayDateRange: {
-                  StartDate: checkIn,
-                  EndDate: checkOut,
-                },
-                Rooms: {
-                  Room: Array.from({ length: roomCount }, (_, idx) => ({
-                    Index: idx + 1,
-                    Adults: adultsPerRoom,
-                    Children: childrenPerRoom,
-                  })),
-                },
-                InfoSource: '100,110,112,113',  // 100=Sabre GDS, 110=Expedia, 112=Bedsonline, 113=Booking.com
+                ConvertedRateInfoOnly: false, CurrencyCode: 'USD', BestOnly: '2', PrepaidQualifier: 'IncludePrepaid',
+                StayDateRange: { StartDate: checkIn, EndDate: checkOut },
+                Rooms: { Room: Array.from({ length: roomCount }, (_, idx) => ({ Index: idx + 1, Adults: adultsPerRoom, Children: childrenPerRoom })) },
+                InfoSource: '100,110,112,113',
               },
-              HotelPref: {
-                SabreRating: {
-                  Min: String(minStars ? parseInt(minStars, 10) : 1),
-                  Max: String(maxStars ? parseInt(maxStars, 10) : 5),
-                },
-              },
-              ImageRef: {
-                Type: 'MEDIUM',
-                LanguageCode: 'EN',
-              },
+              HotelPref: { SabreRating: { Min: String(minStars ? parseInt(minStars, 10) : 1), Max: String(maxStars ? parseInt(maxStars, 10) : 5) } },
+              ImageRef: { Type: 'MEDIUM', LanguageCode: 'EN' },
             },
           },
         };
@@ -652,6 +641,8 @@ function normalizeSearchResponse(response, searchCity, checkIn, checkOut) {
 //  2. HOTEL DETAILS — SOAP HotelPropertyDescriptionLLSRQ
 // ══════════════════════════════════════════════
 async function getHotelDetails(hotelCode, checkIn, checkOut, adults, rooms) {
+  const enabled = await isHotelApiEnabled();
+  if (!enabled) return null;
   try {
     const sabreSoap = getSabreSoap();
     if (!sabreSoap.getHotelPropertyDescription) {
