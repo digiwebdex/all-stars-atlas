@@ -18,7 +18,7 @@ import {
   AlertCircle, CheckCircle2, Timer, AlertTriangle, Package,
   ScanLine, Search, Share2, Save, Upload, X, Eye,
   Accessibility, Heart, Dog, Baby, MessageSquare, Star,
-  Armchair, Info,
+  Armchair, Info, Gift, Ticket, Copy, Check,
 } from "lucide-react";
 import { Link, useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import { usePrefixedNavigate } from "@/hooks/useRoutePrefix";
