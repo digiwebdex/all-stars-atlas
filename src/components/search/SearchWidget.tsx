@@ -644,7 +644,7 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
     if (!esimDate) { toast.error("Please select an activation date"); addDateError("esimDate"); return; }
     const params = new URLSearchParams({ country: esimCountry, plan: esimPlan });
     params.set('activation', format(esimDate, 'yyyy-MM-dd'));
-    navigate(`${routePrefix}/esim?${params.toString()}`);
+    navigate(`/esim?${params.toString()}`);
   };
 
   const handleRecharge = () => {
