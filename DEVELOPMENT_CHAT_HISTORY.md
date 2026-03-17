@@ -2,7 +2,7 @@
 
 > Complete timeline of all development conversations, decisions made, bugs discovered, and features implemented.
 > This serves as the institutional memory of the project — every significant interaction is recorded.
-> Last updated: 2026-03-17 (v4.1.5 — Cabin Class Accuracy & Branded Fare Naming)
+> Last updated: 2026-03-17 (v4.1.6 — Dashboard Hardening, E-Ticket PDF Fix, API Resilience)
 
 ---
 
