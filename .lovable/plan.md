@@ -1,13 +1,13 @@
 
 # Complete Seven Trip Platform — 100% Production Ready ✅
 
-## Status: FULLY COMPLETE (v4.1.5 — 2026-03-17)
+## Status: FULLY COMPLETE (v4.1.6 — 2026-03-17)
 
 All features are production-ready. Zero placeholders. Zero "Coming Soon". Every button works.
 All API keys stored securely in database `system_settings` table (not in env files).
 Enterprise-grade 4-step flight booking with professional e-ticket PDF generation.
 Mobile-responsive verified — no horizontal overflow on any screen size.
-**All 26 Sabre GDS sections fully implemented — 100% feature coverage. v4.1.5: Cabin class accuracy + branded fare naming + fare option ordering by searched cabin.**
+**All 26 Sabre GDS sections fully implemented — 100% feature coverage. v4.1.6: Dashboard hardening + E-ticket PDF ASCII fix + Flight Status/Fare Rules API resilience.**
 
 ---
 
