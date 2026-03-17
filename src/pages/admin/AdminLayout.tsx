@@ -176,8 +176,10 @@ const SidebarNav = ({
                             )}
                           >
                             <span
-                              className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-                              style={{ background: cActive ? "hsl(217 91% 65%)" : "rgba(255,255,255,0.25)" }}
+                              className={cn(
+                                "w-1.5 h-1.5 rounded-full flex-shrink-0",
+                                cActive ? "bg-primary" : "bg-muted-foreground/40"
+                              )}
                             />
                             {child.label}
                           </Link>
