@@ -691,6 +691,7 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
 
   // When compact (dashboard), use lg: breakpoint since sidebar eats ~240px from viewport
   const bp = compact ? 'lg' : 'md';
+  const sf = compact ? 'search-field search-field-lg' : 'search-field';
 
   const tabContent: Record<string, React.ReactNode> = {
     // ====== FLIGHT ======
@@ -813,15 +814,15 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
           <div className="space-y-3">
             {multiCitySegments.map((segment, index) => (
               <div key={index} className={`grid grid-cols-1 ${compact ? 'lg:grid-cols-12' : 'md:grid-cols-12'} gap-0 border border-border rounded-2xl bg-background shadow-sm relative`}>
-                <div className={`${compact ? 'lg:col-span-4' : 'md:col-span-4'} search-field border-b ${compact ? 'lg:border-b-0' : 'md:border-b-0'} flex-col items-start min-w-0`}>
+                <div className={`${compact ? 'lg:col-span-4' : 'md:col-span-4'} ${sf} border-b ${compact ? 'lg:border-b-0' : 'md:border-b-0'} flex-col items-start min-w-0`}>
                   <AirportInput label={`From (Flight ${index + 1})`} value={segment.from} onChange={(a) => updateSegment(index, 'from', a)} placeholder="Type city or airport..." airports={scopedMultiCityFromAirports} icon={<PlaneTakeoff className="w-5 h-5" />} />
                 </div>
 
-                <div className={`${compact ? 'lg:col-span-4' : 'md:col-span-4'} search-field border-b ${compact ? 'lg:border-b-0' : 'md:border-b-0'} flex-col items-start min-w-0`}>
+                <div className={`${compact ? 'lg:col-span-4' : 'md:col-span-4'} ${sf} border-b ${compact ? 'lg:border-b-0' : 'md:border-b-0'} flex-col items-start min-w-0`}>
                   <AirportInput label={`To (Flight ${index + 1})`} value={segment.to} onChange={(a) => updateSegment(index, 'to', a)} placeholder="Where to?" airports={getMultiCityToAirports(segment.from)} icon={<PlaneLanding className="w-5 h-5" />} />
                 </div>
 
-                <div className={`${compact ? 'lg:col-span-3' : 'md:col-span-3'} search-field border-b ${compact ? 'lg:border-b-0' : 'md:border-b-0'} flex-col items-start`}>
+                <div className={`${compact ? 'lg:col-span-3' : 'md:col-span-3'} ${sf} border-b ${compact ? 'lg:border-b-0' : 'md:border-b-0'} flex-col items-start`}>
                   <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1 flex items-center gap-1"><CalendarDays className="w-3 h-3" /> Departure</div>
                   <Popover open={openDatePopover === `mc-${index}`} onOpenChange={(o) => setOpenDatePopover(o ? `mc-${index}` : null)}>
                     <PopoverTrigger className="w-full text-left">
@@ -870,7 +871,7 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
           </div>
         ) : (
           <div className={`grid grid-cols-1 ${compact ? 'lg:grid-cols-12' : 'md:grid-cols-12'} gap-0 border border-border rounded-2xl bg-background shadow-sm overflow-hidden`}>
-            <div className={`${compact ? 'lg:col-span-3' : 'md:col-span-3'} search-field border-b ${compact ? 'lg:border-b-0' : 'md:border-b-0'} flex-col items-start min-w-0`}>
+            <div className={`${compact ? 'lg:col-span-3' : 'md:col-span-3'} ${sf} border-b ${compact ? 'lg:border-b-0' : 'md:border-b-0'} flex-col items-start min-w-0`}>
               <AirportInput label="From" value={fromAirport} onChange={setFromAirport} placeholder="Type city or airport..." airports={scopedFromAirports} icon={<PlaneTakeoff className="w-5 h-5" />} />
             </div>
 
@@ -885,11 +886,11 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
               </button>
             </div>
 
-            <div className={`${compact ? 'lg:col-span-3' : 'md:col-span-3'} search-field border-b ${compact ? 'lg:border-b-0' : 'md:border-b-0'} flex-col items-start min-w-0`}>
+            <div className={`${compact ? 'lg:col-span-3' : 'md:col-span-3'} ${sf} border-b ${compact ? 'lg:border-b-0' : 'md:border-b-0'} flex-col items-start min-w-0`}>
               <AirportInput label="To" value={toAirport} onChange={setToAirport} placeholder="Where to?" airports={scopedToAirports} icon={<PlaneLanding className="w-5 h-5" />} />
             </div>
 
-            <div className={`${tripType === "roundtrip" ? "col-span-1 sm:col-span-1" : ""} ${compact ? 'lg:col-span-2' : 'md:col-span-2'} search-field border-b ${compact ? 'lg:border-b-0' : 'md:border-b-0'} flex-col items-start ${dateErrorClass("depart")}`}>
+            <div className={`${tripType === "roundtrip" ? "col-span-1 sm:col-span-1" : ""} ${compact ? 'lg:col-span-2' : 'md:col-span-2'} ${sf} border-b ${compact ? 'lg:border-b-0' : 'md:border-b-0'} flex-col items-start ${dateErrorClass("depart")}`}>
               <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1 flex items-center gap-1"><CalendarDays className="w-3 h-3" /> Departure</div>
               <Popover open={openDatePopover === "depart"} onOpenChange={(o) => setOpenDatePopover(o ? "depart" : null)}>
                 <PopoverTrigger className="w-full text-left">
@@ -902,7 +903,7 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
             </div>
 
             {tripType === "roundtrip" && (
-              <div className={`${compact ? 'lg:col-span-2' : 'md:col-span-2'} search-field border-b ${compact ? 'lg:border-b-0' : 'md:border-b-0'} flex-col items-start ${dateErrorClass("return")}`}>
+              <div className={`${compact ? 'lg:col-span-2' : 'md:col-span-2'} ${sf} border-b ${compact ? 'lg:border-b-0' : 'md:border-b-0'} flex-col items-start ${dateErrorClass("return")}`}>
                 <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1 flex items-center gap-1"><CalendarDays className="w-3 h-3" /> Return</div>
                 <Popover open={openDatePopover === "return"} onOpenChange={(o) => setOpenDatePopover(o ? "return" : null)}>
                   <PopoverTrigger className="w-full text-left">
@@ -944,7 +945,7 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
     // ====== HOTEL ======
     hotel: (
       <div className={`grid grid-cols-1 ${bp}:grid-cols-12 gap-0 border border-border rounded-2xl bg-background shadow-sm`}>
-        <div className={`${bp}:col-span-4 search-field border-b ${bp}:border-b-0 flex-col items-start min-w-0`}>
+        <div className={`${bp}:col-span-4 ${sf} border-b ${bp}:border-b-0 flex-col items-start min-w-0`}>
           <CityInput
             label="Destination"
             value={hotelCity}
@@ -955,7 +956,7 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
           />
         </div>
         <div className={`grid grid-cols-2 ${bp}:contents`}>
-          <div className={`${bp}:col-span-2 search-field border-b ${bp}:border-b-0 border-r ${bp}:border-r flex-col items-start ${dateErrorClass("checkIn")}`}>
+          <div className={`${bp}:col-span-2 ${sf} border-b ${bp}:border-b-0 border-r ${bp}:border-r flex-col items-start ${dateErrorClass("checkIn")}`}>
             <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Check-in</div>
             <Popover open={openDatePopover === "checkIn"} onOpenChange={(o) => setOpenDatePopover(o ? "checkIn" : null)}>
               <PopoverTrigger className="w-full text-left">
@@ -966,7 +967,7 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
               </PopoverContent>
             </Popover>
           </div>
-          <div className={`${bp}:col-span-2 search-field border-b ${bp}:border-b-0 flex-col items-start ${dateErrorClass("checkOut")}`}>
+          <div className={`${bp}:col-span-2 ${sf} border-b ${bp}:border-b-0 flex-col items-start ${dateErrorClass("checkOut")}`}>
             <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Check-out</div>
             <Popover open={openDatePopover === "checkOut"} onOpenChange={(o) => setOpenDatePopover(o ? "checkOut" : null)}>
               <PopoverTrigger className="w-full text-left">
@@ -978,7 +979,7 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
             </Popover>
           </div>
         </div>
-        <div className={`${bp}:col-span-2 search-field border-b ${bp}:border-b-0 flex-col items-start`}>
+        <div className={`${bp}:col-span-2 ${sf} border-b ${bp}:border-b-0 flex-col items-start`}>
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Guests & Rooms</div>
           <Popover>
             <PopoverTrigger className="w-full text-left">
@@ -1037,7 +1038,7 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
     // ====== VISA ======
     visa: (
       <div className={`grid grid-cols-1 sm:grid-cols-2 ${bp}:grid-cols-12 gap-0 border border-border rounded-2xl bg-background shadow-sm`}>
-        <div className={`sm:col-span-2 ${bp}:col-span-3 search-field border-b ${bp}:border-b-0 flex-col items-start`}>
+        <div className={`sm:col-span-2 ${bp}:col-span-3 ${sf} border-b ${bp}:border-b-0 flex-col items-start`}>
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Country</div>
           <div className="flex items-center gap-2 w-full">
             <span className="text-xl font-black text-primary">{VISA_COUNTRIES.find(c => c.code === visaCountry)?.flag || "🌍"}</span>
@@ -1063,7 +1064,7 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
             </div>
           </div>
         </div>
-        <div className={`search-field border-b ${bp}:border-b-0 flex-col items-start ${bp}:col-span-2 ${dateErrorClass("visaDate")}`}>
+        <div className={`${sf} border-b ${bp}:border-b-0 flex-col items-start ${bp}:col-span-2 ${dateErrorClass("visaDate")}`}>
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Travel Date</div>
           <Popover open={openDatePopover === "visaDate"} onOpenChange={(o) => setOpenDatePopover(o ? "visaDate" : null)}>
             <PopoverTrigger className="w-full text-left">
@@ -1074,7 +1075,7 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
             </PopoverContent>
           </Popover>
         </div>
-        <div className={`search-field border-b ${bp}:border-b-0 flex-col items-start ${bp}:col-span-2 ${dateErrorClass("visaReturnDate")}`}>
+        <div className={`${sf} border-b ${bp}:border-b-0 flex-col items-start ${bp}:col-span-2 ${dateErrorClass("visaReturnDate")}`}>
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Return Date</div>
           <Popover open={openDatePopover === "visaReturnDate"} onOpenChange={(o) => setOpenDatePopover(o ? "visaReturnDate" : null)}>
             <PopoverTrigger className="w-full text-left">
@@ -1085,7 +1086,7 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
             </PopoverContent>
           </Popover>
         </div>
-        <div className={`sm:col-span-2 ${bp}:col-span-2 search-field border-b ${bp}:border-b-0 flex-col items-start`}>
+        <div className={`sm:col-span-2 ${bp}:col-span-2 ${sf} border-b ${bp}:border-b-0 flex-col items-start`}>
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Travellers</div>
           <Popover>
             <PopoverTrigger className="w-full text-left">
@@ -1123,7 +1124,7 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
     holiday: (
       <div className="space-y-3">
         <div className={`grid grid-cols-1 ${bp}:grid-cols-12 gap-0 border border-border rounded-2xl bg-background shadow-sm`}>
-          <div className={`${bp}:col-span-5 search-field border-b ${bp}:border-b-0 flex-col items-start`}>
+          <div className={`${bp}:col-span-5 ${sf} border-b ${bp}:border-b-0 flex-col items-start`}>
             <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Destination</div>
             <div className="flex items-center gap-2 w-full">
               <span className="text-xl font-black text-primary">{HOLIDAY_DESTINATIONS.find(d => d.name === holidayDest)?.flag || "🌍"}</span>
@@ -1140,7 +1141,7 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
               </div>
             </div>
           </div>
-          <div className={`${bp}:col-span-4 search-field border-b ${bp}:border-b-0 flex-col items-start ${dateErrorClass("travelDate")}`}>
+          <div className={`${bp}:col-span-4 ${sf} border-b ${bp}:border-b-0 flex-col items-start ${dateErrorClass("travelDate")}`}>
             <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Travel Date</div>
             <Popover open={openDatePopover === "travelDate"} onOpenChange={(o) => setOpenDatePopover(o ? "travelDate" : null)}>
               <PopoverTrigger className="w-full text-left">
@@ -1163,7 +1164,7 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
     // ====== MEDICAL TOURISM ======
     medical: (
       <div className={`grid grid-cols-1 ${bp}:grid-cols-12 gap-0 border border-border rounded-2xl bg-background shadow-sm`}>
-        <div className={`${bp}:col-span-3 search-field border-b ${bp}:border-b-0 flex-col items-start`}>
+        <div className={`${bp}:col-span-3 ${sf} border-b ${bp}:border-b-0 flex-col items-start`}>
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Destination</div>
           <div className="flex items-center gap-2 w-full">
             <Globe className="w-5 h-5 text-primary shrink-0" />
@@ -1182,14 +1183,14 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
             </div>
           </div>
         </div>
-        <div className={`${bp}:col-span-3 search-field border-b ${bp}:border-b-0 flex-col items-start`}>
+        <div className={`${bp}:col-span-3 ${sf} border-b ${bp}:border-b-0 flex-col items-start`}>
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Treatment</div>
           <Select value={treatmentType} onValueChange={setTreatmentType}>
             <SelectTrigger className="border-0 p-0 h-auto text-sm font-bold shadow-none focus:ring-0"><SelectValue placeholder="Select treatment" /></SelectTrigger>
             <SelectContent>{TREATMENT_TYPES.map(t => (<SelectItem key={t} value={t.toLowerCase().replace(/ /g, '-')}>{t}</SelectItem>))}</SelectContent>
           </Select>
         </div>
-        <div className={`${bp}:col-span-2 search-field border-b ${bp}:border-b-0 flex-col items-start ${dateErrorClass("medicalDate")}`}>
+        <div className={`${bp}:col-span-2 ${sf} border-b ${bp}:border-b-0 flex-col items-start ${dateErrorClass("medicalDate")}`}>
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Travel Date</div>
           <Popover open={openDatePopover === "medicalDate"} onOpenChange={(o) => setOpenDatePopover(o ? "medicalDate" : null)}>
             <PopoverTrigger className="w-full text-left"><DateDisplay date={medicalDate} fallbackDay="—" fallbackMonth="Select" fallbackWeekday="Date" /></PopoverTrigger>
@@ -1198,7 +1199,7 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
             </PopoverContent>
           </Popover>
         </div>
-        <div className={`${bp}:col-span-2 search-field border-b ${bp}:border-b-0 flex-col items-start`}>
+        <div className={`${bp}:col-span-2 ${sf} border-b ${bp}:border-b-0 flex-col items-start`}>
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Patients</div>
           <Popover>
             <PopoverTrigger className="w-full text-left">
@@ -1230,21 +1231,21 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
     // ====== CAR RENTAL ======
     cars: (
       <div className={`grid grid-cols-1 ${bp}:grid-cols-12 gap-0 border border-border rounded-2xl bg-background shadow-sm`}>
-        <div className={`${bp}:col-span-3 search-field border-b ${bp}:border-b-0 flex-col items-start min-w-0`}>
+        <div className={`${bp}:col-span-3 ${sf} border-b ${bp}:border-b-0 flex-col items-start min-w-0`}>
           <CityInput label="Pickup Location" value={pickupCity} onChange={setPickupCity} cities={HOTEL_CITIES.filter(c => ["Dhaka", "Chittagong", "Cox's Bazar", "Sylhet", "Rajshahi", "Gazipur", "Rangpur", "Sreemangal"].includes(c))} icon={<MapPin className="w-5 h-5 text-primary shrink-0" />} placeholder="Pickup city..." />
         </div>
-        <div className={`${bp}:col-span-3 search-field border-b ${bp}:border-b-0 flex-col items-start min-w-0`}>
+        <div className={`${bp}:col-span-3 ${sf} border-b ${bp}:border-b-0 flex-col items-start min-w-0`}>
           <CityInput label="Drop-off Location" value={dropoffCity} onChange={setDropoffCity} cities={HOTEL_CITIES.filter(c => ["Dhaka", "Chittagong", "Cox's Bazar", "Sylhet", "Rajshahi", "Gazipur", "Rangpur", "Sreemangal"].includes(c))} icon={<MapPin className="w-5 h-5 text-secondary shrink-0" />} placeholder="Drop-off city..." />
         </div>
         <div className={`grid grid-cols-2 ${bp}:contents`}>
-          <div className={`${bp}:col-span-2 search-field border-b ${bp}:border-b-0 border-r flex-col items-start ${dateErrorClass("pickupDate")}`}>
+          <div className={`${bp}:col-span-2 ${sf} border-b ${bp}:border-b-0 border-r flex-col items-start ${dateErrorClass("pickupDate")}`}>
             <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Pickup Date</div>
             <Popover open={openDatePopover === "pickupDate"} onOpenChange={(o) => setOpenDatePopover(o ? "pickupDate" : null)}>
               <PopoverTrigger className="w-full text-left"><DateDisplay date={pickupDate} fallbackDay="—" fallbackMonth="Select" fallbackWeekday="Date" /></PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={pickupDate} onSelect={(d) => { setPickupDate(d); clearDateError("pickupDate"); setOpenDatePopover(null); }} initialFocus className="pointer-events-auto" disabled={(date) => date < new Date()} /></PopoverContent>
             </Popover>
           </div>
-          <div className={`${bp}:col-span-2 search-field border-b ${bp}:border-b-0 flex-col items-start ${dateErrorClass("dropoffDate")}`}>
+          <div className={`${bp}:col-span-2 ${sf} border-b ${bp}:border-b-0 flex-col items-start ${dateErrorClass("dropoffDate")}`}>
             <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Drop-off Date</div>
             <Popover open={openDatePopover === "dropoffDate"} onOpenChange={(o) => setOpenDatePopover(o ? "dropoffDate" : null)}>
               <PopoverTrigger className="w-full text-left"><DateDisplay date={dropoffDate} fallbackDay="—" fallbackMonth="Select" fallbackWeekday="Date" /></PopoverTrigger>
@@ -1263,7 +1264,7 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
     // ====== eSIM ======
     esim: (
       <div className={`grid grid-cols-1 ${bp}:grid-cols-12 gap-0 border border-border rounded-2xl bg-background shadow-sm`}>
-        <div className={`${bp}:col-span-4 search-field border-b ${bp}:border-b-0 flex-col items-start`}>
+        <div className={`${bp}:col-span-4 ${sf} border-b ${bp}:border-b-0 flex-col items-start`}>
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Destination Country</div>
           <div className="flex items-center gap-2 w-full">
             <Wifi className="w-5 h-5 text-primary shrink-0" />
@@ -1278,7 +1279,7 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
             </div>
           </div>
         </div>
-        <div className={`${bp}:col-span-3 search-field border-b ${bp}:border-b-0 flex-col items-start`}>
+        <div className={`${bp}:col-span-3 ${sf} border-b ${bp}:border-b-0 flex-col items-start`}>
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Data Plan</div>
           <Select value={esimPlan} onValueChange={setEsimPlan}>
             <SelectTrigger className="border-0 p-0 h-auto text-sm font-bold shadow-none focus:ring-0"><SelectValue /></SelectTrigger>
@@ -1287,7 +1288,7 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
             </SelectContent>
           </Select>
         </div>
-        <div className={`${bp}:col-span-3 search-field border-b ${bp}:border-b-0 flex-col items-start ${dateErrorClass("esimDate")}`}>
+        <div className={`${bp}:col-span-3 ${sf} border-b ${bp}:border-b-0 flex-col items-start ${dateErrorClass("esimDate")}`}>
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Activation Date</div>
           <Popover open={openDatePopover === "esimDate"} onOpenChange={(o) => setOpenDatePopover(o ? "esimDate" : null)}>
             <PopoverTrigger className="w-full text-left"><DateDisplay date={esimDate} fallbackDay="—" fallbackMonth="Select" fallbackWeekday="Date" /></PopoverTrigger>
@@ -1319,21 +1320,21 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
           ))}
         </div>
         <div className={`grid grid-cols-1 ${bp}:grid-cols-12 gap-0 border border-border rounded-2xl bg-background shadow-sm`}>
-          <div className={`${bp}:col-span-3 search-field border-b ${bp}:border-b-0 flex-col items-start`}>
+          <div className={`${bp}:col-span-3 ${sf} border-b ${bp}:border-b-0 flex-col items-start`}>
             <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Operator</div>
             <Select value={rechargeOperator} onValueChange={setRechargeOperator}>
               <SelectTrigger className="border-0 p-0 h-auto text-sm font-bold shadow-none focus:ring-0"><SelectValue placeholder="Select operator" /></SelectTrigger>
               <SelectContent>{RECHARGE_OPERATORS.map(op => (<SelectItem key={op.id} value={op.id}>{op.logo} {op.name}</SelectItem>))}</SelectContent>
             </Select>
           </div>
-          <div className={`${bp}:col-span-3 search-field border-b ${bp}:border-b-0 flex-col items-start`}>
+          <div className={`${bp}:col-span-3 ${sf} border-b ${bp}:border-b-0 flex-col items-start`}>
             <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Phone Number</div>
             <div className="flex items-center gap-2 w-full">
               <PhoneCall className="w-4 h-4 text-primary shrink-0" />
               <Input value={rechargeNumber} onChange={e => setRechargeNumber(e.target.value)} placeholder="01XXX-XXXXXX" className="border-0 p-0 h-auto text-sm font-bold shadow-none focus-visible:ring-0" />
             </div>
           </div>
-          <div className={`${bp}:col-span-3 search-field border-b ${bp}:border-b-0 flex-col items-start`}>
+          <div className={`${bp}:col-span-3 ${sf} border-b ${bp}:border-b-0 flex-col items-start`}>
             <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Amount (৳)</div>
             <div className="flex items-center gap-2 w-full">
               <Zap className="w-4 h-4 text-secondary shrink-0" />
@@ -1362,7 +1363,7 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
     // ====== PAY BILL ======
     paybill: (
       <div className={`grid grid-cols-1 ${bp}:grid-cols-12 gap-0 border border-border rounded-2xl bg-background shadow-sm`}>
-        <div className={`${bp}:col-span-3 search-field border-b ${bp}:border-b-0 flex-col items-start`}>
+        <div className={`${bp}:col-span-3 ${sf} border-b ${bp}:border-b-0 flex-col items-start`}>
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Category</div>
           <div className="flex items-center gap-2 w-full">
             <Receipt className="w-5 h-5 text-primary shrink-0" />
@@ -1372,15 +1373,15 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
             </Select>
           </div>
         </div>
-        <div className={`${bp}:col-span-3 search-field border-b ${bp}:border-b-0 flex-col items-start`}>
+        <div className={`${bp}:col-span-3 ${sf} border-b ${bp}:border-b-0 flex-col items-start`}>
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Biller Name</div>
           <Input value={billerName} onChange={e => setBillerName(e.target.value)} placeholder="e.g. DPDC, Titas Gas" className="border-0 p-0 h-auto text-sm font-bold shadow-none focus-visible:ring-0" />
         </div>
-        <div className={`${bp}:col-span-2 search-field border-b ${bp}:border-b-0 flex-col items-start`}>
+        <div className={`${bp}:col-span-2 ${sf} border-b ${bp}:border-b-0 flex-col items-start`}>
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Account No.</div>
           <Input value={accountNumber} onChange={e => setAccountNumber(e.target.value)} placeholder="Account/Subscriber #" className="border-0 p-0 h-auto text-sm font-bold shadow-none focus-visible:ring-0" />
         </div>
-        <div className={`${bp}:col-span-2 search-field border-b ${bp}:border-b-0 flex-col items-start`}>
+        <div className={`${bp}:col-span-2 ${sf} border-b ${bp}:border-b-0 flex-col items-start`}>
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Amount (৳)</div>
           <div className="flex items-center gap-2 w-full">
             <CreditCard className="w-4 h-4 text-secondary shrink-0" />
