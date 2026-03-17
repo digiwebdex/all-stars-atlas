@@ -124,6 +124,8 @@ const DashboardBookingDetail = () => {
   const [docVerifyOpen, setDocVerifyOpen] = useState(false);
   const [voidOpen, setVoidOpen] = useState(false);
   const [voidLoading, setVoidLoading] = useState(false);
+  const [timelineOpen, setTimelineOpen] = useState(false);
+  const [ssrOpen, setSsrOpen] = useState(false);
 
   const { data, isLoading, error, refetch } = useDashboardBookings({ search: id, limit: 1 });
   const resolved = (data as any) || {};
