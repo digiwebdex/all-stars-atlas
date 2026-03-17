@@ -21,8 +21,10 @@ export const usePrefixedNavigate = () => {
 
   return useCallback(
     (to: string, options?: NavigateOptions) => {
-      // Only prefix absolute paths that aren't already prefixed
+      // Only prefix absolute paths that aren't already under /dashboard
       if (prefix && to.startsWith('/') && !to.startsWith('/dashboard')) {
+        // Special case: navigate('/') should go to /dashboard
+        if (to === '/') return navigate('/dashboard', options);
         return navigate(`${prefix}${to}`, options);
       }
       return navigate(to, options);
