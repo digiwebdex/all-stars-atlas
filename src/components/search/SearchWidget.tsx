@@ -726,7 +726,7 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
             ))}
           </RadioGroup>
 
-          <div className="flex items-center gap-2 w-full sm:w-auto">
+          <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto scrollbar-none">
             <Popover>
               <PopoverTrigger asChild>
                 <Button variant="outline" size="sm" className="text-xs gap-1.5 h-8 rounded-lg font-semibold flex-1 sm:flex-none">
@@ -1460,7 +1460,7 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
   };
 
   return (
-    <div className={`${compact ? 'bg-card border border-border rounded-xl shadow-sm' : 'glass-card-hero rounded-2xl'}`}>
+    <div className={`${compact ? 'bg-card border border-border rounded-xl shadow-sm' : 'glass-card-hero rounded-2xl'} overflow-hidden`}>
       {/* Tabs */}
       {!flightOnly && (
         <div className={`flex items-center justify-center gap-0 px-2 sm:px-4 overflow-x-auto scrollbar-none border-b border-border/40 -webkit-overflow-scrolling-touch ${compact ? 'pt-1.5 pb-0' : 'pt-2 sm:pt-3'}`}>

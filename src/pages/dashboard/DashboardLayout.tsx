@@ -336,7 +336,7 @@ const DashboardLayout = () => {
           </AnimatePresence>
 
           {/* Content */}
-          <main className={cn("flex-1 p-4 md:p-6 lg:p-8 transition-all duration-300 ease-in-out", mainMargin)}>
+          <main className={cn("flex-1 min-w-0 p-4 md:p-6 lg:p-8 transition-all duration-300 ease-in-out overflow-x-hidden", mainMargin)}>
             <DashboardBreadcrumb />
             <Suspense fallback={
               <div className="flex items-center justify-center py-20">
