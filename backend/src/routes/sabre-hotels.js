@@ -93,6 +93,19 @@ function clearSabreHotelConfigCache() { _configCache = null; _configCacheTime = 
 // - Existing, proven flight auth flow in sabre-flights.js (/v3/auth/token + password grant)
 let hotelTokenCache = { token: null, expiresAt: 0 };
 let platformTokenCache = { token: null, expiresAt: 0 };
+let hotelRestCircuit = { disabledUntil: 0, reason: '' };
+
+function disableHotelRest(reason, minutes = 30) {
+  hotelRestCircuit = {
+    disabledUntil: Date.now() + minutes * 60 * 1000,
+    reason: reason || 'unknown',
+  };
+  console.warn(`[Sabre Hotels] REST CSL temporarily disabled (${minutes}m): ${hotelRestCircuit.reason}`);
+}
+
+function isHotelRestDisabled() {
+  return Date.now() < (hotelRestCircuit.disabledUntil || 0);
+}
 
 function writeHotelAuthDebug(payload) {
   try {
