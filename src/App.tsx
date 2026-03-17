@@ -198,6 +198,12 @@ const App = () => (
                 <Route path="invoices" element={<DashboardInvoices />} />
                 <Route path="rewards" element={<DashboardRewards />} />
                 <Route path="bookings/:id/extras" element={<PostBookingExtras />} />
+                <Route path="account-ledger" element={<DashboardAccountLedger />} />
+                <Route path="report" element={<DashboardReport />} />
+                <Route path="support" element={<DashboardSupport />} />
+                <Route path="sub-users" element={<DashboardSubUsers />} />
+                <Route path="insurance" element={<DashboardInsurance />} />
+                <Route path="purchased-esim" element={<DashboardPurchasedEsim />} />
                 {/* Service pages inside dashboard so user stays in dashboard shell */}
                 <Route path="flights" element={<FlightResults />} />
                 <Route path="flights/book" element={<FlightBooking />} />
