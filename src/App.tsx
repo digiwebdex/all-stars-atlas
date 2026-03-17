@@ -84,6 +84,11 @@ const DashboardSupport = lazy(() => import("@/pages/dashboard/DashboardSupport")
 const DashboardSubUsers = lazy(() => import("@/pages/dashboard/DashboardSubUsers"));
 const DashboardInsurance = lazy(() => import("@/pages/dashboard/DashboardInsurance"));
 const DashboardPurchasedEsim = lazy(() => import("@/pages/dashboard/DashboardPurchasedEsim"));
+const DashboardWallet = lazy(() => import("@/pages/dashboard/DashboardWallet"));
+const DashboardSSRHistory = lazy(() => import("@/pages/dashboard/DashboardSSRHistory"));
+const DashboardBankList = lazy(() => import("@/pages/dashboard/DashboardBankList"));
+const DashboardMFSList = lazy(() => import("@/pages/dashboard/DashboardMFSList"));
+const DashboardSendPaymentRequest = lazy(() => import("@/pages/dashboard/DashboardSendPaymentRequest"));
 
 // Admin
 const AdminLogin = lazy(() => import("@/pages/admin/AdminLogin"));
