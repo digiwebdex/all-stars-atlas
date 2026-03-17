@@ -108,7 +108,7 @@ const FareRulesModal = ({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileText className="w-5 h-5 text-accent" />
-            Fare Rules — {airlineCode}{flightNumber}
+            Fare Rules — {airlineCode}{cleanFlightNum}
           </DialogTitle>
           <p className="text-xs text-muted-foreground">{origin} → {destination} · {departureDate}{fareBasis ? ` · ${fareBasis}` : ""}</p>
         </DialogHeader>
