@@ -1,11 +1,12 @@
 # Seven Trip — Developer Documentation
 
-> This document explains **how the codebase works**, how to add features, and how every part connects. Written for developers who may be new to React or this project. Last updated: v4.1.4 (2026-03-15 — Quick-Sort Filters Fix).
+> This document explains **how the codebase works**, how to add features, and how every part connects. Written for developers who may be new to React or this project. Last updated: v4.1.6 (2026-03-17 — Dashboard Hardening, E-Ticket PDF Fix, API Resilience).
 
 ---
 
-## 🔧 Latest Notes (v4.1.5)
+## 🔧 Latest Notes (v4.1.6)
 
+- **v4.1.6** (2026-03-17): Dashboard hardening — E-ticket PDF ASCII-safe rendering (replaced Unicode emojis with text indicators); Flight Status Badge graceful error handling; Fare Rules Modal airline code dedup fix; `sabreRequest()` resilience for empty responses; all 15+ dashboard modules verified functional.
 - **v4.1.5** (2026-03-17): Cabin class accuracy — card labels derived from booking class letter (J→Business, V→Economy); branded fare naming (Economy Convenience, Business Saver, etc.); fare options sorted by searched cabin; cabin class guide banner on results page.
 - **v4.1.4**: Quick-Sort Filters — Cheapest/Fastest/Best top chips now re-sort flight results correctly using `sortRoundTripPairs()` for round-trips and `sortFlights()` for one-way, with deterministic tie-breakers and payable-fare-based pricing.
 - **v4.1.3**: Restored missing `getResponseStats` and `normalizeParams` helpers in `backend/src/routes/sabre-flights.js`; fixed fallback JSON decoding.

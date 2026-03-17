@@ -2,6 +2,33 @@
 
 All notable changes to this project are documented in this file.
 
+## [4.1.6] — 2026-03-17 — Dashboard Hardening & E-Ticket PDF Fix
+
+### Fixed — E-Ticket PDF Garbled Characters
+- **ASCII-safe PDF rendering**: Replaced all non-Latin-1 Unicode characters (emojis, Bengali Taka `৳`, arrows) with ASCII alternatives
+- Timeline icons: `🏢🧳🔒🚶` → `[1] [2] [3] [4]` numbered indicators
+- Currency: `৳` → `BDT` throughout invoices and receipts
+- Directional icons: `◄►→` → `<< >> -`
+
+### Fixed — Flight Status Badge
+- **Graceful error handling** for empty or malformed Sabre FLIFO responses
+- Handles JSON parse failures and empty data states without crashing
+- User-friendly "not available for this route" messages when data is unavailable
+
+### Fixed — Fare Rules Modal
+- **Airline code duplication fix**: Title no longer shows `WYWY318` — now correctly displays `WY318`
+- `cleanFlightNum()` utility strips airline prefix before display and API calls
+- Handles empty response objects gracefully with clean fallback messages
+
+### Fixed — Sabre API Resilience
+- `sabreRequest()` in `sabre-flights.js` now handles empty or non-JSON responses from Sabre API
+- Prevents "Unexpected end of JSON input" crashes on malformed GDS responses
+
+### Verified — All 15+ Dashboard Modules
+- Bookings, Wallet, E-Tickets, Transactions, Travellers, Payments, SSR History, Search History, Settings, Wishlist, Rewards, Invoices, Reports, Support Tickets, Pay Later — all API-connected and functional
+
+---
+
 ## [4.1.5] — 2026-03-17 — Cabin Class Accuracy & Branded Fare Naming
 
 ### Fixed — Cabin Class Display

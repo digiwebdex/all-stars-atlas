@@ -239,8 +239,8 @@
 | File | Description | Lines |
 |------|-------------|-------|
 | `README.md` | Project overview, features, setup | ~320 |
-| `CHANGELOG.md` | Version history (v1.0–v4.0.0, 45+ releases) | ~920 |
-| `ANALYTICS.md` | This file — development analytics & history | ~250 |
+| `CHANGELOG.md` | Version history (v1.0–v4.1.6, 55+ releases) | ~1030 |
+| `ANALYTICS.md` | This file — development analytics & history | ~260 |
 | `BUG_TRACKER.md` | 44+ bugs with root cause analysis | ~160 |
 | `GDS_INTEGRATION_HISTORY.md` | GDS provider integration timeline | ~220 |
 | `DEPLOYMENT_HISTORY.md` | All deployment records with commands | — |

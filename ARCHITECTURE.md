@@ -208,7 +208,7 @@ src/
     ├── paybill/                # PayBillPage
     ├── booking/                # BookingConfirmation
     ├── static/                 # About, Contact, Blog, FAQ, etc.
-    ├── dashboard/              # 12 user dashboard pages
+    ├── dashboard/              # 15+ user dashboard pages
     └── admin/                  # 17 admin modules + CMS suite
 ```
 
