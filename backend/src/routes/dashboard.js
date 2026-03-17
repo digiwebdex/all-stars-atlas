@@ -268,7 +268,7 @@ router.get('/tickets', async (req, res) => {
   try {
     const { status, page = 1, limit = 20, search } = req.query;
     let sql = `SELECT t.*, b.booking_ref, b.booking_type, b.status AS booking_status, 
-               b.total_amount, b.details AS booking_details, b.source, b.created_at AS booking_date
+               b.total_amount, b.details AS booking_details, b.passenger_info AS booking_passengers, b.created_at AS booking_date
                FROM tickets t 
                LEFT JOIN bookings b ON t.booking_id = b.id 
                WHERE t.user_id = ?`;
