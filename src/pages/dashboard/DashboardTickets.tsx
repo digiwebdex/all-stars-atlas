@@ -241,7 +241,7 @@ const DashboardTickets = () => {
         </Select>
       </div>
 
-      <DataLoader isLoading={isLoading} error={error} skeleton="table" retry={refetch}>
+      <DataLoader isLoading={isLoading && bookingsLoading} error={error} skeleton="table" retry={refetch}>
         <div className="space-y-4">
           {filtered.length === 0 ? (
             <Card>
