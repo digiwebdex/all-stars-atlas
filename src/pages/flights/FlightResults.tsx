@@ -2532,7 +2532,7 @@ const FlightCard = ({
                 </Badge>
               )}
             </div>
-            <p className="text-lg sm:text-xl lg:text-2xl font-black leading-none whitespace-nowrap">BDT {price.toLocaleString()}</p>
+            <p className="text-lg sm:text-xl lg:text-2xl font-black leading-none whitespace-nowrap truncate">BDT {price.toLocaleString()}</p>
             {discount > 0 && (
               <p className="text-[11px] font-bold text-amber-500 line-through">BDT {grossPrice.toLocaleString()}</p>
             )}
