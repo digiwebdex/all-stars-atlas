@@ -1920,6 +1920,7 @@ const FlightBooking = () => {
                   </CardContent>
                 </Card>
 
+                <div className="flex items-start gap-2">
                   <Checkbox id="agree" className="mt-0.5" checked={agreedTerms} onCheckedChange={(v) => setAgreedTerms(!!v)} />
                   <label htmlFor="agree" className="text-xs text-muted-foreground">
                     I have read and accept all <Link to="/terms" className="text-accent hover:underline">Terms & Conditions</Link> and <Link to="/refund-policy" className="text-accent hover:underline">Cancellation Policies</Link>
