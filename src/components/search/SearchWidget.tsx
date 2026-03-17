@@ -253,8 +253,7 @@ interface SearchWidgetProps {
 }
 
 const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidgetProps = {}) => {
-  const navigate = useNavigate();
-  const routePrefix = useRoutePrefix();
+  const navigate = usePrefixedNavigate();
   const [activeTab, setActiveTab] = useState("flight");
 
   // Derive initial values from props
