@@ -710,6 +710,7 @@ router.get('/settings', async (req, res) => {
       paymentMethods: settings.paymentMethods || null,
       bankAccounts: settings.bankAccounts || null,
       notificationPrefs: settings.notifications || null,
+      searchTabs: settings.searchTabs || null,
     });
   } catch (err) { console.error(err); res.status(500).json({ message: 'Something went wrong', status: 500 }); }
 });
