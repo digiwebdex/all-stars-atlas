@@ -883,8 +883,9 @@ function buildPassengers(ticket: TicketData): PassengerInfo[] {
 async function buildPremiumTicketDoc(ticket: TicketData): Promise<jsPDF> {
   const doc = new jsPDF();
   const w = doc.internal.pageSize.getWidth();
-  const lm = 12;
-  const rm = w - 12;
+  const pageH = doc.internal.pageSize.getHeight();
+  const lm = 15;
+  const rm = w - 15;
   const contentW = rm - lm;
   const logo = await loadLogoBase64();
 
@@ -895,9 +896,14 @@ async function buildPremiumTicketDoc(ticket: TicketData): Promise<jsPDF> {
   const ticketNo = ticket.ticketNo || passengers[0]?.ticketNumber || "";
   const currency = ticket.currency || "BDT";
   const gdsSource = ticket.source || "";
+  const allSegments = [
+    ...outbound.map((s, i) => ({ ...s, direction: returnSegments.length > 0 ? "OUTBOUND" : "DEPARTURE", segIndex: i })),
+    ...returnSegments.map((s, i) => ({ ...s, direction: "RETURN", segIndex: i })),
+  ];
+  const totalLegs = allSegments.length;
 
   // QR Code
-  const qrText = `SevenTrip E-Ticket | PNR: ${bookingRef} | ${passengers.map(p => p.name || `${p.firstName} ${p.lastName}`).join(", ")} | ${outbound[0]?.origin || ""}-${outbound[outbound.length - 1]?.destination || ""}`;
+  const qrText = `SevenTrip E-Ticket | PNR: ${bookingRef} | ${passengers.map(p => p.name || `${p.firstName} ${p.lastName}`).join(", ")} | ${allSegments[0]?.origin || ""}-${allSegments[allSegments.length - 1]?.destination || ""}`;
   const qr = await generateQRDataUrl(qrText);
 
   // Airline logo
@@ -907,464 +913,538 @@ async function buildPremiumTicketDoc(ticket: TicketData): Promise<jsPDF> {
     airlineLogo = await loadImageBase64(`https://images.kiwi.com/airlines/64/${firstCode}.png`);
   }
 
-  // ═══════════════ HEADER ═══════════════
-  // Deep navy gradient header
-  drawFilledBox(doc, 0, 0, w, 28, 15, 25, 55);
-  // Subtle accent line
-  drawFilledBox(doc, 0, 28, w, 1.5, 0, 150, 136); // Teal accent
+  // Track page number
+  let currentPage = 1;
+  let totalPages = 1; // We'll update after building
 
-  if (logo) {
-    try {
-      const imgProps = doc.getImageProperties(logo);
-      const maxW = 42, maxH = 14;
-      const ratio = Math.min(maxW / imgProps.width, maxH / imgProps.height);
-      const logoW = imgProps.width * ratio;
-      const logoH = imgProps.height * ratio;
-      doc.addImage(logo, "PNG", lm + 2, (28 - logoH) / 2, logoW, logoH);
-    } catch { /* */ }
-  } else {
-    doc.setTextColor(255);
-    doc.setFontSize(16);
-    doc.setFont("helvetica", "bold");
-    doc.text(COMPANY.name, lm + 2, 16);
+  function checkPageBreak(y: number, needed: number): number {
+    if (y + needed > pageH - 25) {
+      doc.addPage();
+      currentPage++;
+      return drawPageHeader(doc, logo, w, lm, rm, ticketNo, currentPage);
+    }
+    return y;
   }
 
-  // Right: title + company
-  doc.setTextColor(255);
-  doc.setFontSize(14);
-  doc.setFont("helvetica", "bold");
-  doc.text("ELECTRONIC TICKET", rm - 2, 12, { align: "right" });
-  doc.setFontSize(7);
-  doc.setFont("helvetica", "normal");
-  doc.setTextColor(180, 200, 220);
-  doc.text(`${COMPANY.parent} | ${COMPANY.phone} | ${COMPANY.website}`, rm - 2, 18, { align: "right" });
-  doc.setFontSize(6);
-  doc.text("Travel Itinerary & Receipt", rm - 2, 24, { align: "right" });
+  // ═══════════════════════════════════════════════════════════
+  // PAGE HEADER — Emirates-inspired with Seven Trip branding
+  // ═══════════════════════════════════════════════════════════
+  function drawPageHeader(d: jsPDF, lg: string | null, pw: number, plm: number, prm: number, tktNo: string, pg: number): number {
+    // Top accent bar — gradient-like purple-to-teal
+    d.setFillColor(88, 55, 160); // Seven Trip purple
+    d.rect(0, 0, pw, 3, "F");
+    d.setFillColor(0, 180, 200); // Seven Trip teal accent
+    d.rect(pw * 0.6, 0, pw * 0.4, 3, "F");
 
-  let y = 34;
-
-  // ═══════════════ BOOKING REFERENCE BAR ═══════════════
-  drawFilledBox(doc, lm, y, contentW, 20, 245, 247, 250);
-  doc.setDrawColor(220);
-  doc.rect(lm, y, contentW, 20);
-
-  // Booking details in columns
-  const refCols = [
-    { label: "BOOKING ID (PNR)", value: bookingRef },
-    ...(airlinesPnr && airlinesPnr !== bookingRef ? [{ label: "AIRLINES PNR", value: airlinesPnr }] : []),
-    ...(ticketNo ? [{ label: "TICKET NUMBER", value: ticketNo }] : []),
-    { label: "STATUS", value: ticket.bookingStatus?.toUpperCase() || "CONFIRMED" },
-    { label: "CLASS", value: outbound[0]?.cabinClass || ticket.cabinClass || ticket.class || "ECONOMY" },
-    ...(ticket.issuedAt ? [{ label: "ISSUED", value: safeDateShort(ticket.issuedAt) }] : []),
-  ];
-
-  const colW = contentW / Math.min(refCols.length, 6);
-  refCols.slice(0, 6).forEach((col, i) => {
-    const cx = lm + i * colW + 4;
-    doc.setFontSize(5.5);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(120);
-    doc.text(col.label, cx, y + 7);
-    doc.setFontSize(9);
-    doc.setFont("helvetica", "bold");
-    if (col.label === "AIRLINES PNR") { doc.setTextColor(200, 80, 0); } else { doc.setTextColor(20); }
-    doc.text(String(col.value || "--").toUpperCase(), cx, y + 14);
-
-    // Vertical divider
-    if (i < refCols.length - 1 && i < 5) {
-      doc.setDrawColor(210);
-      doc.line(lm + (i + 1) * colW, y + 3, lm + (i + 1) * colW, y + 17);
+    // Logo — large and prominent
+    if (lg) {
+      try {
+        const imgProps = d.getImageProperties(lg);
+        const maxW = 55, maxH = 20;
+        const ratio = Math.min(maxW / imgProps.width, maxH / imgProps.height);
+        const logoW = imgProps.width * ratio;
+        const logoH = imgProps.height * ratio;
+        d.addImage(lg, "PNG", plm, 6, logoW, logoH);
+      } catch { /* skip */ }
+    } else {
+      d.setFontSize(20);
+      d.setFont("helvetica", "bold");
+      d.setTextColor(88, 55, 160);
+      d.text("Seven Trip", plm, 20);
     }
-  });
 
-  y += 24;
+    // Right side: "Ticket & receipt" title
+    d.setFontSize(16);
+    d.setFont("helvetica", "bold");
+    d.setTextColor(88, 55, 160);
+    d.text("Ticket & receipt", prm, 14, { align: "right" });
 
-  // ═══════════════ PASSENGER DETAILS TABLE ═══════════════
+    // Ticket number line
+    let hy = 28;
+    if (tktNo) {
+      d.setFontSize(9);
+      d.setFont("helvetica", "bold");
+      d.setTextColor(40);
+      d.text(`Ticket number: ${tktNo}`, plm, hy);
+    }
+    d.setFontSize(6.5);
+    d.setFont("helvetica", "normal");
+    d.setTextColor(120);
+    d.text("Scan the QR code or use the ticket number above at the self check-in points in the airport.", plm, hy + 5);
+
+    // Thin divider
+    d.setDrawColor(200);
+    d.setLineWidth(0.3);
+    d.line(plm, hy + 9, prm, hy + 9);
+
+    return hy + 13;
+  }
+
+  let y = drawPageHeader(doc, logo, w, lm, rm, ticketNo, 1);
+
+  // ═══════════════════════════════════════════════════════════
+  // PASSENGER & BOOKING INFO TABLE — Emirates style
+  // ═══════════════════════════════════════════════════════════
+  // Passenger name row
+  const paxTableH = 12;
+  doc.setFillColor(245, 245, 250);
+  doc.rect(lm, y, contentW, paxTableH, "F");
+  doc.setDrawColor(200);
+  doc.rect(lm, y, contentW, paxTableH);
+
+  // Headers
+  doc.setFontSize(6);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(100);
+  doc.text("Passenger name", lm + 3, y + 3.5);
+  doc.text("Issued by / Date", lm + contentW * 0.55, y + 3.5);
+
+  // Values
   doc.setFontSize(8);
   doc.setFont("helvetica", "bold");
-  doc.setTextColor(15, 25, 55);
-  doc.text("PASSENGER DETAILS", lm, y + 4);
-  y += 7;
+  doc.setTextColor(30);
+  const allPaxNames = passengers.map(p => {
+    const name = p.name || `${p.lastName}/ ${p.firstName}${p.title || ""}`.trim();
+    return name.toUpperCase();
+  }).join(", ");
+  doc.text(allPaxNames.substring(0, 45), lm + 3, y + 9.5);
 
-  // Table header
-  drawFilledBox(doc, lm, y, contentW, 8, 15, 25, 55);
+  doc.setFontSize(7);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(60);
+  const issuedInfo = `${COMPANY.name} | ${safeDateShort(ticket.issuedAt) || new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}`;
+  doc.text(issuedInfo, lm + contentW * 0.55, y + 9.5);
+  y += paxTableH + 4;
+
+  // ═══════════════ BOOKING REFERENCE — highlighted box ═══════════════
+  doc.setFillColor(88, 55, 160); // Purple
+  doc.roundedRect(lm, y, contentW, 14, 2, 2, "F");
+
   doc.setTextColor(255);
-  doc.setFontSize(6.5);
+  doc.setFontSize(8);
+  doc.setFont("helvetica", "normal");
+  doc.text("Your booking reference:", lm + 5, y + 5.5);
+
+  doc.setFontSize(16);
   doc.setFont("helvetica", "bold");
-  const paxColWidths = [8, 60, 22, 30, 35, contentW - 155]; // No, Name, Type, Passport, Ticket No, Seat
-  let px = lm + 3;
-  ["NO", "PASSENGER NAME", "TYPE", "PASSPORT", "TICKET NUMBER", "SEAT"].forEach((h, i) => {
-    doc.text(h, px, y + 5.5);
-    px += paxColWidths[i];
-  });
-  y += 8;
+  doc.text(bookingRef || "—", lm + 55, y + 10.5);
 
-  // Passenger rows
-  passengers.forEach((p, i) => {
-    if (i % 2 === 0) drawFilledBox(doc, lm, y, contentW, 8, 252, 252, 255);
-    doc.setDrawColor(230);
-    doc.line(lm, y + 8, rm, y + 8);
-
-    doc.setTextColor(30);
-    doc.setFontSize(7);
+  // Airlines PNR if different
+  if (airlinesPnr && airlinesPnr !== bookingRef) {
+    doc.setFontSize(8);
     doc.setFont("helvetica", "normal");
-    let ppx = lm + 3;
-    const paxName = p.name || `${p.title ? p.title + " " : ""}${p.firstName} ${p.lastName}`.trim();
-    const paxType = p.type === "ADT" ? "Adult" : p.type === "CHD" ? "Child" : p.type === "INF" ? "Infant" : p.type || "Adult";
-
-    doc.text(String(i + 1), ppx, y + 5.5); ppx += paxColWidths[0];
+    doc.text("Airlines PNR:", lm + contentW * 0.55, y + 5.5);
+    doc.setFontSize(14);
     doc.setFont("helvetica", "bold");
-    doc.text(paxName.toUpperCase().substring(0, 30), ppx, y + 5.5); ppx += paxColWidths[1];
-    doc.setFont("helvetica", "normal");
-    doc.text(paxType, ppx, y + 5.5); ppx += paxColWidths[2];
-    doc.text(p.passport || "--", ppx, y + 5.5); ppx += paxColWidths[3];
-    doc.setFont("helvetica", "bold");
-    doc.text(p.ticketNumber || p.ticketNo || "--", ppx, y + 5.5); ppx += paxColWidths[4];
-    doc.setFont("helvetica", "normal");
-    doc.text(p.seat || p.seatNo || "At Check-In", ppx, y + 5.5);
-    y += 8;
-  });
+    doc.setTextColor(255, 200, 100);
+    doc.text(airlinesPnr, lm + contentW * 0.55 + 35, y + 10.5);
+  }
 
+  // QR code in booking ref bar
+  if (qr) {
+    try { doc.addImage(qr, "PNG", rm - 16, y + 1, 12, 12); } catch { /* */ }
+  }
+  y += 18;
+
+  // Ticket storage note
+  doc.setFontSize(6.5);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(80);
+  const storageNote = "Your ticket is stored in our booking system. This receipt is your record of your ticket and is part of your conditions of carriage.";
+  const noteLines = doc.splitTextToSize(storageNote, contentW - 4);
+  doc.text(noteLines, lm + 2, y + 3);
+  y += noteLines.length * 3.5 + 3;
+
+  doc.setFontSize(6);
+  doc.setTextColor(100);
+  doc.text("Check in at the airport. At most airports you need to arrive 3 hours before departure for international flights.", lm + 2, y + 2);
   y += 6;
 
-  // ═══════════════ FLIGHT SEGMENTS ═══════════════
-  const allSegments = [
-    ...outbound.map((s, i) => ({ ...s, direction: returnSegments.length > 0 ? "OUTBOUND" : "DEPARTURE", segIndex: i })),
-    ...returnSegments.map((s, i) => ({ ...s, direction: "RETURN", segIndex: i })),
-  ];
+  // ═══════════════════════════════════════════════════════════
+  // TRAVEL INFORMATION HEADING
+  // ═══════════════════════════════════════════════════════════
+  doc.setDrawColor(88, 55, 160);
+  doc.setLineWidth(0.8);
+  doc.line(lm, y, rm, y);
+  y += 5;
 
+  doc.setFontSize(12);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(88, 55, 160);
+  doc.text("Your travel information", lm, y + 4);
+  y += 7;
+
+  doc.setFontSize(7);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(100);
+  doc.text("All times shown are local for each city", lm, y + 2);
+  y += 7;
+
+  // ═══════════════════════════════════════════════════════════
+  // FLIGHT SEGMENTS — Emirates leg-by-leg layout
+  // ═══════════════════════════════════════════════════════════
   for (let si = 0; si < allSegments.length; si++) {
     const seg = allSegments[si];
+    y = checkPageBreak(y, 70);
 
-    // Page break check
-    if (y > 220) { doc.addPage(); y = 15; }
-
-    // Direction badge
-    const dirColor = seg.direction === "RETURN" ? [180, 60, 20] : [0, 120, 100];
-    drawFilledBox(doc, lm, y, contentW, 8, dirColor[0], dirColor[1], dirColor[2]);
-    doc.setTextColor(255);
-    doc.setFontSize(7);
-    doc.setFont("helvetica", "bold");
-    doc.text(`${seg.direction} FLIGHT — ${seg.direction === "RETURN" ? "SEGMENT" : "SEGMENT"} ${seg.segIndex + 1}`, lm + 4, y + 5.5);
-    doc.setFontSize(6);
-    doc.setFont("helvetica", "normal");
-    doc.text("Please verify flight times with the airline prior to departure", rm - 4, y + 5.5, { align: "right" });
-    y += 10;
-
-    // Main segment box
-    const segH = 58;
-    drawBox(doc, lm, y, contentW, segH);
-
-    // 4-column layout
-    const c1X = lm;
-    const c1W = 38;
-    const c2X = c1X + c1W;
-    const c2W = 46;
-    const c3X = c2X + c2W;
-    const c3W = 46;
-    const c4X = c3X + c3W;
-
-    // Vertical dividers
-    doc.setDrawColor(220);
-    [c2X, c3X, c4X].forEach(cx => doc.line(cx, y + 1, cx, y + segH - 1));
-
-    // ── Column 1: Airline ──
-    if (airlineLogo) {
-      try { doc.addImage(airlineLogo, "PNG", c1X + 8, y + 3, 20, 10); } catch { /* */ }
-    }
-    doc.setTextColor(30);
-    doc.setFontSize(6.5);
-    doc.setFont("helvetica", "bold");
-    doc.text(seg.airline?.toUpperCase().substring(0, 18) || "", c1X + 3, y + 17);
-
-    doc.setFontSize(12);
-    doc.setFont("helvetica", "bold");
-    doc.text(seg.flightNumber || "", c1X + 3, y + 25);
-
-    doc.setFontSize(6);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(100);
-    let ay = y + 30;
-
-    [
-      ["Duration", seg.duration || "--"],
-      ["Cabin", seg.cabinClass || "Economy"],
-      ["Aircraft", seg.aircraft || "--"],
-      ["Status", seg.status || "Confirmed"],
-    ].forEach(([label, val]) => {
-      doc.setTextColor(100);
-      doc.setFont("helvetica", "normal");
-      doc.text(label as string, c1X + 3, ay);
-      if (label === "Status") { doc.setTextColor(0, 130, 0); } else { doc.setTextColor(30); }
+    // "Departing >> From City" heading
+    const fromCity = seg.originCity || seg.origin || "";
+    if (si === 0 || (si > 0 && allSegments[si - 1].direction !== seg.direction)) {
+      doc.setFontSize(10);
       doc.setFont("helvetica", "bold");
-      doc.text(String(val), c1X + 3, ay + 4);
-      ay += 7;
-    });
-
-    // ── Column 2: Origin ──
-    drawFilledBox(doc, c2X + 1, y + 1, c2W - 2, 7, 0, 150, 136);
-    doc.setTextColor(255);
-    doc.setFontSize(6);
-    doc.setFont("helvetica", "bold");
-    doc.text("DEPARTURE", c2X + 3, y + 6);
-
-    doc.setTextColor(20);
-    doc.setFontSize(20);
-    doc.setFont("helvetica", "bold");
-    doc.text(seg.origin || "--", c2X + 4, y + 18);
-
-    doc.setFontSize(6);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(100);
-    if (seg.originCity) {
-      const cityLines = doc.splitTextToSize(seg.originCity.toUpperCase(), c2W - 8);
-      doc.text(cityLines, c2X + 4, y + 23);
+      doc.setTextColor(88, 55, 160);
+      const dirLabel = seg.direction === "RETURN" ? "Returning" : "Departing";
+      doc.text(`${dirLabel}  >>  From ${fromCity}`, lm, y + 3);
+      y += 8;
     }
 
-    doc.setTextColor(80);
-    doc.text("Departing At", c2X + 4, y + 32);
-    doc.setTextColor(20);
-    doc.setFontSize(14);
+    // Leg label
+    doc.setFontSize(8);
     doc.setFont("helvetica", "bold");
-    doc.text(safeTime(seg.departureTime), c2X + 4, y + 39);
-    const depTz = safeTimezone(seg.departureTime);
-    if (depTz) {
-      doc.setFontSize(6);
-      doc.setFont("helvetica", "normal");
-      doc.setTextColor(100);
-      doc.text(depTz, c2X + 30, y + 39);
-    }
-
-    doc.setFontSize(6.5);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(60);
-    doc.text(safeDateFull(seg.departureTime), c2X + 4, y + 45);
-
-    if (seg.terminal) {
-      doc.setFontSize(6);
-      doc.setTextColor(100);
-      doc.text("Terminal", c2X + 4, y + 51);
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(20);
-      doc.text(seg.terminal, c2X + 22, y + 51);
-    }
-
-    // ── Column 3: Destination ──
-    drawFilledBox(doc, c3X + 1, y + 1, c3W - 2, 7, 15, 25, 55);
-    doc.setTextColor(255);
-    doc.setFontSize(6);
-    doc.setFont("helvetica", "bold");
-    doc.text("ARRIVAL", c3X + 3, y + 6);
-
-    doc.setTextColor(20);
-    doc.setFontSize(20);
-    doc.setFont("helvetica", "bold");
-    doc.text(seg.destination || "--", c3X + 4, y + 18);
-
-    doc.setFontSize(6);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(100);
-    if (seg.destinationCity) {
-      const destLines = doc.splitTextToSize(seg.destinationCity.toUpperCase(), c3W - 8);
-      doc.text(destLines, c3X + 4, y + 23);
-    }
-
-    doc.setTextColor(80);
-    doc.text("Arriving At", c3X + 4, y + 32);
-    doc.setTextColor(20);
-    doc.setFontSize(14);
-    doc.setFont("helvetica", "bold");
-    doc.text(safeTime(seg.arrivalTime), c3X + 4, y + 39);
-    const arrTz = safeTimezone(seg.arrivalTime);
-    if (arrTz) {
-      doc.setFontSize(6);
-      doc.setFont("helvetica", "normal");
-      doc.setTextColor(100);
-      doc.text(arrTz, c3X + 30, y + 39);
-    }
-
-    doc.setFontSize(6.5);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(60);
-    doc.text(safeDateFull(seg.arrivalTime), c3X + 4, y + 45);
-
-    if (seg.arrivalTerminal) {
-      doc.setFontSize(6);
-      doc.setTextColor(100);
-      doc.text("Terminal", c3X + 4, y + 51);
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(20);
-      doc.text(seg.arrivalTerminal, c3X + 22, y + 51);
-    }
-
-    // ── Column 4: Technical Details ──
-    const c4InnerX = c4X + 3;
-    doc.setFontSize(6);
-    doc.setFont("helvetica", "normal");
-    let ty = y + 6;
-
-    const techDetails: [string, string][] = [
-      ["Checked Baggage", baggageStr(seg.baggage)],
-      ["Hand Baggage", baggageStr(seg.handBaggage) || "7kg"],
-      ["Meals", seg.meal || "Available"],
-      ...(seg.distance ? [["Distance", `${seg.distance} mi`] as [string, string]] : []),
-      ...(seg.emission ? [["CO2 Emission", seg.emission] as [string, string]] : []),
-      ...(seg.operatingCarrier ? [["Operated By", seg.operatingCarrier] as [string, string]] : []),
-    ];
-
-    techDetails.forEach(([label, val]) => {
-      if (ty > y + segH - 4) return;
-      doc.setTextColor(100);
-      doc.setFont("helvetica", "normal");
-      doc.text(label, c4InnerX, ty);
-      doc.setTextColor(30);
-      doc.setFont("helvetica", "bold");
-      doc.text(String(val || "--"), c4InnerX, ty + 4);
-      ty += 8;
-    });
-
-    y += segH + 2;
-
-    // Passenger + Seat row for this segment
-    drawFilledBox(doc, lm, y, contentW, 6, 240, 242, 245);
-    doc.setFontSize(6);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(80);
-    doc.text("PASSENGER", lm + 4, y + 4);
-    doc.text("TICKET NO", lm + contentW * 0.45, y + 4);
-    doc.text("SEAT", rm - 20, y + 4);
+    doc.setTextColor(40);
+    const legLabel = `Leg ${si + 1} of ${totalLegs} | ${seg.origin} to ${seg.destination}`;
+    const operatedBy = seg.operatingCarrier || seg.airline || "";
+    doc.text(legLabel + (operatedBy ? ` | Operated by ${operatedBy}` : ""), lm, y + 3);
     y += 7;
 
-    passengers.forEach((p) => {
-      doc.setTextColor(30);
+    // Flight info table — Emirates-style
+    const tableH = 13;
+    // Header row
+    doc.setFillColor(245, 245, 250);
+    doc.rect(lm, y, contentW, 7, "F");
+    doc.setDrawColor(200);
+    doc.rect(lm, y, contentW, 7);
+    doc.setFontSize(6);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(100);
+
+    const flCol1 = lm + 3;
+    const flCol2 = lm + 28;
+    const flCol3 = lm + 60;
+    const flCol4 = lm + 100;
+    const flCol5 = lm + 135;
+
+    doc.text("Flight", flCol1, y + 5);
+    doc.text("Check-in at", flCol2, y + 5);
+    doc.text("Departure", flCol3, y + 5);
+    doc.text("Status", flCol4, y + 5);
+    doc.text("Arrival", flCol5, y + 5);
+    y += 7;
+
+    // Data row
+    doc.setFillColor(255, 255, 255);
+    doc.rect(lm, y, contentW, tableH, "F");
+    doc.setDrawColor(200);
+    doc.rect(lm, y, contentW, tableH);
+
+    // Flight number with airline logo
+    if (airlineLogo) {
+      try { doc.addImage(airlineLogo, "PNG", flCol1, y + 1, 8, 5); } catch { /* */ }
+    }
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(30);
+    doc.text(seg.flightNumber || "", flCol1 + (airlineLogo ? 10 : 0), y + 5);
+    doc.setFontSize(6.5);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(80);
+    doc.text(seg.airline || "", flCol1 + (airlineLogo ? 10 : 0), y + 9.5);
+
+    // Check-in date
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(30);
+    doc.text(safeDateShort(seg.departureTime), flCol2, y + 5);
+
+    // Departure time + date
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(30);
+    doc.text(safeTime(seg.departureTime), flCol3, y + 5);
+    doc.setFontSize(6.5);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(80);
+    doc.text(safeDateFull(seg.departureTime), flCol3, y + 9.5);
+
+    // Status
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(0, 130, 60);
+    doc.text(seg.status || "Confirmed", flCol4, y + 5);
+
+    // Arrival time + date
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(30);
+    doc.text(safeTime(seg.arrivalTime), flCol5, y + 5);
+    doc.setFontSize(6.5);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(80);
+    doc.text(safeDateFull(seg.arrivalTime), flCol5, y + 9.5);
+
+    y += tableH + 2;
+
+    // Airport details line
+    doc.setFontSize(7);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(60);
+    const depTerminal = seg.terminal ? ` Terminal ${seg.terminal}` : "";
+    const arrTerminal = seg.arrivalTerminal ? ` Terminal ${seg.arrivalTerminal}` : "";
+    doc.text(`Departing ${seg.origin}${seg.originCity ? ", " + seg.originCity : ""}${depTerminal}`, lm + 3, y + 2);
+    y += 4;
+    doc.text(`Arriving ${seg.destination}${seg.destinationCity ? ", " + seg.destinationCity : ""}${arrTerminal}`, lm + 3, y + 2);
+    y += 5;
+
+    // Class + duration + baggage info row
+    doc.setFillColor(250, 248, 255);
+    doc.rect(lm, y, contentW, 12, "F");
+    doc.setDrawColor(220);
+    doc.rect(lm, y, contentW, 12);
+
+    const infoItems = [
+      { label: "Class", value: seg.cabinClass || "Economy" },
+      { label: "Duration", value: seg.duration || "--" },
+      { label: "Aircraft", value: seg.aircraft || "--" },
+      { label: "Checked Baggage", value: baggageStr(seg.baggage) },
+      { label: "Hand Baggage", value: baggageStr(seg.handBaggage) || "7kg" },
+      ...(seg.meal ? [{ label: "Meal", value: seg.meal }] : []),
+    ];
+
+    const infoColW = contentW / Math.min(infoItems.length, 6);
+    infoItems.slice(0, 6).forEach((item, idx) => {
+      const ix = lm + idx * infoColW + 3;
+      doc.setFontSize(5.5);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(100);
+      doc.text(item.label, ix, y + 4);
       doc.setFontSize(7);
-      const pName = p.name || `${p.title ? p.title + " " : ""}${p.firstName} ${p.lastName}`.trim();
       doc.setFont("helvetica", "bold");
-      doc.text(pName.toUpperCase().substring(0, 35), lm + 4, y + 3);
+      doc.setTextColor(40);
+      doc.text(String(item.value || "--"), ix, y + 9);
+    });
+    y += 15;
+
+    // Per-segment passenger list
+    passengers.forEach((p) => {
+      doc.setFontSize(6.5);
       doc.setFont("helvetica", "normal");
       doc.setTextColor(80);
-      doc.text(p.ticketNumber || p.ticketNo || "--", lm + contentW * 0.45, y + 3);
-      doc.text(p.seat || p.seatNo || "Check-In", rm - 20, y + 3);
-      y += 5;
+      const pName = (p.name || `${p.title ? p.title + " " : ""}${p.firstName} ${p.lastName}`).trim().toUpperCase();
+      const pType = p.type === "ADT" ? "Adult" : p.type === "CHD" ? "Child" : p.type === "INF" ? "Infant" : p.type || "Adult";
+      doc.text(`${pName} (${pType})  |  Seat: ${p.seat || p.seatNo || "At Check-In"}  |  Ticket: ${p.ticketNumber || p.ticketNo || "--"}`, lm + 3, y + 2);
+      y += 4;
     });
 
     y += 4;
   }
 
-  // ═══════════════ FARE SUMMARY ═══════════════
+  // ═══════════════════════════════════════════════════════════
+  // FARE INFORMATION — Emirates-style table
+  // ═══════════════════════════════════════════════════════════
   const totalAmount = ticket.totalFare || ticket.totalAmount || 0;
   const baseFare = ticket.baseFare || 0;
   const taxes = ticket.taxes || 0;
   const svcCharge = ticket.serviceCharge || 0;
 
   if (totalAmount > 0 || baseFare > 0) {
-    if (y > 240) { doc.addPage(); y = 15; }
+    y = checkPageBreak(y, 50);
 
-    doc.setFontSize(8);
+    doc.setDrawColor(88, 55, 160);
+    doc.setLineWidth(0.8);
+    doc.line(lm, y, rm, y);
+    y += 5;
+
+    doc.setFontSize(11);
     doc.setFont("helvetica", "bold");
-    doc.setTextColor(15, 25, 55);
-    doc.text("FARE SUMMARY", lm, y + 4);
-    y += 7;
+    doc.setTextColor(88, 55, 160);
+    doc.text("Fare information", lm, y + 4);
+    y += 9;
 
-    // Fare table
-    drawFilledBox(doc, lm, y, contentW, 7, 15, 25, 55);
-    doc.setTextColor(255);
+    // Fare table header
+    doc.setFillColor(245, 245, 250);
+    doc.rect(lm, y, contentW, 8, "F");
+    doc.setDrawColor(200);
+    doc.rect(lm, y, contentW, 8);
     doc.setFontSize(6.5);
     doc.setFont("helvetica", "bold");
-    doc.text("DESCRIPTION", lm + 4, y + 5);
-    doc.text("AMOUNT", rm - 4, y + 5, { align: "right" });
-    y += 7;
+    doc.setTextColor(100);
+    doc.text("Description", lm + 4, y + 5.5);
+    doc.text("Amount", rm - 4, y + 5.5, { align: "right" });
+    y += 8;
 
     const fareRows: [string, number][] = [];
     if (baseFare > 0) fareRows.push(["Base Fare", baseFare]);
-    if (taxes > 0) fareRows.push(["Taxes & Surcharges", taxes]);
+    if (taxes > 0) fareRows.push(["Taxes / Fees / Charges", taxes]);
     if (svcCharge > 0) fareRows.push(["Service Charge", svcCharge]);
 
     fareRows.forEach(([label, amount], i) => {
-      if (i % 2 === 0) drawFilledBox(doc, lm, y, contentW, 7, 252, 252, 255);
-      doc.setDrawColor(235);
-      doc.line(lm, y + 7, rm, y + 7);
-      doc.setTextColor(60);
-      doc.setFontSize(7);
+      if (i % 2 === 0) {
+        doc.setFillColor(255, 255, 255);
+      } else {
+        doc.setFillColor(252, 252, 255);
+      }
+      doc.rect(lm, y, contentW, 8, "F");
+      doc.setDrawColor(230);
+      doc.rect(lm, y, contentW, 8);
+      doc.setFontSize(7.5);
       doc.setFont("helvetica", "normal");
-      doc.text(label, lm + 4, y + 5);
-      doc.setTextColor(30);
+      doc.setTextColor(50);
+      doc.text(label, lm + 4, y + 5.5);
       doc.setFont("helvetica", "bold");
-      doc.text(`${currency} ${Number(amount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`, rm - 4, y + 5, { align: "right" });
-      y += 7;
+      doc.setTextColor(30);
+      doc.text(`${currency} ${Number(amount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`, rm - 4, y + 5.5, { align: "right" });
+      y += 8;
     });
 
-    // Total row
-    drawFilledBox(doc, lm, y, contentW, 9, 0, 150, 136);
+    // Total row — purple
+    doc.setFillColor(88, 55, 160);
+    doc.rect(lm, y, contentW, 10, "F");
     doc.setTextColor(255);
-    doc.setFontSize(8);
+    doc.setFontSize(9);
     doc.setFont("helvetica", "bold");
-    doc.text("TOTAL AMOUNT", lm + 4, y + 6.5);
-    doc.text(`${currency} ${Number(totalAmount || (baseFare + taxes + svcCharge)).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`, rm - 4, y + 6.5, { align: "right" });
-    y += 13;
+    doc.text("Total fare (Incl. Taxes)", lm + 4, y + 7);
+    doc.text(`${currency} ${Number(totalAmount || (baseFare + taxes + svcCharge)).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`, rm - 4, y + 7, { align: "right" });
+    y += 14;
   }
 
-  // ═══════════════ IMPORTANT INFORMATION ═══════════════
-  if (y > 250) { doc.addPage(); y = 15; }
+  // ═══════════════════════════════════════════════════════════
+  // BAGGAGE ALLOWANCE — Emirates-style
+  // ═══════════════════════════════════════════════════════════
+  y = checkPageBreak(y, 40);
 
-  doc.setFontSize(7);
+  doc.setDrawColor(88, 55, 160);
+  doc.setLineWidth(0.8);
+  doc.line(lm, y, rm, y);
+  y += 5;
+
+  doc.setFontSize(11);
   doc.setFont("helvetica", "bold");
-  doc.setTextColor(15, 25, 55);
-  doc.text("IMPORTANT INFORMATION", lm, y + 3);
-  y += 6;
+  doc.setTextColor(88, 55, 160);
+  doc.text("Baggage allowance", lm, y + 4);
+  y += 9;
 
-  drawFilledBox(doc, lm, y, contentW, 24, 255, 250, 240);
-  doc.setDrawColor(240, 200, 150);
-  doc.rect(lm, y, contentW, 24);
-
-  doc.setFontSize(5.5);
-  doc.setFont("helvetica", "normal");
-  doc.setTextColor(80);
-  const notices = [
-    "* Please arrive at the airport at least 3 hours before departure for international flights and 2 hours for domestic flights.",
-    "* Please carry a valid passport (with minimum 6 months validity) and visa for international travel.",
-    "* Baggage allowance and cabin baggage limits are subject to airline policy. Excess baggage charges apply.",
-    `* ${ticket.refundable ? "This ticket is refundable subject to airline cancellation fees." : "This ticket is non-refundable. Cancellation and date change fees apply as per airline policy."}`,
-    "* Flight schedules are subject to change. Please reconfirm your flight 24 hours before departure.",
-  ];
-  let ny = y + 4;
-  notices.forEach(n => {
-    const lines = doc.splitTextToSize(n, contentW - 8);
-    doc.text(lines, lm + 4, ny);
-    ny += lines.length * 3.5;
-  });
-
-  y += 28;
-
-  // ═══════════════ FOOTER ═══════════════
-  if (y > 265) { doc.addPage(); y = 15; }
-
-  // QR + Company info footer
-  drawFilledBox(doc, 0, y, w, 22, 15, 25, 55);
-  drawFilledBox(doc, 0, y, w, 1, 0, 150, 136);
-
-  if (qr) {
-    try { doc.addImage(qr, "PNG", lm, y + 3, 16, 16); } catch { /* */ }
-  }
-
-  doc.setTextColor(200, 210, 230);
+  // Baggage table header
+  doc.setFillColor(245, 245, 250);
+  doc.rect(lm, y, contentW, 7, "F");
+  doc.setDrawColor(200);
+  doc.rect(lm, y, contentW, 7);
   doc.setFontSize(6.5);
   doc.setFont("helvetica", "bold");
-  doc.text(COMPANY.name.toUpperCase(), lm + 20, y + 7);
+  doc.setTextColor(100);
+  doc.text("Passenger type", lm + 4, y + 5);
+  doc.text("Route", lm + 45, y + 5);
+  doc.text("Checked baggage", lm + 100, y + 5);
+  doc.text("Carry-on baggage", rm - 4, y + 5, { align: "right" });
+  y += 7;
+
+  // Baggage rows from segments
+  allSegments.forEach((seg, i) => {
+    if (i % 2 === 0) doc.setFillColor(255, 255, 255);
+    else doc.setFillColor(252, 252, 255);
+    doc.rect(lm, y, contentW, 7, "F");
+    doc.setDrawColor(230);
+    doc.rect(lm, y, contentW, 7);
+    doc.setFontSize(7);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(40);
+    doc.text("ADULT", lm + 4, y + 5);
+    doc.text(`${seg.origin} - ${seg.destination}`, lm + 45, y + 5);
+    doc.setFont("helvetica", "bold");
+    doc.text(baggageStr(seg.baggage) || "--", lm + 100, y + 5);
+    doc.text(baggageStr(seg.handBaggage) || "7kg (1PC)", rm - 4, y + 5, { align: "right" });
+    y += 7;
+  });
+  y += 6;
+
+  // ═══════════════════════════════════════════════════════════
+  // IMPORTANT INFORMATION
+  // ═══════════════════════════════════════════════════════════
+  y = checkPageBreak(y, 45);
+
+  doc.setDrawColor(88, 55, 160);
+  doc.setLineWidth(0.8);
+  doc.line(lm, y, rm, y);
+  y += 5;
+
+  doc.setFontSize(11);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(88, 55, 160);
+  doc.text("Important information", lm, y + 4);
+  y += 9;
+
+  doc.setFillColor(255, 252, 245);
+  const notices = [
+    "Please arrive at the airport at least 3 hours before departure for international flights and 2 hours for domestic flights.",
+    "Please carry a valid passport (with minimum 6 months validity) and visa for international travel.",
+    "Baggage allowance and cabin baggage limits are subject to airline policy. Excess baggage charges may apply.",
+    ticket.refundable
+      ? "This ticket is refundable subject to airline cancellation fees."
+      : "This ticket is non-refundable. Cancellation and date change fees apply as per airline policy.",
+    "Flight schedules are subject to change. Please reconfirm your flight 24 hours before departure.",
+    "You might need to show this receipt to enter the airport or to prove your return or onwards travel to immigration.",
+  ];
+
+  const noticeBlockH = notices.length * 5 + 6;
+  doc.rect(lm, y, contentW, noticeBlockH, "F");
+  doc.setDrawColor(240, 210, 160);
+  doc.rect(lm, y, contentW, noticeBlockH);
+
+  doc.setFontSize(6);
   doc.setFont("helvetica", "normal");
+  doc.setTextColor(70);
+  let ny = y + 4;
+  notices.forEach(n => {
+    doc.text(`•  ${n}`, lm + 4, ny, { maxWidth: contentW - 10 });
+    ny += 5;
+  });
+
+  y += noticeBlockH + 6;
+
+  // ═══════════════════════════════════════════════════════════
+  // FOOTER — Company info + copyright
+  // ═══════════════════════════════════════════════════════════
+  y = checkPageBreak(y, 25);
+
+  // Footer bar
+  doc.setFillColor(88, 55, 160);
+  doc.rect(0, y, w, 20, "F");
+  // Teal accent stripe
+  doc.setFillColor(0, 180, 200);
+  doc.rect(0, y, w, 1.5, "F");
+
+  if (qr) {
+    try { doc.addImage(qr, "PNG", lm, y + 3, 14, 14); } catch { /* */ }
+  }
+
+  doc.setTextColor(220, 210, 240);
+  doc.setFontSize(7);
+  doc.setFont("helvetica", "bold");
+  doc.text(COMPANY.name.toUpperCase(), lm + 18, y + 7);
   doc.setFontSize(5.5);
-  doc.setTextColor(150, 165, 190);
-  doc.text(`A concern of ${COMPANY.parent}`, lm + 20, y + 11);
-  doc.text(`${COMPANY.email} | ${COMPANY.phone} | ${COMPANY.address}`, lm + 20, y + 15);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(170, 160, 200);
+  doc.text(`A concern of ${COMPANY.parent} | ${COMPANY.phone} | ${COMPANY.website}`, lm + 18, y + 11);
+  doc.text(COMPANY.address, lm + 18, y + 15);
 
   doc.setFontSize(5);
-  doc.setTextColor(120, 140, 170);
-  doc.text("This is a computer-generated electronic ticket and does not require a physical signature.", rm - 4, y + 19, { align: "right" });
+  doc.setTextColor(140, 130, 180);
+  doc.text("This is a computer-generated electronic ticket and does not require a physical signature.", rm, y + 18, { align: "right" });
 
   if (gdsSource && gdsSource !== "db") {
     doc.setFontSize(4.5);
-    doc.setTextColor(100, 120, 150);
-    doc.text(`Powered by ${gdsSource.toUpperCase()} GDS`, rm - 4, y + 7, { align: "right" });
+    doc.setTextColor(120, 110, 160);
+    doc.text(`Powered by ${gdsSource.toUpperCase()} GDS`, rm, y + 7, { align: "right" });
+  }
+
+  // Page footer text on all pages
+  const numPages = doc.getNumberOfPages();
+  for (let i = 1; i <= numPages; i++) {
+    doc.setPage(i);
+    doc.setFontSize(5.5);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(150);
+    doc.text(`© ${COMPANY.name}. All rights reserved`, lm, pageH - 5);
+    doc.text(`Page ${i} of ${numPages}`, rm, pageH - 5, { align: "right" });
   }
 
   return doc;
