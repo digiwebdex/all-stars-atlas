@@ -66,45 +66,7 @@ const Header = () => {
               <img src="/images/seven-trip-logo.png" alt="Seven Trip" className="h-[120px] lg:h-[140px] w-auto drop-shadow-[0_0_12px_rgba(29,106,229,0.5)]" />
             </Link>
 
-            <nav className="hidden lg:flex items-center gap-1">
-              {mainNav.map((item) => (
-                <Link key={item.href} to={item.href} {...getPrefetchHandlers(item.href)}
-                  className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-[14px] font-semibold transition-all ${
-                    transparent ? "text-white/80 hover:text-white hover:bg-white/10" : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                  } ${location.pathname === item.href ? (transparent ? "text-white bg-white/10" : "text-primary bg-primary/10") : ""}`}
-                >
-                  <item.icon className="w-4 h-4" />{item.label}
-                </Link>
-              ))}
-
-              <DropdownMenu>
-                <DropdownMenuTrigger className={`flex items-center gap-1 px-4 py-2 rounded-lg text-[14px] font-semibold transition-all ${
-                  transparent ? "text-white/80 hover:text-white hover:bg-white/10" : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                }`}>
-                  <FileText className="w-4 h-4" /> Visa <ChevronDown className="w-3 h-3 ml-0.5" />
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="w-52">
-                  <DropdownMenuItem asChild><Link to="/visa">Visa Application</Link></DropdownMenuItem>
-                  <DropdownMenuItem asChild><Link to="/visa?filter=popular">Visa Requirements</Link></DropdownMenuItem>
-                  <DropdownMenuItem asChild><Link to="/dashboard/bookings">Track Application</Link></DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-
-              <DropdownMenu>
-                <DropdownMenuTrigger className={`flex items-center gap-1 px-4 py-2 rounded-lg text-[14px] font-semibold transition-all ${
-                  transparent ? "text-white/80 hover:text-white hover:bg-white/10" : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                }`}>
-                  More <ChevronDown className="w-3 h-3 ml-0.5" />
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="w-52">
-                  <DropdownMenuItem asChild><Link to="/esim">eSIM</Link></DropdownMenuItem>
-                  <DropdownMenuItem asChild><Link to="/recharge">Recharge</Link></DropdownMenuItem>
-                  <DropdownMenuItem asChild><Link to="/paybill">Pay Bill</Link></DropdownMenuItem>
-                  <DropdownMenuItem asChild><Link to="/medical">Medical Tourism</Link></DropdownMenuItem>
-                  <DropdownMenuItem asChild><Link to="/cars">Car Rental</Link></DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </nav>
+            {/* Navigation removed — search widget handles service tabs */}
 
             <div className="hidden lg:flex items-center gap-2.5">
               <ThemeToggle className={transparent ? "text-white/80 hover:bg-white/10 hover:text-white" : ""} />
