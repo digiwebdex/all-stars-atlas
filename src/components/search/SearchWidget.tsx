@@ -1183,7 +1183,7 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
             </div>
           </div>
         </div>
-        <div className={`${bp}:col-span-3 search-field border-b ${bp}:border-b-0 flex-col items-start`}>
+        <div className={`${bp}:col-span-3 ${sf} border-b ${bp}:border-b-0 flex-col items-start`}>
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Treatment</div>
           <Select value={treatmentType} onValueChange={setTreatmentType}>
             <SelectTrigger className="border-0 p-0 h-auto text-sm font-bold shadow-none focus:ring-0"><SelectValue placeholder="Select treatment" /></SelectTrigger>
