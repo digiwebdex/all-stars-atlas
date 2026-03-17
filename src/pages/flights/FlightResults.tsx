@@ -1068,11 +1068,25 @@ function buildFareRows(
 ): { paxType: string; baseFare: number; tax: number; other: number; discount: number; aitVat: number; count: number; amount: number }[] {
   const fareRows: { paxType: string; baseFare: number; tax: number; other: number; discount: number; aitVat: number; count: number; amount: number }[] = [];
 
+  // Card-level gross (already in BDT) = baseFare + taxes
+  const cardGross = baseFare + taxes;
+
   // Merge two paxPricing arrays (outbound + return) by summing per-type
   const mergedPax = mergePaxPricingArrays(paxPricing, paxPricing2);
 
-  if (mergedPax && mergedPax.length > 0) {
-    // Use real API per-pax-type pricing
+  // Validate paxPricing: sum must match card-level gross within 5%
+  // If paxPricing baseFare is in foreign currency (e.g. USD from Sabre), it won't match → fall back
+  let usePaxPricing = false;
+  if (mergedPax && mergedPax.length > 0 && cardGross > 0) {
+    const paxGrossSum = mergedPax.reduce((sum: number, pp: any) => {
+      const count = Math.max(1, Number(pp.count) || 1);
+      return sum + ((pp.baseFare || 0) + (pp.taxes || 0)) * count;
+    }, 0);
+    usePaxPricing = paxGrossSum > 0 && Math.abs(paxGrossSum - cardGross) / cardGross <= 0.05;
+  }
+
+  if (usePaxPricing && mergedPax) {
+    // Use real API per-pax-type pricing (values confirmed in BDT)
     for (const pp of mergedPax) {
       const ppBase = pp.baseFare || 0;
       const ppTax = pp.taxes || 0;
@@ -1091,21 +1105,24 @@ function buildFareRows(
       });
     }
   } else {
-    // Fallback: only adult pricing available from API (no per-pax breakdown)
+    // Fallback: use card-level baseFare/taxes (guaranteed BDT)
     if (paxAdults > 0) {
-      const disc = Math.round(baseFare * discountPct / 100);
-      const aitVat = Math.round(baseFare * aitVatPct / 100);
-      fareRows.push({ paxType: "Adult", baseFare, tax: taxes, other: 0, discount: disc, aitVat, count: paxAdults, amount: (baseFare - disc + taxes + aitVat) * paxAdults });
+      const perAdultBase = paxAdults > 0 ? Math.round(baseFare / paxAdults) : baseFare;
+      const perAdultTax = paxAdults > 0 ? Math.round(taxes / paxAdults) : taxes;
+      const disc = Math.round(perAdultBase * discountPct / 100);
+      const aitVat = Math.round(perAdultBase * aitVatPct / 100);
+      fareRows.push({ paxType: "Adult", baseFare: perAdultBase, tax: perAdultTax, other: 0, discount: disc, aitVat, count: paxAdults, amount: (perAdultBase - disc + perAdultTax + aitVat) * paxAdults });
     }
     if (paxChildren > 0) {
-      const childBase = Math.round(baseFare * 0.75);
+      const childBase = paxAdults > 0 ? Math.round((baseFare / paxAdults) * 0.75) : Math.round(baseFare * 0.75);
+      const childTax = paxAdults > 0 ? Math.round(taxes / paxAdults) : taxes;
       const disc = Math.round(childBase * discountPct / 100);
       const aitVat = Math.round(childBase * aitVatPct / 100);
-      fareRows.push({ paxType: "Child", baseFare: childBase, tax: taxes, other: 0, discount: disc, aitVat, count: paxChildren, amount: (childBase - disc + taxes + aitVat) * paxChildren });
+      fareRows.push({ paxType: "Child", baseFare: childBase, tax: childTax, other: 0, discount: disc, aitVat, count: paxChildren, amount: (childBase - disc + childTax + aitVat) * paxChildren });
     }
     if (paxInfants > 0) {
-      const infantBase = Math.round(baseFare * 0.1);
-      const infantTax = Math.round(taxes * 0.5);
+      const infantBase = paxAdults > 0 ? Math.round((baseFare / paxAdults) * 0.1) : Math.round(baseFare * 0.1);
+      const infantTax = paxAdults > 0 ? Math.round((taxes / paxAdults) * 0.5) : Math.round(taxes * 0.5);
       const disc = Math.round(infantBase * discountPct / 100);
       const aitVat = Math.round(infantBase * aitVatPct / 100);
       fareRows.push({ paxType: "Infant", baseFare: infantBase, tax: infantTax, other: 0, discount: disc, aitVat, count: paxInfants, amount: (infantBase - disc + infantTax + aitVat) * paxInfants });
