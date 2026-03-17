@@ -250,14 +250,14 @@ const AdminLayout = () => {
         {/* Admin Top Bar */}
         <header className="fixed top-0 left-0 right-0 z-50 h-14 admin-topbar-clean flex items-center px-4 md:px-6">
           <button
-            className="md:hidden mr-3 p-2 rounded-lg hover:bg-white/10 transition-colors text-white/70"
+            className="md:hidden mr-3 p-2 rounded-lg hover:bg-muted transition-colors text-muted-foreground"
             onClick={() => setSidebarOpen(!sidebarOpen)}
           >
             {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
           <Link to="/admin" className="flex items-center gap-3 mr-6">
-            <img src="/images/seven-trip-logo.png" alt="Seven Trip" className="h-8 w-auto brightness-0 invert" />
-            <span className="hidden sm:flex items-center gap-1.5 text-[11px] font-bold text-white/80 px-2 py-1 rounded-md bg-white/5 border border-white/10">
+            <img src="/images/seven-trip-logo.png" alt="Seven Trip" className="h-8 w-auto" />
+            <span className="hidden sm:flex items-center gap-1.5 text-[11px] font-bold text-muted-foreground px-2 py-1 rounded-md bg-muted border border-border">
               <Shield className="w-3 h-3" />
               Admin
             </span>
