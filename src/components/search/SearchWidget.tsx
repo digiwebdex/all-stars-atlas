@@ -628,7 +628,7 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
     if (treatmentType) params.set('treatment', treatmentType);
     params.set('date', format(medicalDate, 'yyyy-MM-dd'));
     params.set('patients', String(medicalPatients));
-    navigate(`${routePrefix}/medical?${params.toString()}`);
+    navigate(`/medical?${params.toString()}`);
   };
 
   const handleCarSearch = () => {
