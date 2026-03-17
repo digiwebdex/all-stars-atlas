@@ -21,6 +21,7 @@
 | **UI/UX Overhaul** | v4.1.0 | Mar 14, 2026 | 1 day | SearchWidget props refactor, compact pill bar, AnimatedFlightArc redesign, Sabre child/infant PTC fix, session timeout redirect |
 | **Documentation & Fixes** | v4.1.3 | Mar 15, 2026 | 1 day | Flight sorting/filter/responsiveness fixes, TTI payload docs, 20+ .md version bump |
 | **Cabin Class Accuracy** | v4.1.5 | Mar 17, 2026 | 1 day | Branded fare naming, cabin class derived from booking code, fare option ordering by searched cabin |
+| **Dashboard Hardening** | v4.1.6 | Mar 17, 2026 | 1 day | E-ticket PDF ASCII fix, Flight Status/Fare Rules resilience, SSR History popup, all 15+ dashboard modules verified |
 
 **Total Development Time:** ~22 days (Mar 1–17, 2026)
 
