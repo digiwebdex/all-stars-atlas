@@ -1,7 +1,7 @@
 # Seven Trip — Complete Deployment History
 
 > Every deployment to production with exact commands, what changed, and verification steps.
-> Last updated: 2026-03-15 (v4.1.3 — Flight UI fixes + TTI Payload Docs)
+> Last updated: 2026-03-17 (v4.1.5 — Cabin Class Accuracy & Branded Fare Naming)
 
 ---
 
