@@ -585,7 +585,7 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
     params.set('depart', format(departDate, 'yyyy-MM-dd'));
     if (returnDate && tripType === 'roundtrip') params.set('return', format(returnDate, 'yyyy-MM-dd'));
     if (preferredCarrier && preferredCarrier !== 'any') params.set('carrier', preferredCarrier);
-    navigate(`${routePrefix}/flights?${params.toString()}`);
+    navigate(`/flights?${params.toString()}`);
   };
 
   const handleHotelSearch = () => {
