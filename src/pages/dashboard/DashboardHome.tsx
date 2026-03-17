@@ -70,8 +70,8 @@ const DashboardHome = () => {
       <motion.div className="space-y-6" variants={container} initial="hidden" animate="show">
 
         {/* Search Widget - like reference design */}
-        <motion.div variants={item} className="rounded-2xl bg-card border border-border shadow-sm overflow-hidden min-w-0">
-          <SearchWidget />
+        <motion.div variants={item} className="rounded-2xl bg-card border border-border shadow-sm overflow-hidden min-w-0 w-full max-w-full">
+          <SearchWidget compact />
         </motion.div>
 
         <motion.div variants={item} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
