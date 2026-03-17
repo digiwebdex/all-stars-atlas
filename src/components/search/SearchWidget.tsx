@@ -814,7 +814,7 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
           <div className="space-y-3">
             {multiCitySegments.map((segment, index) => (
               <div key={index} className={`grid grid-cols-1 ${compact ? 'lg:grid-cols-12' : 'md:grid-cols-12'} gap-0 border border-border rounded-2xl bg-background shadow-sm relative`}>
-                <div className={`${compact ? 'lg:col-span-4' : 'md:col-span-4'} search-field border-b ${compact ? 'lg:border-b-0' : 'md:border-b-0'} flex-col items-start min-w-0`}>
+                <div className={`${compact ? 'lg:col-span-4' : 'md:col-span-4'} ${sf} border-b ${compact ? 'lg:border-b-0' : 'md:border-b-0'} flex-col items-start min-w-0`}>
                   <AirportInput label={`From (Flight ${index + 1})`} value={segment.from} onChange={(a) => updateSegment(index, 'from', a)} placeholder="Type city or airport..." airports={scopedMultiCityFromAirports} icon={<PlaneTakeoff className="w-5 h-5" />} />
                 </div>
 
