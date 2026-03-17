@@ -1064,7 +1064,7 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
             </div>
           </div>
         </div>
-        <div className={`search-field border-b ${bp}:border-b-0 flex-col items-start ${bp}:col-span-2 ${dateErrorClass("visaDate")}`}>
+        <div className={`${sf} border-b ${bp}:border-b-0 flex-col items-start ${bp}:col-span-2 ${dateErrorClass("visaDate")}`}>
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Travel Date</div>
           <Popover open={openDatePopover === "visaDate"} onOpenChange={(o) => setOpenDatePopover(o ? "visaDate" : null)}>
             <PopoverTrigger className="w-full text-left">
