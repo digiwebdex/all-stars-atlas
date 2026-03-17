@@ -4,6 +4,12 @@ export default {
   darkMode: ["class"],
   content: ["./pages/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}", "./app/**/*.{ts,tsx}", "./src/**/*.{ts,tsx}"],
   prefix: "",
+  safelist: [
+    {
+      pattern: /(grid-cols-12|contents|border-b-0|border-r|col-span-(2|3|4|5))/,
+      variants: ["md", "lg"],
+    },
+  ],
   theme: {
     container: {
       center: true,
