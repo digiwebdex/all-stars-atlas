@@ -637,7 +637,7 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
     const params = new URLSearchParams({ pickup: pickupCity, dropoff: dropoffCity });
     params.set('pickupDate', format(pickupDate, 'yyyy-MM-dd'));
     params.set('dropoffDate', format(dropoffDate, 'yyyy-MM-dd'));
-    navigate(`${routePrefix}/cars?${params.toString()}`);
+    navigate(`/cars?${params.toString()}`);
   };
 
   const handleEsimSearch = () => {
