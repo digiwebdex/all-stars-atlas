@@ -1245,7 +1245,7 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
               <PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={pickupDate} onSelect={(d) => { setPickupDate(d); clearDateError("pickupDate"); setOpenDatePopover(null); }} initialFocus className="pointer-events-auto" disabled={(date) => date < new Date()} /></PopoverContent>
             </Popover>
           </div>
-          <div className={`${bp}:col-span-2 search-field border-b ${bp}:border-b-0 flex-col items-start ${dateErrorClass("dropoffDate")}`}>
+          <div className={`${bp}:col-span-2 ${sf} border-b ${bp}:border-b-0 flex-col items-start ${dateErrorClass("dropoffDate")}`}>
             <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Drop-off Date</div>
             <Popover open={openDatePopover === "dropoffDate"} onOpenChange={(o) => setOpenDatePopover(o ? "dropoffDate" : null)}>
               <PopoverTrigger className="w-full text-left"><DateDisplay date={dropoffDate} fallbackDay="—" fallbackMonth="Select" fallbackWeekday="Date" /></PopoverTrigger>
