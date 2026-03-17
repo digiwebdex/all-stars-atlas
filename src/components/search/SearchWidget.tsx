@@ -867,27 +867,27 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
             </div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-0 border border-border rounded-2xl bg-background shadow-sm overflow-hidden">
-            <div className="md:col-span-3 search-field border-b md:border-b-0 flex-col items-start">
+          <div className={`grid grid-cols-1 ${compact ? 'lg:grid-cols-12' : 'md:grid-cols-12'} gap-0 border border-border rounded-2xl bg-background shadow-sm overflow-hidden`}>
+            <div className={`${compact ? 'lg:col-span-3' : 'md:col-span-3'} search-field border-b ${compact ? 'lg:border-b-0' : 'md:border-b-0'} flex-col items-start min-w-0`}>
               <AirportInput label="From" value={fromAirport} onChange={setFromAirport} placeholder="Type city or airport..." airports={scopedFromAirports} icon={<PlaneTakeoff className="w-5 h-5" />} />
             </div>
 
-            <div className="flex md:hidden items-center justify-center py-1">
+            <div className={`flex ${compact ? 'lg:hidden' : 'md:hidden'} items-center justify-center py-1`}>
               <button onClick={swapAirports} className="w-9 h-9 rounded-full bg-card border-2 border-primary/30 flex items-center justify-center text-primary hover:bg-primary hover:text-primary-foreground transition-all shadow-sm">
                 <Repeat2 className="w-4 h-4 rotate-90" />
               </button>
             </div>
-            <div className="hidden md:flex items-center justify-center -mx-4 z-10">
+            <div className={`hidden ${compact ? 'lg:flex' : 'md:flex'} items-center justify-center -mx-4 z-10`}>
               <button onClick={swapAirports} className="w-10 h-10 rounded-full bg-card border-2 border-primary/30 flex items-center justify-center text-primary hover:bg-primary hover:text-primary-foreground transition-all shadow-md hover:shadow-lg hover:scale-110">
                 <Repeat2 className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="md:col-span-3 search-field border-b md:border-b-0 flex-col items-start">
+            <div className={`${compact ? 'lg:col-span-3' : 'md:col-span-3'} search-field border-b ${compact ? 'lg:border-b-0' : 'md:border-b-0'} flex-col items-start min-w-0`}>
               <AirportInput label="To" value={toAirport} onChange={setToAirport} placeholder="Where to?" airports={scopedToAirports} icon={<PlaneLanding className="w-5 h-5" />} />
             </div>
 
-            <div className={`${tripType === "roundtrip" ? "col-span-1 sm:col-span-1" : ""} md:col-span-2 search-field border-b md:border-b-0 flex-col items-start ${dateErrorClass("depart")}`}>
+            <div className={`${tripType === "roundtrip" ? "col-span-1 sm:col-span-1" : ""} ${compact ? 'lg:col-span-2' : 'md:col-span-2'} search-field border-b ${compact ? 'lg:border-b-0' : 'md:border-b-0'} flex-col items-start ${dateErrorClass("depart")}`}>
               <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1 flex items-center gap-1"><CalendarDays className="w-3 h-3" /> Departure</div>
               <Popover open={openDatePopover === "depart"} onOpenChange={(o) => setOpenDatePopover(o ? "depart" : null)}>
                 <PopoverTrigger className="w-full text-left">
@@ -900,7 +900,7 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
             </div>
 
             {tripType === "roundtrip" && (
-              <div className={`md:col-span-2 search-field border-b md:border-b-0 flex-col items-start ${dateErrorClass("return")}`}>
+              <div className={`${compact ? 'lg:col-span-2' : 'md:col-span-2'} search-field border-b ${compact ? 'lg:border-b-0' : 'md:border-b-0'} flex-col items-start ${dateErrorClass("return")}`}>
                 <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1 flex items-center gap-1"><CalendarDays className="w-3 h-3" /> Return</div>
                 <Popover open={openDatePopover === "return"} onOpenChange={(o) => setOpenDatePopover(o ? "return" : null)}>
                   <PopoverTrigger className="w-full text-left">
@@ -913,7 +913,7 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
               </div>
             )}
 
-            <div className={`${tripType === "roundtrip" ? "md:col-span-2" : "md:col-span-4"} flex items-center justify-center p-3`}>
+            <div className={`${tripType === "roundtrip" ? (compact ? "lg:col-span-2" : "md:col-span-2") : (compact ? "lg:col-span-4" : "md:col-span-4")} flex items-center justify-center p-3`}>
               <Button onClick={handleFlightSearch} className="w-full h-12 md:h-full md:min-h-[56px] rounded-xl bg-secondary text-secondary-foreground hover:bg-secondary/90 text-base font-extrabold shadow-xl shadow-secondary/25 hover:shadow-secondary/40 transition-all active:scale-[0.98]">
                 <SendHorizontal className="w-5 h-5 mr-2" /> SEARCH
               </Button>
