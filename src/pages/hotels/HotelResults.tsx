@@ -344,11 +344,11 @@ const HotelResults = () => {
                 <span className="flex items-center gap-1"><Moon className="w-3 h-3" /> {nights} night{nights > 1 ? 's' : ''}, {adults} adult{parseInt(adults) > 1 ? 's' : ''}</span>
               </div>
               <div className="text-right">
-                {hotel.originalPrice && <p className="text-xs text-muted-foreground line-through">${hotel.originalPrice.toLocaleString()}</p>}
-                <p className="text-xl sm:text-2xl font-black text-primary">${hotel.price?.toLocaleString()}</p>
+                {hotel.originalPrice && <p className="text-xs text-muted-foreground line-through">৳{hotel.originalPrice.toLocaleString()}</p>}
+                <p className="text-xl sm:text-2xl font-black text-primary">৳{hotel.price?.toLocaleString()}</p>
                 <p className="text-[10px] text-muted-foreground">per night</p>
                 {hotel.totalPrice > 0 && nights > 1 && (
-                  <p className="text-[11px] text-muted-foreground font-medium mt-0.5">${hotel.totalPrice.toLocaleString()} total</p>
+                  <p className="text-[11px] text-muted-foreground font-medium mt-0.5">৳{hotel.totalPrice.toLocaleString()} total</p>
                 )}
               </div>
             </div>
