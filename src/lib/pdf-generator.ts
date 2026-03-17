@@ -258,9 +258,9 @@ export async function generateMoneyReceiptPDF(data: MoneyReceiptData) {
     if (item) {
       doc.text(item.description, colDesc, y + 7, { maxWidth: colPax - colDesc - 5 });
       doc.text(String(item.pax), colPax, y + 7, { align: "center" });
-      doc.text(`${item.unitPrice.toLocaleString("en-IN", { minimumFractionDigits: 2 })}৳`, colUnit + 10, y + 7, { align: "center" });
+      doc.text(`${item.unitPrice.toLocaleString("en-IN", { minimumFractionDigits: 2 })} BDT`, colUnit + 10, y + 7, { align: "center" });
       doc.setFont("helvetica", "bold");
-      doc.text(`${item.totalPrice.toLocaleString("en-IN", { minimumFractionDigits: 2 })}৳`, colTotal - 4, y + 7, { align: "right" });
+      doc.text(`${item.totalPrice.toLocaleString("en-IN", { minimumFractionDigits: 2 })} BDT`, colTotal - 4, y + 7, { align: "right" });
       doc.setFont("helvetica", "normal");
     }
     y += rowH;
@@ -281,7 +281,7 @@ export async function generateMoneyReceiptPDF(data: MoneyReceiptData) {
   doc.setFont("helvetica", "bold");
   doc.setTextColor(0);
   doc.text("Total Fair", totalsValueX - 45, y + 6, { align: "right" });
-  doc.text(`${data.totalAmount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}৳`, totalsValueX, y + 6, { align: "right" });
+  doc.text(`${data.totalAmount.toLocaleString("en-IN", { minimumFractionDigits: 2 })} BDT`, totalsValueX, y + 6, { align: "right" });
   y += totalsRowH;
 
   // Due
@@ -291,7 +291,7 @@ export async function generateMoneyReceiptPDF(data: MoneyReceiptData) {
   doc.rect(totalsLabelX - 5, y, tableRight - totalsLabelX + 5, totalsRowH, "S");
   doc.setFont("helvetica", "bold");
   doc.text("Due", totalsValueX - 45, y + 6, { align: "right" });
-  doc.text(`${data.due.toLocaleString("en-IN", { minimumFractionDigits: 2 })}৳`, totalsValueX, y + 6, { align: "right" });
+  doc.text(`${data.due.toLocaleString("en-IN", { minimumFractionDigits: 2 })} BDT`, totalsValueX, y + 6, { align: "right" });
   y += totalsRowH;
 
   // Adjustment/Discount
@@ -301,7 +301,7 @@ export async function generateMoneyReceiptPDF(data: MoneyReceiptData) {
   doc.rect(totalsLabelX - 5, y, tableRight - totalsLabelX + 5, totalsRowH, "S");
   doc.setFont("helvetica", "bold");
   doc.text("Adjustment/Discount", totalsValueX - 45, y + 6, { align: "right" });
-  doc.text(`${data.discount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}৳`, totalsValueX, y + 6, { align: "right" });
+  doc.text(`${data.discount.toLocaleString("en-IN", { minimumFractionDigits: 2 })} BDT`, totalsValueX, y + 6, { align: "right" });
   y += totalsRowH;
 
   // Grand Total — pink background
@@ -312,7 +312,7 @@ export async function generateMoneyReceiptPDF(data: MoneyReceiptData) {
   doc.setFontSize(10);
   doc.setFont("helvetica", "bold");
   doc.text("Grand Total", totalsValueX - 45, y + 6, { align: "right" });
-  doc.text(`${data.grandTotal.toLocaleString("en-IN", { minimumFractionDigits: 2 })}৳`, totalsValueX, y + 6, { align: "right" });
+  doc.text(`${data.grandTotal.toLocaleString("en-IN", { minimumFractionDigits: 2 })} BDT`, totalsValueX, y + 6, { align: "right" });
   y += totalsRowH;
 
   // In Words
@@ -529,9 +529,9 @@ async function buildInvoiceDoc(inv: InvoiceData): Promise<jsPDF> {
       if (item.quantity !== undefined) {
         doc.text(String(item.quantity), tableRight - 65, y + 7, { align: "center" });
       }
-      doc.text(`${item.unitPrice.toLocaleString("en-IN", { minimumFractionDigits: 2 })}৳`, tableRight - 38, y + 7, { align: "center" });
+      doc.text(`${item.unitPrice.toLocaleString("en-IN", { minimumFractionDigits: 2 })} BDT`, tableRight - 38, y + 7, { align: "center" });
       doc.setFont("helvetica", "bold");
-      doc.text(`${item.totalPrice.toLocaleString("en-IN", { minimumFractionDigits: 2 })}৳`, tableRight - 4, y + 7, { align: "right" });
+      doc.text(`${item.totalPrice.toLocaleString("en-IN", { minimumFractionDigits: 2 })} BDT`, tableRight - 4, y + 7, { align: "right" });
       doc.setFont("helvetica", "normal");
     }
     y += rowH;
@@ -552,7 +552,7 @@ async function buildInvoiceDoc(inv: InvoiceData): Promise<jsPDF> {
   doc.setFont("helvetica", "bold");
   doc.setTextColor(0);
   doc.text("Subtotal", totalsValueX - 45, y + 6, { align: "right" });
-  doc.text(`${(inv.subtotal || inv.amount || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}৳`, totalsValueX, y + 6, { align: "right" });
+  doc.text(`${(inv.subtotal || inv.amount || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })} BDT`, totalsValueX, y + 6, { align: "right" });
   y += totalsRowH;
 
   // Tax (if applicable)
@@ -562,7 +562,7 @@ async function buildInvoiceDoc(inv: InvoiceData): Promise<jsPDF> {
     doc.setDrawColor(220);
     doc.rect(totalsLabelX - 5, y, tableRight - totalsLabelX + 5, totalsRowH, "S");
     doc.text("Tax", totalsValueX - 45, y + 6, { align: "right" });
-    doc.text(`${inv.tax.toLocaleString("en-IN", { minimumFractionDigits: 2 })}৳`, totalsValueX, y + 6, { align: "right" });
+    doc.text(`${inv.tax.toLocaleString("en-IN", { minimumFractionDigits: 2 })} BDT`, totalsValueX, y + 6, { align: "right" });
     y += totalsRowH;
   }
 
@@ -574,7 +574,7 @@ async function buildInvoiceDoc(inv: InvoiceData): Promise<jsPDF> {
     doc.rect(totalsLabelX - 5, y, tableRight - totalsLabelX + 5, totalsRowH, "S");
     doc.setTextColor(0, 130, 0);
     doc.text("Discount", totalsValueX - 45, y + 6, { align: "right" });
-    doc.text(`-${inv.discount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}৳`, totalsValueX, y + 6, { align: "right" });
+    doc.text(`-${inv.discount.toLocaleString("en-IN", { minimumFractionDigits: 2 })} BDT`, totalsValueX, y + 6, { align: "right" });
     doc.setTextColor(0);
     y += totalsRowH;
   }
@@ -588,7 +588,7 @@ async function buildInvoiceDoc(inv: InvoiceData): Promise<jsPDF> {
   doc.setFont("helvetica", "bold");
   doc.setTextColor(0);
   doc.text("Grand Total", totalsValueX - 45, y + 6, { align: "right" });
-  doc.text(`${inv.amount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}৳`, totalsValueX, y + 6, { align: "right" });
+  doc.text(`${inv.amount.toLocaleString("en-IN", { minimumFractionDigits: 2 })} BDT`, totalsValueX, y + 6, { align: "right" });
   y += totalsRowH;
 
   // In words
@@ -1120,10 +1120,10 @@ async function buildPremiumTicketDoc(ticket: TicketData): Promise<jsPDF> {
   doc.rect(lm, y, cw, 18);
 
   const timelineItems = [
-    { icon: "🏢", title: "Check in online, or", desc: "Arrive 3 hours before departure" },
-    { icon: "🧳", title: "90 minutes", desc: "Drop bags at check-in counter" },
-    { icon: "🔒", title: "60 minutes", desc: "Clear airport security" },
-    { icon: "🚶", title: "45 minutes", desc: "Arrive at boarding gate" },
+    { icon: "[1]", title: "Check in online, or", desc: "Arrive 3 hours before departure" },
+    { icon: "[2]", title: "90 minutes", desc: "Drop bags at check-in counter" },
+    { icon: "[3]", title: "60 minutes", desc: "Clear airport security" },
+    { icon: "[4]", title: "45 minutes", desc: "Arrive at boarding gate" },
   ];
   const tlColW = cw / 4;
   timelineItems.forEach((item, i) => {
@@ -1177,9 +1177,9 @@ async function buildPremiumTicketDoc(ticket: TicketData): Promise<jsPDF> {
       doc.setFontSize(9);
       doc.setFont("helvetica", "bold");
       doc.setTextColor(255, 255, 255);
-      const dirIcon = isReturn ? "◄" : "►";
+      const dirIcon = isReturn ? "<<" : ">>";
       const dirLabel = isReturn ? "Returning" : "Departing";
-      doc.text(`  ${dirIcon}  ${dirLabel}  »  From ${fromCity}`, lm + 2, y + 5.5);
+      doc.text(`  ${dirIcon}  ${dirLabel}  --  From ${fromCity}`, lm + 2, y + 5.5);
       y += 10;
     }
 
@@ -1355,10 +1355,10 @@ async function buildPremiumTicketDoc(ticket: TicketData): Promise<jsPDF> {
     doc.setFont("helvetica", "italic");
     setColor(doc, LIGHT);
     const depDate = safeDateShort(seg.departureTime) || "--";
-    doc.text(`📅  Coupon validity: not before ${depDate} / not after ${depDate}`, lm + 3, y + 3);
+    doc.text(`Coupon validity: not before ${depDate} / not after ${depDate}`, lm + 3, y + 3);
     doc.setFont("helvetica", "bold");
     setColor(doc, PURPLE);
-    doc.text(`🧳  Baggage  ${baggageStr(seg.baggage) || "As per airline policy"}`, lm + cw * 0.6, y + 3);
+    doc.text(`Baggage: ${baggageStr(seg.baggage) || "As per airline policy"}`, lm + cw * 0.6, y + 3);
     y += 6;
 
     // ══════ PER-SEGMENT PASSENGER TABLE ══════
@@ -1519,7 +1519,7 @@ async function buildPremiumTicketDoc(ticket: TicketData): Promise<jsPDF> {
     doc.setFont("helvetica", "normal");
     setColor(doc, DARK);
     doc.text("ADULT", lm + 4, y + 4);
-    doc.text(`${seg.origin} → ${seg.destination}`, lm + 40, y + 4);
+    doc.text(`${seg.origin} - ${seg.destination}`, lm + 40, y + 4);
     doc.setFont("helvetica", "bold");
     doc.text(baggageStr(seg.baggage) || "--", lm + cw * 0.65, y + 4);
     y += 6;
@@ -1548,7 +1548,7 @@ async function buildPremiumTicketDoc(ticket: TicketData): Promise<jsPDF> {
     doc.setFont("helvetica", "normal");
     setColor(doc, DARK);
     doc.text("ADULT", lm + 4, y + 4);
-    doc.text(`${seg.origin} → ${seg.destination}`, lm + 40, y + 4);
+    doc.text(`${seg.origin} - ${seg.destination}`, lm + 40, y + 4);
     doc.setFont("helvetica", "bold");
     doc.text(baggageStr(seg.handBaggage) || "1PC", lm + cw * 0.65, y + 4);
     y += 6;
