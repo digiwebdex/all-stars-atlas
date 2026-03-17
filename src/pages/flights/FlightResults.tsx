@@ -707,16 +707,46 @@ const FareOptionsPanel = ({ flights, onBook }: { flights: any[]; onBook: (flight
     const fd = primary.fareDetails || [];
     const isSabreSource = String(primary.source || '').toLowerCase().includes('sabre') || !!primary._sabreSeqNumber || !!primary._sabreSource;
     
-    const buildOption = (f: any, i: number, isSingle: boolean) => {
-      // Smart label: use brandName → fareBasis → generic
-      let label = '';
-      if (f.brandName) {
-        label = f.brandName.split(' ').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
-      } else if (f.fareBasis && !isSingle) {
-        label = `Fare ${f.fareBasis}`;
-      } else {
-        label = isSingle ? "Available Fare" : (f.label || `Fare Option ${i + 1}`);
+    const deriveFareBrandName = (fareDetail: any, bookingCls: string, idx: number, single: boolean): string => {
+      // 1) If GDS provides a brand name, use it
+      if (fareDetail.brandName) {
+        return fareDetail.brandName.split(' ').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
       }
+      if (fareDetail.label && !fareDetail.label.startsWith('Fare Option')) return fareDetail.label;
+
+      // 2) Derive from booking class letter → branded cabin tier
+      const cls = (fareDetail.bookingClass || fareDetail.cabinClass || bookingCls || '').charAt(0).toUpperCase();
+      const cabinRaw = String(fareDetail.cabin || fareDetail.cabinClass || primary.cabinClass || '').toLowerCase();
+
+      // Business / First class letters
+      const businessClasses: Record<string, string> = { C: 'Business Saver', J: 'Business Flex', D: 'Business Value', I: 'Business Classic', Z: 'Business Promo' };
+      const firstClasses: Record<string, string> = { F: 'First Class', A: 'First Saver', P: 'Premium First', R: 'First Suite' };
+      const premEconClasses: Record<string, string> = { W: 'Premium Economy', E: 'Premium Economy Saver' };
+
+      if (businessClasses[cls]) return businessClasses[cls];
+      if (firstClasses[cls]) return firstClasses[cls];
+      if (premEconClasses[cls]) return premEconClasses[cls];
+      if (cabinRaw.includes('business')) return `Business ${cls || 'Class'}`;
+      if (cabinRaw.includes('first')) return `First ${cls || 'Class'}`;
+      if (cabinRaw.includes('premium')) return `Premium Economy ${cls || ''}`.trim();
+
+      // 3) Economy tiers — map by booking class letter
+      const econTiers: Record<string, string> = {
+        Y: 'Economy Flex', B: 'Economy Standard', M: 'Economy Standard',
+        H: 'Economy Comfort', K: 'Economy Value', L: 'Economy Light',
+        Q: 'Economy Saver', T: 'Economy Super Saver', N: 'Economy Promo',
+        V: 'Economy Convenience', S: 'Economy Smart', G: 'Economy Basic',
+        X: 'Economy Discount', U: 'Economy Budget', O: 'Economy Special',
+      };
+      if (econTiers[cls]) return econTiers[cls];
+
+      // 4) Final fallback
+      if (single) return 'Available Fare';
+      return `Economy ${cls || `Option ${idx + 1}`}`;
+    };
+
+    const buildOption = (f: any, i: number, isSingle: boolean) => {
+      const label = deriveFareBrandName(f, primary.bookingClass || '', i, isSingle);
 
       // Determine meal/seat status — 'available' means "can be added as SSR/ancillary"
       const mealStatus = f.mealIncluded === true ? 'included' 
