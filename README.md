@@ -148,20 +148,25 @@
 - **Role-based routing** — Admin ↔ Customer strict separation
 - **AuthGateModal** — Inline auth popup during booking flow (no page redirect)
 
-### User Dashboard (12 pages)
+### User Dashboard (15+ pages)
 | Page | Features |
 |------|----------|
-| Overview | Stats cards, recent bookings, quick actions |
-| Bookings | 12-status lifecycle, filters, detail view |
-| E-Tickets | PDF download via jsPDF, print |
-| Transactions | Running balance ledger with debit/credit |
+| Overview | Stats cards, recent bookings, quick actions, embedded SearchWidget |
+| Bookings | 12-status lifecycle, filters, detail view, cancel, void, pay |
+| Booking Detail | Flight segments, fare breakdown, passengers, dual PNR display |
+| E-Tickets | PDF download via jsPDF, print, void, refund quote |
+| Transactions | Running balance ledger with debit/credit, CSV export |
 | E-Transactions | Digital gateway fee tracking |
 | Payments | Receipt upload for manual payment verification |
 | Invoices | Auto-generated Invoice PDF + Money Receipt PDF with QR codes |
 | Pay Later | Due management & reminders |
 | Travellers | Saved passenger profiles for faster booking |
+| Wallet | Add funds (SSLCommerz/bKash/Nagad/bank), transfer, transaction history |
 | Wishlist | Saved hotels |
 | Search History | Past flight/hotel searches |
+| SSR History | Special service requests across bookings with popup detail view |
+| Timeline | Booking lifecycle events timeline |
+| Rewards | Points balance, earn/redeem history, coupons |
 | Settings | Profile, password, notifications, 2FA toggle, delete account |
 
 ### Admin Panel (17 modules)
