@@ -101,7 +101,7 @@
 │       ├── paybill/           # PayBillPage
 │       ├── booking/           # BookingConfirmation
 │       ├── static/            # About, Contact, Blog, FAQ, Terms, Privacy, etc.
-│       ├── dashboard/         # 12 user dashboard pages
+│       ├── dashboard/         # 15+ user dashboard pages
 │       └── admin/             # 17 admin panel modules
 ├── public/                   # Static assets
 │   ├── images/               # Logo, hero images
