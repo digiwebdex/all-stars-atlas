@@ -1177,9 +1177,9 @@ async function buildPremiumTicketDoc(ticket: TicketData): Promise<jsPDF> {
       doc.setFontSize(9);
       doc.setFont("helvetica", "bold");
       doc.setTextColor(255, 255, 255);
-      const dirIcon = isReturn ? "◄" : "►";
+      const dirIcon = isReturn ? "<<" : ">>";
       const dirLabel = isReturn ? "Returning" : "Departing";
-      doc.text(`  ${dirIcon}  ${dirLabel}  »  From ${fromCity}`, lm + 2, y + 5.5);
+      doc.text(`  ${dirIcon}  ${dirLabel}  --  From ${fromCity}`, lm + 2, y + 5.5);
       y += 10;
     }
 
