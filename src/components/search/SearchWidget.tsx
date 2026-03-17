@@ -1190,7 +1190,7 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
             <SelectContent>{TREATMENT_TYPES.map(t => (<SelectItem key={t} value={t.toLowerCase().replace(/ /g, '-')}>{t}</SelectItem>))}</SelectContent>
           </Select>
         </div>
-        <div className={`${bp}:col-span-2 search-field border-b ${bp}:border-b-0 flex-col items-start ${dateErrorClass("medicalDate")}`}>
+        <div className={`${bp}:col-span-2 ${sf} border-b ${bp}:border-b-0 flex-col items-start ${dateErrorClass("medicalDate")}`}>
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Travel Date</div>
           <Popover open={openDatePopover === "medicalDate"} onOpenChange={(o) => setOpenDatePopover(o ? "medicalDate" : null)}>
             <PopoverTrigger className="w-full text-left"><DateDisplay date={medicalDate} fallbackDay="—" fallbackMonth="Select" fallbackWeekday="Date" /></PopoverTrigger>
