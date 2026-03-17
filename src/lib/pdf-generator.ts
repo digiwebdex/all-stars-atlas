@@ -1519,7 +1519,7 @@ async function buildPremiumTicketDoc(ticket: TicketData): Promise<jsPDF> {
     doc.setFont("helvetica", "normal");
     setColor(doc, DARK);
     doc.text("ADULT", lm + 4, y + 4);
-    doc.text(`${seg.origin} → ${seg.destination}`, lm + 40, y + 4);
+    doc.text(`${seg.origin} - ${seg.destination}`, lm + 40, y + 4);
     doc.setFont("helvetica", "bold");
     doc.text(baggageStr(seg.baggage) || "--", lm + cw * 0.65, y + 4);
     y += 6;
