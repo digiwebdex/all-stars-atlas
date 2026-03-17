@@ -1470,8 +1470,8 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
       {/* Tabs */}
       {!flightOnly && (
         <div className={`flex items-center justify-center gap-0 px-2 sm:px-4 overflow-x-auto scrollbar-none border-b border-border/40 -webkit-overflow-scrolling-touch ${compact ? 'pt-1.5 pb-0' : 'pt-2 sm:pt-3'}`}>
-          <div className="flex items-center gap-1 sm:gap-1.5">
-            {tabs.map((tab) => (
+          <div className="flex items-center justify-center gap-1 sm:gap-1.5 mx-auto">
+            {visibleTabs.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
