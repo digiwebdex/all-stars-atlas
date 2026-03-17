@@ -1836,7 +1836,90 @@ const FlightBooking = () => {
                   </Card>
                 )}
 
-                <div className="flex items-start gap-2">
+                {/* ── Coupon / Reward Points Section ── */}
+                <Card className="border-warning/20 bg-warning/[0.02]">
+                  <CardContent className="pt-5 pb-5 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <Gift className="w-4 h-4 text-warning" />
+                      <h3 className="text-sm font-bold">Apply Reward Coupon</h3>
+                    </div>
+
+                    {appliedCoupon ? (
+                      <div className="flex items-center justify-between p-3 rounded-xl bg-accent/5 border border-accent/20">
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-lg bg-accent/20 flex items-center justify-center">
+                            <Ticket className="w-4 h-4 text-accent" />
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-mono font-bold text-sm">{appliedCoupon.code}</span>
+                              <Badge className="text-[9px] bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">Applied</Badge>
+                            </div>
+                            <p className="text-xs text-accent font-semibold">-৳{appliedCoupon.amount.toLocaleString()} discount</p>
+                          </div>
+                        </div>
+                        <Button variant="ghost" size="sm" onClick={handleRemoveCoupon} className="text-destructive hover:text-destructive hover:bg-destructive/10">
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <>
+                        {/* Auto-suggest available coupons */}
+                        {activeCoupons.length > 0 && (
+                          <div className="space-y-2">
+                            <p className="text-xs text-muted-foreground">Your available coupons:</p>
+                            <div className="space-y-1.5">
+                              {activeCoupons.slice(0, 3).map((c: any) => (
+                                <button
+                                  key={c.id}
+                                  onClick={() => handleApplyCoupon(c.code)}
+                                  className="w-full flex items-center justify-between p-2.5 rounded-lg border border-border hover:border-accent/40 hover:bg-accent/5 transition-colors text-left"
+                                >
+                                  <div className="flex items-center gap-2.5">
+                                    <div className="w-8 h-8 rounded-lg bg-warning/20 flex items-center justify-center">
+                                      <Ticket className="w-4 h-4 text-warning" />
+                                    </div>
+                                    <div>
+                                      <span className="font-mono font-bold text-xs">{c.code}</span>
+                                      <p className="text-[10px] text-muted-foreground">
+                                        BDT {parseFloat(c.amount).toLocaleString()} • Expires {c.expires_at ? new Date(c.expires_at).toLocaleDateString() : "Never"}
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <Badge variant="outline" className="text-[9px] text-accent border-accent/40">Apply</Badge>
+                                </button>
+                              ))}
+                            </div>
+                            <Separator className="my-2" />
+                          </div>
+                        )}
+                        {/* Manual coupon entry */}
+                        <div className="flex gap-2">
+                          <Input
+                            placeholder="Enter coupon code"
+                            value={couponCode}
+                            onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                            className="flex-1 font-mono text-sm"
+                          />
+                          <Button
+                            variant="outline"
+                            onClick={() => handleApplyCoupon()}
+                            disabled={couponLoading || !couponCode.trim()}
+                            className="shrink-0"
+                          >
+                            {couponLoading ? "Checking..." : "Apply"}
+                          </Button>
+                        </div>
+                        {activeCoupons.length === 0 && (
+                          <p className="text-[10px] text-muted-foreground">
+                            Earn reward points on every booking! Redeem points for coupons from your <Link to="/dashboard/rewards" className="text-accent hover:underline">Dashboard → Rewards</Link>.
+                          </p>
+                        )}
+                      </>
+                    )}
+                  </CardContent>
+                </Card>
+
                   <Checkbox id="agree" className="mt-0.5" checked={agreedTerms} onCheckedChange={(v) => setAgreedTerms(!!v)} />
                   <label htmlFor="agree" className="text-xs text-muted-foreground">
                     I have read and accept all <Link to="/terms" className="text-accent hover:underline">Terms & Conditions</Link> and <Link to="/refund-policy" className="text-accent hover:underline">Cancellation Policies</Link>
