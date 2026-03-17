@@ -241,7 +241,7 @@ FF Update: POST /flights/update-frequent-flyer → Sabre UpdatePNR FQTV SSR (v4.
 
 > **Note**: Sabre REST GetSeats v1 (`/v1/offers/getseats`) requires a PNR or offerId — it cannot do raw flight+date lookups like SOAP EnhancedSeatMapRQ. SOAP remains the primary seat map provider for pre-booking.
 
-### Production Airline Support Matrix (Verified 2026-03-13)
+### Production Airline Support Matrix (Verified 2026-03-17)
 ```
 ✅ SEAT MAP WORKING (6 airlines):
    EK (Emirates) 33 rows | SQ (Singapore) 35 rows | AI (Air India) 23 rows
@@ -256,6 +256,11 @@ FF Update: POST /flights/update-frequent-flyer → Sabre UpdatePNR FQTV SSR (v4.
    Pre-booking: NOT available (GAO requires PNR context)
    Post-booking: Available for airlines with active GAO support
    SSR injection: Available at PNR creation for ALL carriers
+
+🎫 CABIN CLASS DISPLAY (v4.1.5):
+   Card labels derive cabin from booking class letter (J→Business, V→Economy, F→First)
+   Fare options sorted: searched cabin first → other cabins by price
+   Branded names: Economy Convenience (V), Business Saver (C), First Class (F), etc.
 ```
 
 ---
