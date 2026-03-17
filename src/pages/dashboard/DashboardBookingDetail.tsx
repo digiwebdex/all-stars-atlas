@@ -374,30 +374,12 @@ const DashboardBookingDetail = () => {
           {activeTab === "itinerary" && (
             <div className="space-y-4">
               {booking.isRoundTrip && (
-                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-accent/15 text-accent border border-accent/30 text-sm font-bold shadow-sm">
+                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-400/30 text-sm font-bold shadow-sm">
                   <Plane className="w-4 h-4" />
                   <span>Outbound: {booking.origin} → {booking.destination}</span>
-                  <span className="flight-date text-xs ml-1">· {fmtDate(booking.departureTime)}</span>
+                  <span className="text-xs ml-1">· {fmtDate(booking.departureTime)}</span>
                 </div>
               )}
-              <div className="grid sm:grid-cols-2 gap-4">
-                <div className="border border-border rounded-xl overflow-hidden">
-                  <div className="bg-accent px-4 py-2"><p className="text-xs font-bold text-accent-foreground uppercase">Departure</p></div>
-                  <div className="p-4 space-y-2">
-                    <div className="flex items-center justify-between"><span className="text-3xl font-black">{booking.origin}</span><span className="text-2xl font-black">{fmtTime(booking.departureTime)}</span></div>
-                    <p className="text-xs text-muted-foreground">{fmtDate(booking.departureTime)}</p>
-                    {booking.legs[0]?.originTerminal && <p className="text-xs text-muted-foreground">Terminal {booking.legs[0].originTerminal}</p>}
-                  </div>
-                </div>
-                <div className="border border-border rounded-xl overflow-hidden">
-                  <div className="bg-accent px-4 py-2"><p className="text-xs font-bold text-accent-foreground uppercase">Arrival</p></div>
-                  <div className="p-4 space-y-2">
-                    <div className="flex items-center justify-between"><span className="text-3xl font-black">{booking.destination}</span><span className="text-2xl font-black">{fmtTime(booking.arrivalTime)}</span></div>
-                    <p className="text-xs text-muted-foreground">{fmtDate(booking.arrivalTime)}</p>
-                    {booking.legs[booking.legs.length - 1]?.destinationTerminal && <p className="text-xs text-muted-foreground">Terminal {booking.legs[booking.legs.length - 1].destinationTerminal}</p>}
-                  </div>
-                </div>
-              </div>
 
               <div className="border border-border rounded-xl overflow-hidden">
                 <div className="bg-muted/30 px-4 py-2 border-b border-border"><p className="text-xs font-bold uppercase text-muted-foreground">Flight Details</p></div>
