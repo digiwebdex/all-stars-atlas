@@ -11,6 +11,7 @@ import {
   ParkingCircle, Bath, Phone, Mail, Globe, CreditCard, Info, AlertCircle,
 } from "lucide-react";
 import { Link, useParams, useNavigate, useSearchParams } from "react-router-dom";
+import { usePrefixedNavigate } from "@/hooks/useRoutePrefix";
 import { useHotelDetails } from "@/hooks/useApiData";
 import { useAuth } from "@/hooks/useAuth";
 import AuthGateModal from "@/components/AuthGateModal";
