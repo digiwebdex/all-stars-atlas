@@ -302,9 +302,11 @@ const DashboardBookingDetail = () => {
 
           {/* ━━ Action Buttons ━━ */}
           <div className="flex flex-wrap items-center gap-3">
-            <Link to="/dashboard/issue-with-balance">
-              <Button className="bg-emerald-500 hover:bg-emerald-600 text-white font-bold shadow-sm"><Wallet className="w-4 h-4 mr-1.5" /> Issue With Balance</Button>
-            </Link>
+            {['on_hold', 'pending', 'confirmed'].includes(booking.status) && (
+              <Button className="bg-emerald-500 hover:bg-emerald-600 text-white font-bold shadow-sm" onClick={() => setPayDialogOpen(true)}>
+                <Wallet className="w-4 h-4 mr-1.5" /> Issue With Balance
+              </Button>
+            )}
             <div className="ml-auto flex flex-wrap gap-2">
               <Button variant="outline" className="font-semibold border-2 border-foreground/80" onClick={() => setTimelineOpen(true)}><Clock className="w-4 h-4 mr-1.5" /> Timeline</Button>
               <Button variant="outline" className="font-semibold border-2 border-foreground/80" onClick={() => setSsrOpen(true)}><Eye className="w-4 h-4 mr-1.5" /> View SSR</Button>
