@@ -400,6 +400,14 @@ const FlightBooking = () => {
   const [bookingResult, setBookingResult] = useState<any>(null);
   const [bookingLoading, setBookingLoading] = useState(false);
   const [agreedTerms, setAgreedTerms] = useState(false);
+
+  // ── Pre-book price revalidation guard ──
+  const [priceChangeOpen, setPriceChangeOpen] = useState(false);
+  const [revalidatedFare, setRevalidatedFare] = useState<{
+    baseFare: number; taxes: number; total: number; bookingClass?: string;
+    currency?: string;
+  } | null>(null);
+  const [pendingPayLater, setPendingPayLater] = useState(true);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("");
 
   // ── Coupon / Reward Points ──
