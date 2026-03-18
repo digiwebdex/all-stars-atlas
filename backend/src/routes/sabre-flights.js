@@ -1376,15 +1376,7 @@ function normalizeGroupedResponse(response, params) {
 
             let minSeats = Infinity;
             let bookingClass = '';
-            const fareComponents = passengerInfoList[0]?.passengerInfo?.fareComponents || [];
-            
-            // ── CRITICAL: Extract booking class PER-LEG, not from all fare components ──
-            // Each fareComponent in Sabre grouped response corresponds to a specific OD leg.
-            // fareComponents[0] = outbound, fareComponents[1] = return.
-            // Using all segments causes the last (return) bookingCode to overwrite outbound,
-            // and misses per-direction cheapest class resolution.
-            const legFareComponents = fareComponents[legIdx] ? [fareComponents[legIdx]] : fareComponents;
-            const owResolvedSegs = resolveFareComponentSegments(legFareComponents);
+            // fareComponents & owResolvedSegs already resolved above (before legs map)
             for (const rs of owResolvedSegs) {
               if (rs.seatsAvailable !== null && rs.seatsAvailable !== undefined) {
                 const s = parseInt(rs.seatsAvailable);
