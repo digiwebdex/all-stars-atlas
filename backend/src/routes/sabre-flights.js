@@ -1316,7 +1316,14 @@ function normalizeGroupedResponse(response, params) {
 
             const legDepartDate = groupDesc.legDescriptions?.[legIdx]?.departureDate || params.departDate || '';
 
-            const legs = schedules.map((sched) => {
+            // ── Pre-resolve per-leg booking class from fareComponents ──
+            const fareComponents = passengerInfoList[0]?.passengerInfo?.fareComponents || [];
+            const legFareComponents = fareComponents[legIdx] ? [fareComponents[legIdx]] : fareComponents;
+            const owResolvedSegs = resolveFareComponentSegments(legFareComponents);
+            // Build per-segment bookingCode array for this leg's schedules
+            const perSegBookingCodes = owResolvedSegs.map(rs => rs.bookingCode || '');
+
+            const legs = schedules.map((sched, schedIdx) => {
               const schedRef = sched.ref;
               const schedDesc = scheduleDescs.find(sd => sd.id === schedRef) || {};
               const dep = schedDesc.departure || sched.departure || {};
@@ -1338,6 +1345,9 @@ function normalizeGroupedResponse(response, params) {
                 arrDateTime = `${arrDate}T${arr.time}`;
               }
 
+              // Attach per-segment booking class from fareComponent resolution
+              const segBookingClass = perSegBookingCodes[schedIdx] || perSegBookingCodes[0] || '';
+
               return {
                 origin: dep.airport || '',
                 destination: arr.airport || '',
@@ -1351,6 +1361,7 @@ function normalizeGroupedResponse(response, params) {
                 aircraft: carrier.equipment?.code || '',
                 originTerminal: dep.terminal || '',
                 destinationTerminal: arr.terminal || '',
+                bookingClass: segBookingClass,
                 stops: [],
               };
             });
