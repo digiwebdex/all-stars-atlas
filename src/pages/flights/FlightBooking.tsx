@@ -2152,6 +2152,22 @@ const FlightBooking = () => {
       <AuthGateModal open={authOpen} onOpenChange={setAuthOpen} onAuthenticated={() => { setAuthOpen(false); handleConfirmBooking(); }} title="Sign in to complete your booking" />
       <PassportScanner open={passportScanOpen} onOpenChange={setPassportScanOpen} onConfirm={handlePassportScan} />
       <SearchPassengerModal open={searchPaxOpen} onOpenChange={setSearchPaxOpen} onSelect={handleSelectExistingPax} />
+      <PriceChangeModal
+        open={priceChangeOpen}
+        onClose={() => { setPriceChangeOpen(false); setBookingLoading(false); }}
+        onAccept={handleAcceptRevalidatedPrice}
+        loading={bookingLoading}
+        searchBaseFare={perPaxBaseFare}
+        searchTaxes={perPaxTaxes}
+        searchTotal={perPaxPayable}
+        searchClass={outboundFlight?.bookingClass || outboundFlight?._sabreBookingClass}
+        revalidatedBaseFare={revalidatedFare?.baseFare || 0}
+        revalidatedTaxes={revalidatedFare?.taxes || 0}
+        revalidatedTotal={revalidatedFare ? Math.round(revalidatedFare.total / totalPaxCount) : 0}
+        revalidatedClass={revalidatedFare?.bookingClass}
+        airline={outboundFlight?.airline}
+        route={`${outboundFlight?.origin} → ${outboundFlight?.destination}${returnFlight ? ` → ${returnFlight.destination}` : ""}`}
+      />
       <ShareItineraryModal open={shareOpen} onOpenChange={setShareOpen} bookingRef={bookingResult?.bookingRef} itinerarySummary={outboundFlight ? `${outboundFlight.origin} → ${outboundFlight.destination}, ${outboundFlight.airline}` : ""} />
 
       {/* Session Expired Modal Overlay */}
