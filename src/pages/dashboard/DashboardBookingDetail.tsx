@@ -126,12 +126,22 @@ const DashboardBookingDetail = () => {
   const [voidLoading, setVoidLoading] = useState(false);
   const [timelineOpen, setTimelineOpen] = useState(false);
   const [ssrOpen, setSsrOpen] = useState(false);
+  const [payDialogOpen, setPayDialogOpen] = useState(false);
+  const [payLoading, setPayLoading] = useState(false);
 
   const { data, isLoading, error, refetch } = useDashboardBookings({ search: id, limit: 1 });
   const resolved = (data as any) || {};
   const rawBookings = resolved?.data || resolved?.bookings || [];
   const booking = rawBookings.length > 0 ? mapBooking(rawBookings[0]) : null;
   const countdown = useCountdown(booking?.paymentDeadline || null);
+
+  // Wallet balance for inline pay dialog
+  const { data: walletData } = useQuery({
+    queryKey: ["dashboard", "wallet-balance-detail"],
+    queryFn: () => api.get<any>("/dashboard/wallet"),
+    enabled: payDialogOpen,
+  });
+  const walletBalance = Number((walletData as any)?.balance ?? 0);
 
   // SSR history for this booking
   const { data: ssrData, isLoading: ssrLoading } = useQuery({
@@ -220,10 +230,24 @@ const DashboardBookingDetail = () => {
     finally { setVoidLoading(false); }
   };
 
-  const handlePay = () => {
+  const handlePayWithBalance = async () => {
     if (!booking) return;
-    if (!booking.isDomestic && booking.type === "flight") setDocVerifyOpen(true);
-    else navigate("/dashboard/payments");
+    const amount = booking.rawAmount;
+    if (walletBalance < amount) {
+      toast({ title: "Insufficient Balance", description: `You need ৳${amount.toLocaleString()} but only have ৳${walletBalance.toLocaleString()}`, variant: "destructive" });
+      return;
+    }
+    setPayLoading(true);
+    try {
+      await api.post("/dashboard/wallet/pay", { bookingId: booking.rawId, amount });
+      toast({ title: "Payment Successful ✓", description: "Booking paid with wallet balance. Ticket will be issued shortly." });
+      setPayDialogOpen(false);
+      refetch();
+    } catch (e: any) {
+      toast({ title: "Payment Failed", description: e.message || "Could not process payment", variant: "destructive" });
+    } finally {
+      setPayLoading(false);
+    }
   };
 
   const handleDownload = async () => {
@@ -278,9 +302,11 @@ const DashboardBookingDetail = () => {
 
           {/* ━━ Action Buttons ━━ */}
           <div className="flex flex-wrap items-center gap-3">
-            <Link to="/dashboard/issue-with-balance">
-              <Button className="bg-emerald-500 hover:bg-emerald-600 text-white font-bold shadow-sm"><Wallet className="w-4 h-4 mr-1.5" /> Issue With Balance</Button>
-            </Link>
+            {['on_hold', 'pending', 'confirmed'].includes(booking.status) && (
+              <Button className="bg-emerald-500 hover:bg-emerald-600 text-white font-bold shadow-sm" onClick={() => setPayDialogOpen(true)}>
+                <Wallet className="w-4 h-4 mr-1.5" /> Issue With Balance
+              </Button>
+            )}
             <div className="ml-auto flex flex-wrap gap-2">
               <Button variant="outline" className="font-semibold border-2 border-foreground/80" onClick={() => setTimelineOpen(true)}><Clock className="w-4 h-4 mr-1.5" /> Timeline</Button>
               <Button variant="outline" className="font-semibold border-2 border-foreground/80" onClick={() => setSsrOpen(true)}><Eye className="w-4 h-4 mr-1.5" /> View SSR</Button>
@@ -726,6 +752,71 @@ const DashboardBookingDetail = () => {
                   </TableBody>
                 </Table>
               )}
+            </DialogContent>
+          </Dialog>
+
+          {/* ━━ Pay With Balance Dialog ━━ */}
+          <Dialog open={payDialogOpen} onOpenChange={setPayDialogOpen}>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <Wallet className="w-5 h-5 text-emerald-600" /> Issue With Balance
+                </DialogTitle>
+              </DialogHeader>
+              {booking && (
+                <div className="space-y-4">
+                  {/* Balance Card */}
+                  <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20">
+                    <p className="text-xs text-muted-foreground font-medium">Available Wallet Balance</p>
+                    <p className="text-2xl font-bold text-foreground">৳{walletBalance.toLocaleString('en-BD', { minimumFractionDigits: 2 })}</p>
+                  </div>
+
+                  {/* Booking Info */}
+                  <div className="p-4 rounded-lg bg-muted/50 space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Booking</span>
+                      <span className="font-mono font-bold">{booking.gdsBookingId || booking.id}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">PNR</span>
+                      <span className="font-mono font-bold">{booking.pnr}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Route</span>
+                      <span className="font-semibold">{booking.origin} → {booking.destination}</span>
+                    </div>
+                    <Separator />
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Booking Amount</span>
+                      <span className="font-bold text-base">৳{booking.rawAmount.toLocaleString('en-BD', { minimumFractionDigits: 2 })}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">After Payment</span>
+                      <span className={`font-bold ${walletBalance >= booking.rawAmount ? 'text-emerald-600' : 'text-destructive'}`}>
+                        ৳{(walletBalance - booking.rawAmount).toLocaleString('en-BD', { minimumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                  </div>
+
+                  {walletBalance < booking.rawAmount && (
+                    <div className="flex items-center gap-2 text-destructive text-sm p-3 rounded-lg bg-destructive/5 border border-destructive/20">
+                      <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+                      <span>Insufficient balance. Please <button className="underline font-semibold" onClick={() => { setPayDialogOpen(false); navigate('/dashboard/wallet'); }}>add funds</button> first.</span>
+                    </div>
+                  )}
+                </div>
+              )}
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setPayDialogOpen(false)}>Cancel</Button>
+                <Button
+                  onClick={handlePayWithBalance}
+                  disabled={payLoading || walletBalance < (booking?.rawAmount || 0)}
+                  className="gap-1.5 bg-emerald-500 hover:bg-emerald-600 text-white"
+                >
+                  <CheckCircle className="w-4 h-4" />
+                  {payLoading ? 'Processing...' : 'Confirm Payment'}
+                </Button>
+              </DialogFooter>
             </DialogContent>
           </Dialog>
 
