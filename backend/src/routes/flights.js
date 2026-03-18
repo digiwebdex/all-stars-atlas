@@ -1437,14 +1437,21 @@ function mergeBookingFlightData({ flightData, returnFlightData, multiCityFlights
     merged.legs = flattenLegs(flightData?.legs?.length ? flightData.legs : [flightData]);
   }
 
-  // CRITICAL: Propagate selected fare's bookingClass to every leg that lacks one
+  // CRITICAL: Only propagate parentClass to legs that truly have NO bookingClass.
+  // For round-trips, each leg already carries its own per-direction RBD from search.
   const parentClass = merged.bookingClass || merged.fareDetails?.[0]?.bookingClass || '';
-  if (parentClass && Array.isArray(merged.legs)) {
-    merged.legs = merged.legs.map(leg => ({
-      ...leg,
-      bookingClass: leg.bookingClass || parentClass,
-    }));
-    console.log(`[Booking] Propagated bookingClass "${parentClass}" to ${merged.legs.length} leg(s)`);
+  if (Array.isArray(merged.legs)) {
+    let propagatedCount = 0;
+    merged.legs = merged.legs.map(leg => {
+      if (leg.bookingClass) return leg; // Already has per-direction RBD — preserve it
+      propagatedCount++;
+      return { ...leg, bookingClass: parentClass || 'Y' };
+    });
+    if (propagatedCount > 0) {
+      console.log(`[Booking] Propagated bookingClass "${parentClass}" to ${propagatedCount}/${merged.legs.length} leg(s) that lacked one`);
+    } else {
+      console.log(`[Booking] All ${merged.legs.length} leg(s) already have per-direction bookingClass — no override needed`);
+    }
   }
 
   return merged;
