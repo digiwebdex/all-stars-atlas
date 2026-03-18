@@ -954,16 +954,22 @@ const FlightBooking = () => {
     setTravelDocsUploaded(prev => { const n = { ...prev }; delete n[key]; return n; });
   };
 
-  const createBooking = async (payLater: boolean) => {
+  const createBooking = async (payLater: boolean, overrideFare?: { baseFare: number; taxes: number; total: number }) => {
     setBookingLoading(true);
     try {
+      const finalBaseFare = overrideFare ? overrideFare.baseFare : baseFare;
+      const finalTaxes = overrideFare ? overrideFare.taxes : taxes;
+      const finalTotal = overrideFare ? (overrideFare.total + serviceCharge + addOnTotal - couponDiscount) : grandTotal;
+
       const bookingData = {
         flightData: bookingFlightData,
         returnFlightData: returnFlight,
         multiCityFlights: isMultiCity ? multiCityFlights : undefined,
         passengers, isRoundTrip, isMultiCity, isDomestic: domestic, payLater,
-        paymentMethod: payLater ? "pay_later" : (selectedPaymentMethod || "card"), totalAmount: grandTotal, baseFare, taxes, serviceCharge,
+        paymentMethod: payLater ? "pay_later" : (selectedPaymentMethod || "card"),
+        totalAmount: finalTotal, baseFare: finalBaseFare, taxes: finalTaxes, serviceCharge,
         couponCode: appliedCoupon?.code || undefined, couponDiscount: couponDiscount || undefined,
+        priceRevalidated: !!overrideFare,
         addOns: {
           meal: mealOptions.find(m => m.id === selectedMeal)?.name || undefined,
           baggage: selectedBaggage.map(id => baggageOptions.find(b => b.id === id)?.name).filter(Boolean),
@@ -1003,6 +1009,129 @@ const FlightBooking = () => {
     } finally { setBookingLoading(false); }
   };
 
+  // ── Pre-book revalidation: compare GDS truth vs search price ──
+  const revalidateBeforeBooking = async (payLater: boolean) => {
+    setBookingLoading(true);
+    setPendingPayLater(payLater);
+
+    try {
+      // Build segments for revalidation
+      const segments: any[] = [];
+      const allFlights = isMultiCity ? multiCityFlights : [outboundFlight, ...(returnFlight ? [returnFlight] : [])];
+
+      for (const f of allFlights) {
+        if (!f) continue;
+        const legs = f.legs || f.segments || [f];
+        for (const leg of legs) {
+          segments.push({
+            origin: leg.origin || f.origin,
+            destination: leg.destination || f.destination,
+            departureTime: leg.departureTime || f.departureTime,
+            arrivalTime: leg.arrivalTime || f.arrivalTime,
+            flightNumber: leg.flightNumber || f.flightNumber,
+            airlineCode: leg.airlineCode || f.airlineCode,
+            bookingClass: leg.bookingClass || f.bookingClass || f._sabreBookingClass,
+          });
+        }
+      }
+
+      // Only revalidate for Sabre flights
+      const isSabre = allFlights.some((f: any) => f && (
+        String(f.source || '').toLowerCase().includes('sabre') || f._sabreSource || f._sabreSeqNumber
+      ));
+
+      if (!isSabre || segments.length === 0) {
+        // Non-Sabre: skip revalidation, book directly
+        await createBooking(payLater);
+        return;
+      }
+
+      const revalResult = await api.post<any>("/flights/revalidate-price", {
+        flights: segments,
+        adults: adultCount,
+        children: childCount,
+        infants: infantCount,
+        cabinClass: searchCabin,
+      });
+
+      if (!revalResult?.success || !revalResult?.pricedItineraries?.length) {
+        // Revalidation API failed — allow booking with warning
+        toast({ title: "Price Check Unavailable", description: "Could not verify fare with airline. Proceeding with search price.", variant: "default" });
+        await createBooking(payLater);
+        return;
+      }
+
+      const revalPricing = revalResult.pricedItineraries[0];
+      
+      // If grouped format with no price details, proceed
+      if (revalPricing.format === 'grouped' || !revalPricing.totalFare) {
+        await createBooking(payLater);
+        return;
+      }
+
+      const revalBaseFare = Math.round(revalPricing.baseFare || 0);
+      const revalTaxes = Math.round(revalPricing.taxes || 0);
+      const revalTotal = Math.round(revalPricing.totalFare || 0);
+
+      // Compare search-time gross fare vs revalidated fare (per-pax values)
+      const searchGrossPerPax = isMultiCity
+        ? multiCityCalcs.reduce((s: number, c: any) => s + c.grossPrice, 0)
+        : (outboundCalc.grossPrice + returnCalc.grossPrice);
+      const searchBaseFarePerPax = isMultiCity
+        ? multiCityCalcs.reduce((s: number, c: any) => s + c.baseFare, 0)
+        : (outboundCalc.baseFare + returnCalc.baseFare);
+      const searchTaxesPerPax = isMultiCity
+        ? multiCityCalcs.reduce((s: number, c: any) => s + c.taxes, 0)
+        : (outboundCalc.taxes + returnCalc.taxes);
+
+      // Tolerance: 2% or ৳50, whichever is larger
+      const tolerance = Math.max(searchGrossPerPax * 0.02, 50);
+      const baseDiff = Math.abs(revalBaseFare - searchBaseFarePerPax);
+      const taxDiff = Math.abs(revalTaxes - searchTaxesPerPax);
+      const totalDiff = Math.abs(revalTotal - searchGrossPerPax);
+
+      if (totalDiff <= tolerance && baseDiff <= tolerance && taxDiff <= tolerance) {
+        // Prices match within tolerance — book directly
+        await createBooking(payLater);
+        return;
+      }
+
+      // MISMATCH detected — self-heal: apply discount/AIT to revalidated fare
+      const discPct = outboundFlight?.fareRules?.discount ?? 6.30;
+      const aitPct = outboundFlight?.fareRules?.aitVat ?? 0.3;
+      const adjustedDiscount = Math.round(revalBaseFare * discPct / 100);
+      const adjustedAit = Math.round(revalBaseFare * aitPct / 100);
+      const adjustedPayablePerPax = revalBaseFare - adjustedDiscount + revalTaxes + adjustedAit;
+
+      setRevalidatedFare({
+        baseFare: revalBaseFare,
+        taxes: revalTaxes,
+        total: adjustedPayablePerPax * totalPaxCount,
+        bookingClass: revalPricing.bookingClass || undefined,
+        currency: revalPricing.currency || "BDT",
+      });
+      setPriceChangeOpen(true);
+      setBookingLoading(false);
+
+    } catch (err: any) {
+      console.error('[Revalidation] Error:', err);
+      // On revalidation failure, still allow booking with warning
+      toast({ title: "Price Check Failed", description: "Could not verify fare. Proceeding with search price.", variant: "default" });
+      await createBooking(payLater);
+    }
+  };
+
+  const handleAcceptRevalidatedPrice = async () => {
+    setPriceChangeOpen(false);
+    if (revalidatedFare) {
+      await createBooking(pendingPayLater, {
+        baseFare: revalidatedFare.baseFare * totalPaxCount,
+        taxes: revalidatedFare.taxes * totalPaxCount,
+        total: revalidatedFare.total,
+      });
+    }
+  };
+
   const handleConfirmBooking = () => {
     const allFilled = passengers.every(p => p.firstName && p.lastName);
     if (!allFilled) { toast({ title: "Missing Info", description: "Please fill in all passenger details.", variant: "destructive" }); setStep(2); return; }
@@ -1013,8 +1142,8 @@ const FlightBooking = () => {
 
     if (isBiman) {
       if (!selectedPaymentMethod) { toast({ title: "Payment Required", description: "Biman Bangladesh Airlines requires immediate payment.", variant: "destructive" }); return; }
-      createBooking(false);
-    } else { createBooking(true); }
+      revalidateBeforeBooking(false);
+    } else { revalidateBeforeBooking(true); }
   };
 
   const handlePayNow = () => {
