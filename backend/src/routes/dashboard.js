@@ -948,12 +948,32 @@ router.post('/wallet/pay', async (req, res) => {
       return res.status(400).json({ message: 'Booking is not in a payable state' });
     }
 
+    // Server-side amount verification — never trust client amount
+    const dbAmount = Number(booking.total_amount || booking.amount || 0);
+    if (dbAmount <= 0) {
+      return res.status(400).json({ message: 'Booking amount is invalid in the system' });
+    }
+    // Allow small tolerance (rounding) but reject if client tries to pay less
+    const tolerance = Math.max(dbAmount * 0.001, 1); // 0.1% or ৳1
+    if (Math.abs(amount - dbAmount) > tolerance) {
+      return res.status(400).json({ 
+        message: `Amount mismatch. Expected ৳${dbAmount.toLocaleString()}, received ৳${amount.toLocaleString()}. Please refresh and try again.`,
+        expectedAmount: dbAmount
+      });
+    }
+    // Use the verified DB amount, not client amount
+    const verifiedAmount = dbAmount;
+
+    if (balance < verifiedAmount) {
+      return res.status(400).json({ message: `Insufficient balance. Available: ৳${balance.toLocaleString()}, Required: ৳${verifiedAmount.toLocaleString()}` });
+    }
+
     // Create debit transaction
     const txnId = require('uuid').v4();
     await db.query(
       `INSERT INTO transactions (id, user_id, type, amount, description, status, created_at)
        VALUES (?, ?, 'payment', ?, ?, 'completed', NOW())`,
-      [txnId, userId, -Math.abs(amount), `Wallet payment for booking ${booking.booking_ref || bookingId}`]
+      [txnId, userId, -Math.abs(verifiedAmount), `Wallet payment for booking ${booking.booking_ref || bookingId}`]
     );
 
     // Update booking status
