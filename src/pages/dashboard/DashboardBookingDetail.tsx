@@ -230,10 +230,24 @@ const DashboardBookingDetail = () => {
     finally { setVoidLoading(false); }
   };
 
-  const handlePay = () => {
+  const handlePayWithBalance = async () => {
     if (!booking) return;
-    if (!booking.isDomestic && booking.type === "flight") setDocVerifyOpen(true);
-    else navigate("/dashboard/payments");
+    const amount = booking.rawAmount;
+    if (walletBalance < amount) {
+      toast({ title: "Insufficient Balance", description: `You need ৳${amount.toLocaleString()} but only have ৳${walletBalance.toLocaleString()}`, variant: "destructive" });
+      return;
+    }
+    setPayLoading(true);
+    try {
+      await api.post("/dashboard/wallet/pay", { bookingId: booking.rawId, amount });
+      toast({ title: "Payment Successful ✓", description: "Booking paid with wallet balance. Ticket will be issued shortly." });
+      setPayDialogOpen(false);
+      refetch();
+    } catch (e: any) {
+      toast({ title: "Payment Failed", description: e.message || "Could not process payment", variant: "destructive" });
+    } finally {
+      setPayLoading(false);
+    }
   };
 
   const handleDownload = async () => {
