@@ -934,9 +934,9 @@ router.post('/wallet/pay', async (req, res) => {
       return res.status(400).json({ message: `Insufficient balance. Available: ৳${balance.toLocaleString()}, Required: ৳${amount.toLocaleString()}` });
     }
 
-    // Verify booking exists and belongs to user
+    // Verify booking exists and belongs to user — fetch amount for server-side verification
     const [bookingRows] = await db.query(
-      `SELECT id, status, booking_ref FROM bookings WHERE id = ? AND user_id = ?`,
+      `SELECT id, status, booking_ref, total_amount, amount FROM bookings WHERE id = ? AND user_id = ?`,
       [bookingId, userId]
     );
     if (bookingRows.length === 0) {
