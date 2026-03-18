@@ -135,6 +135,14 @@ const DashboardBookingDetail = () => {
   const booking = rawBookings.length > 0 ? mapBooking(rawBookings[0]) : null;
   const countdown = useCountdown(booking?.paymentDeadline || null);
 
+  // Wallet balance for inline pay dialog
+  const { data: walletData } = useQuery({
+    queryKey: ["dashboard", "wallet-balance-detail"],
+    queryFn: () => api.get<any>("/dashboard/wallet"),
+    enabled: payDialogOpen,
+  });
+  const walletBalance = Number((walletData as any)?.balance ?? 0);
+
   // SSR history for this booking
   const { data: ssrData, isLoading: ssrLoading } = useQuery({
     queryKey: ["dashboard", "ssr-history", booking?.id],
