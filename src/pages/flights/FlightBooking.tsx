@@ -34,6 +34,7 @@ import { formatApiDate, formatApiTime } from "@/lib/flight-time";
 import ShareItineraryModal from "@/components/ShareItineraryModal";
 import SeatMap from "@/components/flights/SeatMap";
 import { motion, AnimatePresence } from "framer-motion";
+import PriceChangeModal from "@/components/flights/PriceChangeModal";
 
 // ─── Bangladesh domestic airports ───
 const BD_AIRPORTS = ["DAC", "CXB", "CGP", "ZYL", "JSR", "RJH", "SPD", "BZL", "IRD", "TKR"];
