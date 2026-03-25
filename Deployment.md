@@ -622,78 +622,49 @@ echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
 
 ## 12. Complete Nginx Config Reference <a name="nginx-reference"></a>
 
-Full production Nginx config with SSL (after Certbot):
+Full production Nginx config with SSL (after Certbot).
+
+> ⚠️ **CRITICAL:** Do NOT add `gzip` directives to site configs — they are managed in `/etc/nginx/nginx.conf`. Duplicating them will crash Nginx (caused a 3.5-hour outage on 2026-03-25).
 
 ```nginx
 # Redirect HTTP to HTTPS
 server {
     listen 80;
     server_name seven-trip.com www.seven-trip.com;
-    return 301 https://$server_name$request_uri;
+    return 301 https://$host$request_uri;
 }
 
-# Main frontend
+# Main site (frontend + API proxy)
 server {
     listen 443 ssl http2;
     server_name seven-trip.com www.seven-trip.com;
 
     ssl_certificate /etc/letsencrypt/live/seven-trip.com/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/seven-trip.com/privkey.pem;
-    include /etc/letsencrypt/options-ssl-nginx.conf;
-    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_prefer_server_ciphers off;
+    ssl_session_cache shared:SSL:10m;
+    ssl_session_timeout 1d;
 
-    root /home/seventrip/projects/seven-trip-frontend/dist;
+    root /var/www/seventrip;
     index index.html;
 
     # Static assets with long cache
-    location /assets/ {
+    location ~* \.(js|css|woff2|woff|ttf|eot)$ {
         expires 1y;
         add_header Cache-Control "public, immutable";
+        access_log off;
     }
 
-    location /images/ {
+    location ~* \.(jpg|jpeg|png|gif|ico|svg|webp|avif|mp4|webm)$ {
         expires 30d;
         add_header Cache-Control "public";
+        access_log off;
     }
 
-    # SPA fallback
-    location / {
-        try_files $uri $uri/ /index.html;
-    }
-
-    # Gzip
-    gzip on;
-    gzip_vary on;
-    gzip_proxied any;
-    gzip_comp_level 6;
-    gzip_types text/plain text/css application/json application/javascript text/xml application/xml text/javascript image/svg+xml;
-
-    # Security headers
-    add_header X-Frame-Options "SAMEORIGIN" always;
-    add_header X-Content-Type-Options "nosniff" always;
-    add_header X-XSS-Protection "1; mode=block" always;
-    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
-    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
-}
-
-# API reverse proxy
-server {
-    listen 80;
-    server_name seven-trip.com;
-    return 301 https://$server_name$request_uri;
-}
-
-server {
-    listen 443 ssl http2;
-    server_name seven-trip.com;
-
-    ssl_certificate /etc/letsencrypt/live/seven-trip.com/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/seven-trip.com/privkey.pem;
-    include /etc/letsencrypt/options-ssl-nginx.conf;
-    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
-
-    location / {
-        proxy_pass http://127.0.0.1:3001;
+    # API proxy to Node.js backend (port 3001)
+    location /api/ {
+        proxy_pass http://127.0.0.1:3001/api/;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
@@ -703,6 +674,28 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_cache_bypass $http_upgrade;
         client_max_body_size 50m;
+    }
+
+    # SPA fallback
+    location / {
+        try_files $uri $uri/ /index.html;
+        location = /index.html {
+            add_header Cache-Control "no-cache, no-store, must-revalidate";
+        }
+    }
+
+    # Security headers
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+
+    # Deny hidden files
+    location ~ /\. {
+        deny all;
+        access_log off;
+        log_not_found off;
     }
 }
 ```
