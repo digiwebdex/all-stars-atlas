@@ -45,7 +45,7 @@
 | Process Manager | PM2 |
 | Server | Ubuntu 24.04 VPS + Nginx reverse proxy |
 
-**Base URL**: `https://api.seven-trip.com/api`
+**Base URL**: `https://seven-trip.com/api`
 
 All endpoints below are relative to this base. For example, `/auth/login` means `POST https://seven-trip.com/api/auth/login`.
 
@@ -1515,7 +1515,7 @@ Same request/response as `/auth/login`. The frontend checks that `user.role` is 
       "ticketNo": "098-1234567890",
       "pnr": "ABC123",
       "status": "active",
-      "pdfUrl": "https://api.seven-trip.com/tickets/download/ticket-uuid",
+      "pdfUrl": "https://seven-trip.com/api/tickets/download/ticket-uuid",
       "details": {
         "airline": "Biman Bangladesh",
         "flightNumber": "BG-435",
@@ -1826,7 +1826,7 @@ Permanently deletes a booking and all related tickets and transactions. **Irreve
   "originalName": "beach-sunset.jpg",
   "mimeType": "image/jpeg",
   "size": 245000,
-  "url": "https://api.seven-trip.com/uploads/beach-sunset-abc123.jpg",
+  "url": "https://seven-trip.com/api/uploads/beach-sunset-abc123.jpg",
   "altText": "Sunset at Cox's Bazar beach",
   "folder": "destinations",
   "uploadedBy": { "id": "uuid", "name": "Admin" },

@@ -139,7 +139,7 @@ router.get('/flights/search', handler);
 ```
 Provider: Let's Encrypt
 Type: Domain Validated (DV)
-Domains: seven-trip.com, www.seven-trip.com, api.seven-trip.com
+Domains: seven-trip.com, www.seven-trip.com, seven-trip.com
 Auto-renewal: certbot timer (every 60 days)
 ```
 

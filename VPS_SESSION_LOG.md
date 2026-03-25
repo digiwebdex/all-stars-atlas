@@ -41,7 +41,7 @@ mkdir -p ~/projects && cd ~/projects
 git clone https://github.com/digiwebdex/all-stars-atlas-f50e6db8.git all-stars-atlas
 cd all-stars-atlas
 cp .env.example .env
-# Edited: VITE_API_BASE_URL=https://api.seven-trip.com/api
+# Edited: VITE_API_BASE_URL=https://seven-trip.com/api
 npm install && npm run build
 sudo mkdir -p /var/www/seventrip
 sudo cp -r dist/* /var/www/seventrip/
@@ -77,7 +77,7 @@ sudo systemctl reload nginx
 ### SSL Setup
 ```bash
 sudo apt install -y certbot python3-certbot-nginx
-sudo certbot --nginx -d seven-trip.com -d www.seven-trip.com -d api.seven-trip.com
+sudo certbot --nginx -d seven-trip.com -d www.seven-trip.com -d seven-trip.com
 ```
 
 ### Firewall

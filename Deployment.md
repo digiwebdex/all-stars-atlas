@@ -140,7 +140,7 @@ nano .env
 Set your production API URL:
 
 ```env
-VITE_API_BASE_URL=https://api.seven-trip.com/api
+VITE_API_BASE_URL=https://seven-trip.com/api
 ```
 
 Save: Press `Ctrl + X`, then `Y`, then `Enter`.
@@ -245,7 +245,7 @@ server {
 # API Proxy (reverse proxy to your Node.js backend)
 server {
     listen 80;
-    server_name api.seven-trip.com;
+    server_name seven-trip.com;
 
     location / {
         proxy_pass http://127.0.0.1:3001;
@@ -313,7 +313,7 @@ sudo apt install -y certbot python3-certbot-nginx
 ### Get SSL certificates
 
 ```bash
-sudo certbot --nginx -d seven-trip.com -d www.seven-trip.com -d api.seven-trip.com
+sudo certbot --nginx -d seven-trip.com -d www.seven-trip.com -d seven-trip.com
 ```
 
 Certbot will ask:
@@ -413,7 +413,7 @@ pm2 monit                 # Real-time monitoring
 
 | Variable             | Value for Production                    |
 | -------------------- | --------------------------------------- |
-| `VITE_API_BASE_URL`  | `https://api.seven-trip.com/api`      |
+| `VITE_API_BASE_URL`  | `https://seven-trip.com/api`      |
 
 > **Important:** Frontend env vars are baked into the build. After changing `.env`, you must run `npm run build` again.
 
@@ -590,7 +590,7 @@ try_files $uri $uri/ /index.html;
 
 **Cause:** Your `VITE_API_BASE_URL` uses `http://` but the site is on `https://`.
 
-Fix: Set `VITE_API_BASE_URL=https://api.seven-trip.com/api` in `.env` and rebuild.
+Fix: Set `VITE_API_BASE_URL=https://seven-trip.com/api` in `.env` and rebuild.
 
 ### SSL certificate not renewing
 
@@ -692,13 +692,13 @@ server {
 # API reverse proxy
 server {
     listen 80;
-    server_name api.seven-trip.com;
+    server_name seven-trip.com;
     return 301 https://$server_name$request_uri;
 }
 
 server {
     listen 443 ssl http2;
-    server_name api.seven-trip.com;
+    server_name seven-trip.com;
 
     ssl_certificate /etc/letsencrypt/live/seven-trip.com/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/seven-trip.com/privkey.pem;
