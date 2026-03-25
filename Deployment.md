@@ -204,51 +204,31 @@ sudo nano /etc/nginx/sites-available/seventrip
 Paste this configuration:
 
 ```nginx
-# Seven Trip Frontend
+# Seven Trip — Frontend + API (single server block)
+# NOTE: Do NOT add gzip directives here — they belong in /etc/nginx/nginx.conf
 server {
     listen 80;
     server_name seven-trip.com www.seven-trip.com;
 
-    # Where your built frontend files are
-    root /home/seventrip/projects/seven-trip-frontend/dist;
+    root /var/www/seventrip;
     index index.html;
 
-    # Serve static files directly
-    location /assets/ {
+    # Static assets with long cache
+    location ~* \.(js|css|woff2|woff|ttf|eot)$ {
         expires 1y;
         add_header Cache-Control "public, immutable";
+        access_log off;
     }
 
-    location /images/ {
+    location ~* \.(jpg|jpeg|png|gif|ico|svg|webp|avif|mp4|webm)$ {
         expires 30d;
         add_header Cache-Control "public";
+        access_log off;
     }
 
-    # SPA fallback — all routes go to index.html
-    # This is CRITICAL for React Router to work
-    location / {
-        try_files $uri $uri/ /index.html;
-    }
-
-    # Gzip compression for faster loading
-    gzip on;
-    gzip_types text/plain text/css application/json application/javascript text/xml application/xml text/javascript image/svg+xml;
-    gzip_min_length 1000;
-
-    # Security headers
-    add_header X-Frame-Options "SAMEORIGIN" always;
-    add_header X-Content-Type-Options "nosniff" always;
-    add_header X-XSS-Protection "1; mode=block" always;
-    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
-}
-
-# API Proxy (reverse proxy to your Node.js backend)
-server {
-    listen 80;
-    server_name seven-trip.com;
-
-    location / {
-        proxy_pass http://127.0.0.1:3001;
+    # API proxy to Node.js backend (port 3001)
+    location /api/ {
+        proxy_pass http://127.0.0.1:3001/api/;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
@@ -257,15 +237,22 @@ server {
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_cache_bypass $http_upgrade;
-
-        # Increase timeout for long requests
         proxy_connect_timeout 60s;
         proxy_send_timeout 60s;
         proxy_read_timeout 60s;
-
-        # Allow file uploads up to 50MB
         client_max_body_size 50m;
     }
+
+    # SPA fallback — all routes go to index.html
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    # Security headers
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
 }
 ```
 
