@@ -277,6 +277,47 @@ cd ~/projects/all-stars-atlas && git pull origin main && npm install && npm run 
 
 ---
 
+## Session 6 — 2026-03-25 — Nginx Gzip Crash Fix (3.5h Outage)
+
+### Diagnosis
+```bash
+sudo systemctl status nginx
+# Active: failed — "gzip" directive is duplicate in /etc/nginx/sites-enabled/seventrip:15
+pm2 status
+# seventrip-api: online (port 3001)
+sudo ufw status
+# Ports 80/443 open
+```
+
+### Fix — Replace site config (no gzip, correct port)
+```bash
+sudo tee /etc/nginx/sites-available/seventrip > /dev/null << 'NGINX'
+# (clean config without gzip directives, API proxy to port 3001)
+NGINX
+sudo ln -sf /etc/nginx/sites-available/seventrip /etc/nginx/sites-enabled/seventrip
+sudo nginx -t && sudo systemctl start nginx
+```
+
+### Fix API proxy port (was 5000, should be 3001)
+```bash
+sudo sed -i 's|proxy_pass http://127.0.0.1:5000/api/;|proxy_pass http://127.0.0.1:3001/api/;|' /etc/nginx/sites-available/seventrip
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+### Verification
+```bash
+sudo systemctl status nginx --no-pager
+# Active: active (running)
+curl -sI https://seven-trip.com | head -5
+# HTTP/2 200
+```
+
+**Outage:** 06:12 UTC → 09:34 UTC (~3.5 hours)
+**Root Cause:** Duplicate gzip directive in site config vs /etc/nginx/nginx.conf
+**Prevention:** Repo `nginx-optimized.conf` has NO gzip directives
+
+---
+
 ## 📊 PM2 Process History
 
 ```bash
@@ -286,10 +327,10 @@ pm2 status
 | Metric | Value |
 |--------|-------|
 | **Process Name** | seventrip-api |
-| **PID** | 64217 (latest) |
-| **Restarts** | 364 (includes all hotfixes + deploys) |
+| **PID** | 192711 (latest) |
+| **Restarts** | 811 (includes all hotfixes + deploys) |
 | **Mode** | fork |
-| **Memory** | ~25.8 MB |
+| **Memory** | ~69.4 MB |
 | **Status** | online |
 
 ---
