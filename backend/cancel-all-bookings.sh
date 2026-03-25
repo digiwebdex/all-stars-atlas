@@ -7,7 +7,7 @@
 set -euo pipefail
 
 API_BASE="${API_BASE:-https://seven-trip.com/api}"
-ADMIN_EMAIL="${ADMIN_EMAIL:-admin@seventrip.com.bd}"
+ADMIN_EMAIL="${ADMIN_EMAIL:-admin@seven-trip.com}"
 ADMIN_PASS="${ADMIN_PASS:-Admin@123456}"
 FILTER="${1:-reserved}"  # reserved | all_with_pnr
 

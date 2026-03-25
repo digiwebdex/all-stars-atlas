@@ -15,13 +15,13 @@ async function getConfig() {
     if (rows.length > 0 && rows[0].setting_value) {
       const parsed = JSON.parse(rows[0].setting_value);
       if (parsed.api_key) {
-        cachedConfig = { apiKey: parsed.api_key, from: parsed.from_email || 'Seven Trip <noreply@seventrip.com.bd>' };
+        cachedConfig = { apiKey: parsed.api_key, from: parsed.from_email || 'Seven Trip <noreply@seven-trip.com>' };
         cacheTime = Date.now();
         return cachedConfig;
       }
     }
   } catch {}
-  cachedConfig = { apiKey: process.env.RESEND_API_KEY || '', from: process.env.EMAIL_FROM || 'Seven Trip <noreply@seventrip.com.bd>' };
+  cachedConfig = { apiKey: process.env.RESEND_API_KEY || '', from: process.env.EMAIL_FROM || 'Seven Trip <noreply@seven-trip.com>' };
   cacheTime = Date.now();
   return cachedConfig;
 }
@@ -54,7 +54,7 @@ async function sendEmail({ to, subject, html, text }) {
 }
 
 // ============ TEMPLATES ============
-const FRONTEND = () => process.env.FRONTEND_URL || 'https://seventrip.com.bd';
+const FRONTEND = () => process.env.FRONTEND_URL || 'https://seven-trip.com';
 const YEAR = () => new Date().getFullYear();
 const wrap = (body) => `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;"><div style="text-align:center;padding:20px 0;border-bottom:2px solid #0ea5e9;"><h1 style="color:#0ea5e9;margin:0;">Seven Trip</h1></div><div style="padding:30px 0;">${body}</div><div style="text-align:center;padding:20px 0;border-top:1px solid #e5e7eb;color:#6b7280;font-size:12px;"><p>© ${YEAR()} Seven Trip. All rights reserved.</p></div></div>`;
 

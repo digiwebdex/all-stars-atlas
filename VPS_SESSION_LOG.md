@@ -2,7 +2,7 @@
 
 > All terminal commands executed on the production VPS with their outputs.
 > This serves as the audit trail for every production action taken.
-> Last updated: 2026-03-17 (v4.1.6)
+> Last updated: 2026-03-25 (v4.1.7)
 
 ---
 
@@ -41,7 +41,7 @@ mkdir -p ~/projects && cd ~/projects
 git clone https://github.com/digiwebdex/all-stars-atlas-f50e6db8.git all-stars-atlas
 cd all-stars-atlas
 cp .env.example .env
-# Edited: VITE_API_BASE_URL=https://api.seventrip.com.bd/api
+# Edited: VITE_API_BASE_URL=https://seven-trip.com/api
 npm install && npm run build
 sudo mkdir -p /var/www/seventrip
 sudo cp -r dist/* /var/www/seventrip/
@@ -77,7 +77,7 @@ sudo systemctl reload nginx
 ### SSL Setup
 ```bash
 sudo apt install -y certbot python3-certbot-nginx
-sudo certbot --nginx -d seven-trip.com.bd -d www.seven-trip.com.bd -d api.seventrip.com.bd
+sudo certbot --nginx -d seven-trip.com -d www.seven-trip.com -d seven-trip.com
 ```
 
 ### Firewall
@@ -277,6 +277,47 @@ cd ~/projects/all-stars-atlas && git pull origin main && npm install && npm run 
 
 ---
 
+## Session 6 — 2026-03-25 — Nginx Gzip Crash Fix (3.5h Outage)
+
+### Diagnosis
+```bash
+sudo systemctl status nginx
+# Active: failed — "gzip" directive is duplicate in /etc/nginx/sites-enabled/seventrip:15
+pm2 status
+# seventrip-api: online (port 3001)
+sudo ufw status
+# Ports 80/443 open
+```
+
+### Fix — Replace site config (no gzip, correct port)
+```bash
+sudo tee /etc/nginx/sites-available/seventrip > /dev/null << 'NGINX'
+# (clean config without gzip directives, API proxy to port 3001)
+NGINX
+sudo ln -sf /etc/nginx/sites-available/seventrip /etc/nginx/sites-enabled/seventrip
+sudo nginx -t && sudo systemctl start nginx
+```
+
+### Fix API proxy port (was 5000, should be 3001)
+```bash
+sudo sed -i 's|proxy_pass http://127.0.0.1:5000/api/;|proxy_pass http://127.0.0.1:3001/api/;|' /etc/nginx/sites-available/seventrip
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+### Verification
+```bash
+sudo systemctl status nginx --no-pager
+# Active: active (running)
+curl -sI https://seven-trip.com | head -5
+# HTTP/2 200
+```
+
+**Outage:** 06:12 UTC → 09:34 UTC (~3.5 hours)
+**Root Cause:** Duplicate gzip directive in site config vs /etc/nginx/nginx.conf
+**Prevention:** Repo `nginx-optimized.conf` has NO gzip directives
+
+---
+
 ## 📊 PM2 Process History
 
 ```bash
@@ -286,10 +327,10 @@ pm2 status
 | Metric | Value |
 |--------|-------|
 | **Process Name** | seventrip-api |
-| **PID** | 64217 (latest) |
-| **Restarts** | 364 (includes all hotfixes + deploys) |
+| **PID** | 192711 (latest) |
+| **Restarts** | 811 (includes all hotfixes + deploys) |
 | **Mode** | fork |
-| **Memory** | ~25.8 MB |
+| **Memory** | ~69.4 MB |
 | **Status** | online |
 
 ---
@@ -320,7 +361,7 @@ free -m
 sudo certbot certificates
 
 # Test API health
-curl -s https://api.seventrip.com.bd/api/health
+curl -s https://seven-trip.com/api/health
 ```
 
 ---

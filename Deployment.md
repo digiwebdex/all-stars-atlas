@@ -1,7 +1,7 @@
 # Seven Trip — Deployment Guide (Ubuntu VPS)
 
 > Step-by-step guide to deploy the Seven Trip frontend on an Ubuntu VPS using Nginx. Written for beginners — every command is explained.
-> Last updated: 2026-03-17 (v4.1.6)
+> Last updated: 2026-03-25 (v4.1.7)
 
 ---
 
@@ -29,7 +29,7 @@
 | Item                | Description                                        | Example                     |
 | ------------------- | -------------------------------------------------- | --------------------------- |
 | **VPS Provider**    | Any VPS with Ubuntu 22.04 or 24.04                 | DigitalOcean, Hetzner, Vultr|
-| **Domain Name**     | Your domain pointed to the VPS IP                  | `seventrip.com.bd`          |
+| **Domain Name**     | Your domain pointed to the VPS IP                  | `seven-trip.com`          |
 | **SSH Access**      | Ability to connect to your server                  | `ssh root@your-ip`          |
 | **Min. Specs**      | 1 vCPU, 1 GB RAM, 25 GB disk (minimum)            |                             |
 | **Git Repository**  | Your frontend code in a Git repo (GitHub, etc.)    |                             |
@@ -140,7 +140,7 @@ nano .env
 Set your production API URL:
 
 ```env
-VITE_API_BASE_URL=https://api.seventrip.com.bd/api
+VITE_API_BASE_URL=https://seven-trip.com/api
 ```
 
 Save: Press `Ctrl + X`, then `Y`, then `Enter`.
@@ -204,51 +204,31 @@ sudo nano /etc/nginx/sites-available/seventrip
 Paste this configuration:
 
 ```nginx
-# Seven Trip Frontend
+# Seven Trip — Frontend + API (single server block)
+# NOTE: Do NOT add gzip directives here — they belong in /etc/nginx/nginx.conf
 server {
     listen 80;
-    server_name seventrip.com.bd www.seventrip.com.bd;
+    server_name seven-trip.com www.seven-trip.com;
 
-    # Where your built frontend files are
-    root /home/seventrip/projects/seven-trip-frontend/dist;
+    root /var/www/seventrip;
     index index.html;
 
-    # Serve static files directly
-    location /assets/ {
+    # Static assets with long cache
+    location ~* \.(js|css|woff2|woff|ttf|eot)$ {
         expires 1y;
         add_header Cache-Control "public, immutable";
+        access_log off;
     }
 
-    location /images/ {
+    location ~* \.(jpg|jpeg|png|gif|ico|svg|webp|avif|mp4|webm)$ {
         expires 30d;
         add_header Cache-Control "public";
+        access_log off;
     }
 
-    # SPA fallback — all routes go to index.html
-    # This is CRITICAL for React Router to work
-    location / {
-        try_files $uri $uri/ /index.html;
-    }
-
-    # Gzip compression for faster loading
-    gzip on;
-    gzip_types text/plain text/css application/json application/javascript text/xml application/xml text/javascript image/svg+xml;
-    gzip_min_length 1000;
-
-    # Security headers
-    add_header X-Frame-Options "SAMEORIGIN" always;
-    add_header X-Content-Type-Options "nosniff" always;
-    add_header X-XSS-Protection "1; mode=block" always;
-    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
-}
-
-# API Proxy (reverse proxy to your Node.js backend)
-server {
-    listen 80;
-    server_name api.seventrip.com.bd;
-
-    location / {
-        proxy_pass http://127.0.0.1:3001;
+    # API proxy to Node.js backend (port 3001)
+    location /api/ {
+        proxy_pass http://127.0.0.1:3001/api/;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
@@ -257,15 +237,22 @@ server {
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_cache_bypass $http_upgrade;
-
-        # Increase timeout for long requests
         proxy_connect_timeout 60s;
         proxy_send_timeout 60s;
         proxy_read_timeout 60s;
-
-        # Allow file uploads up to 50MB
         client_max_body_size 50m;
     }
+
+    # SPA fallback — all routes go to index.html
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    # Security headers
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
 }
 ```
 
@@ -296,7 +283,7 @@ sudo systemctl reload nginx
 
 ### Test it!
 
-Open `http://seventrip.com.bd` in your browser. You should see the Seven Trip website!
+Open `http://seven-trip.com` in your browser. You should see the Seven Trip website!
 
 ---
 
@@ -313,7 +300,7 @@ sudo apt install -y certbot python3-certbot-nginx
 ### Get SSL certificates
 
 ```bash
-sudo certbot --nginx -d seventrip.com.bd -d www.seventrip.com.bd -d api.seventrip.com.bd
+sudo certbot --nginx -d seven-trip.com -d www.seven-trip.com
 ```
 
 Certbot will ask:
@@ -332,7 +319,7 @@ sudo certbot renew --dry-run
 
 ### Done!
 
-Your site is now available at `https://seventrip.com.bd` with a valid SSL certificate! 🎉
+Your site is now available at `https://seven-trip.com` with a valid SSL certificate! 🎉
 
 ---
 
@@ -379,7 +366,7 @@ SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
 SMTP_USER=your@gmail.com
 SMTP_PASS=your-app-password
-FRONTEND_URL=https://seventrip.com.bd
+FRONTEND_URL=https://seven-trip.com
 ```
 
 ### Start with PM2
@@ -413,7 +400,7 @@ pm2 monit                 # Real-time monitoring
 
 | Variable             | Value for Production                    |
 | -------------------- | --------------------------------------- |
-| `VITE_API_BASE_URL`  | `https://api.seventrip.com.bd/api`      |
+| `VITE_API_BASE_URL`  | `https://seven-trip.com/api`      |
 
 > **Important:** Frontend env vars are baked into the build. After changing `.env`, you must run `npm run build` again.
 
@@ -590,7 +577,7 @@ try_files $uri $uri/ /index.html;
 
 **Cause:** Your `VITE_API_BASE_URL` uses `http://` but the site is on `https://`.
 
-Fix: Set `VITE_API_BASE_URL=https://api.seventrip.com.bd/api` in `.env` and rebuild.
+Fix: Set `VITE_API_BASE_URL=https://seven-trip.com/api` in `.env` and rebuild.
 
 ### SSL certificate not renewing
 
@@ -635,78 +622,49 @@ echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
 
 ## 12. Complete Nginx Config Reference <a name="nginx-reference"></a>
 
-Full production Nginx config with SSL (after Certbot):
+Full production Nginx config with SSL (after Certbot).
+
+> ⚠️ **CRITICAL:** Do NOT add `gzip` directives to site configs — they are managed in `/etc/nginx/nginx.conf`. Duplicating them will crash Nginx (caused a 3.5-hour outage on 2026-03-25).
 
 ```nginx
 # Redirect HTTP to HTTPS
 server {
     listen 80;
-    server_name seventrip.com.bd www.seventrip.com.bd;
-    return 301 https://$server_name$request_uri;
+    server_name seven-trip.com www.seven-trip.com;
+    return 301 https://$host$request_uri;
 }
 
-# Main frontend
+# Main site (frontend + API proxy)
 server {
     listen 443 ssl http2;
-    server_name seventrip.com.bd www.seventrip.com.bd;
+    server_name seven-trip.com www.seven-trip.com;
 
-    ssl_certificate /etc/letsencrypt/live/seventrip.com.bd/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/seventrip.com.bd/privkey.pem;
-    include /etc/letsencrypt/options-ssl-nginx.conf;
-    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+    ssl_certificate /etc/letsencrypt/live/seven-trip.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/seven-trip.com/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_prefer_server_ciphers off;
+    ssl_session_cache shared:SSL:10m;
+    ssl_session_timeout 1d;
 
-    root /home/seventrip/projects/seven-trip-frontend/dist;
+    root /var/www/seventrip;
     index index.html;
 
     # Static assets with long cache
-    location /assets/ {
+    location ~* \.(js|css|woff2|woff|ttf|eot)$ {
         expires 1y;
         add_header Cache-Control "public, immutable";
+        access_log off;
     }
 
-    location /images/ {
+    location ~* \.(jpg|jpeg|png|gif|ico|svg|webp|avif|mp4|webm)$ {
         expires 30d;
         add_header Cache-Control "public";
+        access_log off;
     }
 
-    # SPA fallback
-    location / {
-        try_files $uri $uri/ /index.html;
-    }
-
-    # Gzip
-    gzip on;
-    gzip_vary on;
-    gzip_proxied any;
-    gzip_comp_level 6;
-    gzip_types text/plain text/css application/json application/javascript text/xml application/xml text/javascript image/svg+xml;
-
-    # Security headers
-    add_header X-Frame-Options "SAMEORIGIN" always;
-    add_header X-Content-Type-Options "nosniff" always;
-    add_header X-XSS-Protection "1; mode=block" always;
-    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
-    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
-}
-
-# API reverse proxy
-server {
-    listen 80;
-    server_name api.seventrip.com.bd;
-    return 301 https://$server_name$request_uri;
-}
-
-server {
-    listen 443 ssl http2;
-    server_name api.seventrip.com.bd;
-
-    ssl_certificate /etc/letsencrypt/live/seventrip.com.bd/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/seventrip.com.bd/privkey.pem;
-    include /etc/letsencrypt/options-ssl-nginx.conf;
-    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
-
-    location / {
-        proxy_pass http://127.0.0.1:3001;
+    # API proxy to Node.js backend (port 3001)
+    location /api/ {
+        proxy_pass http://127.0.0.1:3001/api/;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
@@ -716,6 +674,28 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_cache_bypass $http_upgrade;
         client_max_body_size 50m;
+    }
+
+    # SPA fallback
+    location / {
+        try_files $uri $uri/ /index.html;
+        location = /index.html {
+            add_header Cache-Control "no-cache, no-store, must-revalidate";
+        }
+    }
+
+    # Security headers
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+
+    # Deny hidden files
+    location ~ /\. {
+        deny all;
+        access_log off;
+        log_not_found off;
     }
 }
 ```

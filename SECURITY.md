@@ -1,7 +1,7 @@
 # Seven Trip — Security Documentation
 
 > All security measures, authentication flow, and best practices implemented in the platform.
-> Last updated: 2026-03-17 (v4.1.6)
+> Last updated: 2026-03-25 (v4.1.7)
 
 ---
 
@@ -50,7 +50,7 @@ Logout → POST /auth/logout { refreshToken }
 | Middleware | Purpose |
 |-----------|---------|
 | **Helmet.js** | Sets security HTTP headers (XSS, HSTS, X-Frame-Options, X-Content-Type-Options) |
-| **CORS** | Whitelist: only `seven-trip.com.bd` origin allowed |
+| **CORS** | Whitelist: only `seven-trip.com` origin allowed |
 | **express-rate-limit** | Rate limiting on auth endpoints |
 | **Morgan** | HTTP request logging (audit trail) |
 | **JWT verify** | Route-level authentication via `authenticate` middleware |
@@ -80,7 +80,7 @@ All third-party API credentials stored in MySQL `system_settings` table:
 
 ```javascript
 cors({
-  origin: process.env.FRONTEND_URL,  // https://seven-trip.com.bd
+  origin: process.env.FRONTEND_URL,  // https://seven-trip.com
   credentials: true
 })
 ```
@@ -139,15 +139,15 @@ router.get('/flights/search', handler);
 ```
 Provider: Let's Encrypt
 Type: Domain Validated (DV)
-Domains: seven-trip.com.bd, www.seven-trip.com.bd, api.seventrip.com.bd
+Domains: seven-trip.com, www.seven-trip.com
 Auto-renewal: certbot timer (every 60 days)
 ```
 
 ### Nginx SSL Settings
 
 ```nginx
-ssl_certificate /etc/letsencrypt/live/seventrip.com.bd/fullchain.pem;
-ssl_certificate_key /etc/letsencrypt/live/seventrip.com.bd/privkey.pem;
+ssl_certificate /etc/letsencrypt/live/seven-trip.com/fullchain.pem;
+ssl_certificate_key /etc/letsencrypt/live/seven-trip.com/privkey.pem;
 include /etc/letsencrypt/options-ssl-nginx.conf;
 ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
 ```
@@ -158,7 +158,7 @@ All HTTP traffic automatically redirected to HTTPS via Nginx:
 ```nginx
 server {
     listen 80;
-    server_name seven-trip.com.bd www.seven-trip.com.bd;
+    server_name seven-trip.com www.seven-trip.com;
     return 301 https://$server_name$request_uri;
 }
 ```

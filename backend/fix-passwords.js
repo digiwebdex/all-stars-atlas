@@ -9,7 +9,7 @@ async function fix() {
   try {
     // Admin password: Admin@123456
     const adminHash = await bcrypt.hash('Admin@123456', 12);
-    await db.query('UPDATE users SET password_hash = ? WHERE email = ?', [adminHash, 'admin@seventrip.com.bd']);
+    await db.query('UPDATE users SET password_hash = ? WHERE email = ?', [adminHash, 'admin@seven-trip.com']);
     console.log('✅ Admin password updated');
 
     // User password: User@123456
@@ -18,7 +18,7 @@ async function fix() {
     console.log('✅ User password updated');
 
     console.log('\n🔑 Credentials:');
-    console.log('   Admin: admin@seventrip.com.bd / Admin@123456');
+    console.log('   Admin: admin@seven-trip.com / Admin@123456');
     console.log('   User:  rahim@gmail.com / User@123456');
 
     process.exit(0);

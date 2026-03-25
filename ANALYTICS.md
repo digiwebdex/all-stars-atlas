@@ -155,7 +155,7 @@
 | Helmet.js headers | v1.9 | XSS, HSTS, X-Frame-Options, X-Content-Type-Options |
 | Passport OCR validation | v3.3 | ICAO 9303 check digits (passport number, DOB, expiry, composite) |
 | Document gating | v3.6 | International tickets blocked without passport upload |
-| CORS whitelist | v1.9 | Only seven-trip.com.bd allowed |
+| CORS whitelist | v1.9 | Only seven-trip.com allowed |
 | SSL/TLS | Deployment | Let's Encrypt with auto-renewal |
 | Password hashing | v1.2 | bcryptjs with salt rounds |
 | Admin route guards | v1.3 | Role-based access (customer/admin/super_admin) |
