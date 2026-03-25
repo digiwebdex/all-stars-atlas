@@ -1,7 +1,7 @@
 # Seven Trip — Complete Deployment History
 
 > Every deployment to production with exact commands, what changed, and verification steps.
-> Last updated: 2026-03-17 (v4.1.6 — Dashboard Hardening, E-Ticket PDF Fix, API Resilience)
+> Last updated: 2026-03-25 (v4.1.7 — Nginx Gzip Fix, Domain Migration seven-trip.com)
 
 ---
 
@@ -12,8 +12,8 @@
 | **Provider** | Hostinger KVM 2 VPS |
 | **OS** | Ubuntu 24.04 LTS |
 | **IP** | 187.77.137.249 |
-| **Domain** | seven-trip.com.bd / www.seven-trip.com.bd |
-| **API Domain** | api.seventrip.com.bd |
+| **Domain** | seven-trip.com / www.seven-trip.com |
+| **API** | seven-trip.com/api (Nginx reverse proxy to port 3001) |
 | **Frontend Path** | `/var/www/seventrip/` |
 | **Backend Path** | `~/projects/all-stars-atlas/backend/` |
 | **Process Manager** | PM2 (process name: `seventrip-api`) |
