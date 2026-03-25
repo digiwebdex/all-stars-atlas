@@ -1,7 +1,7 @@
 # Seven Trip — System Architecture
 
 > Complete technical architecture documentation for the Seven Trip travel platform.
-> Last updated: 2026-03-17 (v4.1.6 — Dashboard Hardening, E-Ticket PDF Fix, API Resilience)
+> Last updated: 2026-03-25 (v4.1.7 — Domain Migration, Nginx Fix)
 
 ---
 

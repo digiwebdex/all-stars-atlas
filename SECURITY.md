@@ -1,7 +1,7 @@
 # Seven Trip — Security Documentation
 
 > All security measures, authentication flow, and best practices implemented in the platform.
-> Last updated: 2026-03-17 (v4.1.6)
+> Last updated: 2026-03-25 (v4.1.7)
 
 ---
 

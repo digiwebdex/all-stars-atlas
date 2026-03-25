@@ -157,6 +157,7 @@ pm2 logs seventrip-api --lines 30
 
 | Date | Change | Deploy Command |
 |------|--------|----------------|
+| 2026-03-25 | **v4.1.7** Nginx gzip crash fix: removed duplicate gzip directive from site config (3.5h outage), fixed API proxy port 5000→3001, domain migration seven-trip.com.bd→seven-trip.com across all docs | Nginx Config Update |
 | 2026-03-17 | **v4.1.6** Dashboard hardening: E-ticket PDF ASCII fix (garbled Unicode→text), Flight Status graceful error handling, Fare Rules airline code dedup, Sabre `sabreRequest()` empty response resilience. All 15+ dashboard modules verified. | Standard Deployment |
 | 2026-03-14 | **v4.1.3** Sabre search recovery hotfix: restored missing `getResponseStats` + `normalizeParams` and removed undefined decoder dependency in BFM fallback flow. | Backend Only |
 | 2026-03-14 | **v4.1.2** Sabre search crash hotfix: removed accidental `...` token in `backend/src/routes/sabre-flights.js` that caused Node startup `SyntaxError` and intermittent 502 on `/api/flights/search`. | Backend Only |
