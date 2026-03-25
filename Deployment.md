@@ -300,7 +300,7 @@ sudo apt install -y certbot python3-certbot-nginx
 ### Get SSL certificates
 
 ```bash
-sudo certbot --nginx -d seven-trip.com -d www.seven-trip.com -d seven-trip.com
+sudo certbot --nginx -d seven-trip.com -d www.seven-trip.com
 ```
 
 Certbot will ask:
