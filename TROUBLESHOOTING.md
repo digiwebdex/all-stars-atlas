@@ -209,7 +209,7 @@ const images = safeJsonParse(row.images, []);
 
 **Cause:** `VITE_API_BASE_URL` uses `http://` but site is on `https://`
 
-**Fix:** Set `VITE_API_BASE_URL=https://api.seventrip.com.bd/api` and rebuild
+**Fix:** Set `VITE_API_BASE_URL=https://api.seven-trip.com/api` and rebuild
 
 ### Pages Return 404 (Except Homepage)
 
@@ -262,7 +262,7 @@ df -h
 free -m
 
 # Test API
-curl -s https://api.seventrip.com.bd/api/health
+curl -s https://seven-trip.com/api/health
 
 # Test Nginx config
 sudo nginx -t

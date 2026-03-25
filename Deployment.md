@@ -29,7 +29,7 @@
 | Item                | Description                                        | Example                     |
 | ------------------- | -------------------------------------------------- | --------------------------- |
 | **VPS Provider**    | Any VPS with Ubuntu 22.04 or 24.04                 | DigitalOcean, Hetzner, Vultr|
-| **Domain Name**     | Your domain pointed to the VPS IP                  | `seventrip.com.bd`          |
+| **Domain Name**     | Your domain pointed to the VPS IP                  | `seven-trip.com`          |
 | **SSH Access**      | Ability to connect to your server                  | `ssh root@your-ip`          |
 | **Min. Specs**      | 1 vCPU, 1 GB RAM, 25 GB disk (minimum)            |                             |
 | **Git Repository**  | Your frontend code in a Git repo (GitHub, etc.)    |                             |
@@ -140,7 +140,7 @@ nano .env
 Set your production API URL:
 
 ```env
-VITE_API_BASE_URL=https://api.seventrip.com.bd/api
+VITE_API_BASE_URL=https://api.seven-trip.com/api
 ```
 
 Save: Press `Ctrl + X`, then `Y`, then `Enter`.
@@ -207,7 +207,7 @@ Paste this configuration:
 # Seven Trip Frontend
 server {
     listen 80;
-    server_name seventrip.com.bd www.seventrip.com.bd;
+    server_name seven-trip.com www.seven-trip.com;
 
     # Where your built frontend files are
     root /home/seventrip/projects/seven-trip-frontend/dist;
@@ -245,7 +245,7 @@ server {
 # API Proxy (reverse proxy to your Node.js backend)
 server {
     listen 80;
-    server_name api.seventrip.com.bd;
+    server_name api.seven-trip.com;
 
     location / {
         proxy_pass http://127.0.0.1:3001;
@@ -296,7 +296,7 @@ sudo systemctl reload nginx
 
 ### Test it!
 
-Open `http://seventrip.com.bd` in your browser. You should see the Seven Trip website!
+Open `http://seven-trip.com` in your browser. You should see the Seven Trip website!
 
 ---
 
@@ -313,7 +313,7 @@ sudo apt install -y certbot python3-certbot-nginx
 ### Get SSL certificates
 
 ```bash
-sudo certbot --nginx -d seventrip.com.bd -d www.seventrip.com.bd -d api.seventrip.com.bd
+sudo certbot --nginx -d seven-trip.com -d www.seven-trip.com -d api.seven-trip.com
 ```
 
 Certbot will ask:
@@ -332,7 +332,7 @@ sudo certbot renew --dry-run
 
 ### Done!
 
-Your site is now available at `https://seventrip.com.bd` with a valid SSL certificate! 🎉
+Your site is now available at `https://seven-trip.com` with a valid SSL certificate! 🎉
 
 ---
 
@@ -379,7 +379,7 @@ SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
 SMTP_USER=your@gmail.com
 SMTP_PASS=your-app-password
-FRONTEND_URL=https://seventrip.com.bd
+FRONTEND_URL=https://seven-trip.com
 ```
 
 ### Start with PM2
@@ -413,7 +413,7 @@ pm2 monit                 # Real-time monitoring
 
 | Variable             | Value for Production                    |
 | -------------------- | --------------------------------------- |
-| `VITE_API_BASE_URL`  | `https://api.seventrip.com.bd/api`      |
+| `VITE_API_BASE_URL`  | `https://api.seven-trip.com/api`      |
 
 > **Important:** Frontend env vars are baked into the build. After changing `.env`, you must run `npm run build` again.
 
@@ -590,7 +590,7 @@ try_files $uri $uri/ /index.html;
 
 **Cause:** Your `VITE_API_BASE_URL` uses `http://` but the site is on `https://`.
 
-Fix: Set `VITE_API_BASE_URL=https://api.seventrip.com.bd/api` in `.env` and rebuild.
+Fix: Set `VITE_API_BASE_URL=https://api.seven-trip.com/api` in `.env` and rebuild.
 
 ### SSL certificate not renewing
 
@@ -641,17 +641,17 @@ Full production Nginx config with SSL (after Certbot):
 # Redirect HTTP to HTTPS
 server {
     listen 80;
-    server_name seventrip.com.bd www.seventrip.com.bd;
+    server_name seven-trip.com www.seven-trip.com;
     return 301 https://$server_name$request_uri;
 }
 
 # Main frontend
 server {
     listen 443 ssl http2;
-    server_name seventrip.com.bd www.seventrip.com.bd;
+    server_name seven-trip.com www.seven-trip.com;
 
-    ssl_certificate /etc/letsencrypt/live/seventrip.com.bd/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/seventrip.com.bd/privkey.pem;
+    ssl_certificate /etc/letsencrypt/live/seven-trip.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/seven-trip.com/privkey.pem;
     include /etc/letsencrypt/options-ssl-nginx.conf;
     ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
 
@@ -692,16 +692,16 @@ server {
 # API reverse proxy
 server {
     listen 80;
-    server_name api.seventrip.com.bd;
+    server_name api.seven-trip.com;
     return 301 https://$server_name$request_uri;
 }
 
 server {
     listen 443 ssl http2;
-    server_name api.seventrip.com.bd;
+    server_name api.seven-trip.com;
 
-    ssl_certificate /etc/letsencrypt/live/seventrip.com.bd/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/seventrip.com.bd/privkey.pem;
+    ssl_certificate /etc/letsencrypt/live/seven-trip.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/seven-trip.com/privkey.pem;
     include /etc/letsencrypt/options-ssl-nginx.conf;
     ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
 

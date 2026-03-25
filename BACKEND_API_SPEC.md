@@ -45,9 +45,9 @@
 | Process Manager | PM2 |
 | Server | Ubuntu 24.04 VPS + Nginx reverse proxy |
 
-**Base URL**: `https://api.seventrip.com.bd/api`
+**Base URL**: `https://api.seven-trip.com/api`
 
-All endpoints below are relative to this base. For example, `/auth/login` means `POST https://api.seventrip.com.bd/api/auth/login`.
+All endpoints below are relative to this base. For example, `/auth/login` means `POST https://seven-trip.com/api/auth/login`.
 
 ---
 
@@ -1515,7 +1515,7 @@ Same request/response as `/auth/login`. The frontend checks that `user.role` is 
       "ticketNo": "098-1234567890",
       "pnr": "ABC123",
       "status": "active",
-      "pdfUrl": "https://api.seventrip.com.bd/tickets/download/ticket-uuid",
+      "pdfUrl": "https://api.seven-trip.com/tickets/download/ticket-uuid",
       "details": {
         "airline": "Biman Bangladesh",
         "flightNumber": "BG-435",
@@ -1698,7 +1698,7 @@ Permanently deletes a booking and all related tickets and transactions. **Irreve
 ```json
 {
   "siteName": "Seven Trip",
-  "supportEmail": "support@seventrip.com.bd",
+  "supportEmail": "support@seven-trip.com",
   "defaultCurrency": "BDT",
   "defaultLanguage": "en",
   "paymentGateways": [
@@ -1709,7 +1709,7 @@ Permanently deletes a booking and all related tickets and transactions. **Irreve
   "smtpSettings": {
     "host": "smtp.example.com",
     "port": 587,
-    "username": "noreply@seventrip.com.bd"
+    "username": "noreply@seven-trip.com"
   },
   "notifications": [
     { "id": "new_booking", "label": "New Booking Alert", "enabled": true },
@@ -1826,7 +1826,7 @@ Permanently deletes a booking and all related tickets and transactions. **Irreve
   "originalName": "beach-sunset.jpg",
   "mimeType": "image/jpeg",
   "size": 245000,
-  "url": "https://api.seventrip.com.bd/uploads/beach-sunset-abc123.jpg",
+  "url": "https://api.seven-trip.com/uploads/beach-sunset-abc123.jpg",
   "altText": "Sunset at Cox's Bazar beach",
   "folder": "destinations",
   "uploadedBy": { "id": "uuid", "name": "Admin" },
@@ -1949,12 +1949,12 @@ JWT_REFRESH_EXPIRES=7d
 # SMTP (Email)
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
-SMTP_USER=noreply@seventrip.com.bd
+SMTP_USER=noreply@seven-trip.com
 SMTP_PASS=your-smtp-app-password
-SMTP_FROM="Seven Trip <noreply@seventrip.com.bd>"
+SMTP_FROM="Seven Trip <noreply@seven-trip.com>"
 
 # Frontend URL (for CORS and email links)
-FRONTEND_URL=https://seventrip.com.bd
+FRONTEND_URL=https://seven-trip.com
 
 # File uploads
 UPLOAD_DIR=/var/www/seventrip-api/uploads
@@ -1973,7 +1973,7 @@ MAX_FILE_SIZE=10485760
 
 - [ ] All 50+ endpoints implemented and tested
 - [ ] MySQL database created with all tables from Section 2
-- [ ] Default admin user seeded: `admin@seventrip.com.bd` / `role: super_admin`
+- [ ] Default admin user seeded: `admin@seven-trip.com` / `role: super_admin`
 - [ ] JWT secrets are strong (256-bit random)
 - [ ] SMTP configured and sending emails
 - [ ] CORS configured for frontend domain only
@@ -1994,7 +1994,7 @@ MAX_FILE_SIZE=10485760
 ```sql
 -- Create super admin
 INSERT INTO users (id, first_name, last_name, email, password_hash, role, email_verified)
-VALUES (UUID(), 'Super', 'Admin', 'admin@seventrip.com.bd', '$2b$12$...hashed...', 'super_admin', 1);
+VALUES (UUID(), 'Super', 'Admin', 'admin@seven-trip.com', '$2b$12$...hashed...', 'super_admin', 1);
 
 -- Insert BD recharge operators
 INSERT INTO recharge_operators (id, name, logo, type, active) VALUES
@@ -2007,7 +2007,7 @@ INSERT INTO recharge_operators (id, name, logo, type, active) VALUES
 -- Insert system settings
 INSERT INTO system_settings (setting_key, setting_value, category) VALUES
 ('site_name', 'Seven Trip', 'general'),
-('support_email', 'support@seventrip.com.bd', 'general'),
+('support_email', 'support@seven-trip.com', 'general'),
 ('default_currency', 'BDT', 'general'),
 ('default_language', 'en', 'general');
 ```
