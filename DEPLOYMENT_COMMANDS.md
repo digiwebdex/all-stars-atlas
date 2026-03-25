@@ -97,8 +97,8 @@ sudo certbot renew             # Force renewal
 
 ## ⚠️ Troubleshooting
 
-### Nginx "gzip duplicate" error
-The gzip directives are in `/etc/nginx/nginx.conf` — do NOT add them in site configs.
+### Nginx "gzip duplicate" error (CRITICAL)
+The gzip/brotli directives are in `/etc/nginx/nginx.conf` — do NOT add them in site configs. This caused a 3.5-hour outage on 2026-03-25. Always deploy from `backend/nginx-optimized.conf` which has NO gzip.
 
 ### API not responding
 ```bash
