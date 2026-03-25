@@ -193,11 +193,23 @@ const images = safeJsonParse(row.images, []);
 
 **Fix:** Already configured in `vite.config.ts` with manual chunks for vendor, UI, charts, PDF, motion
 
-### Nginx "gzip duplicate" Error
+### Nginx "gzip duplicate" Error (CRITICAL — caused 3.5h outage on 2026-03-25)
 
-**Cause:** Gzip directives in both `nginx.conf` and site config
+**Cause:** Gzip directives in both `nginx.conf` AND site config. Nginx refuses to start.
 
-**Fix:** Only configure gzip in one location (usually `nginx.conf`)
+**Fix:** 
+1. **NEVER add gzip/brotli directives to site configs** — they belong ONLY in `/etc/nginx/nginx.conf`
+2. If already broken:
+```bash
+# Option 1: Replace entire site config from repo (recommended)
+sudo cp backend/nginx-optimized.conf /etc/nginx/sites-available/seventrip
+# Option 2: Remove gzip lines manually
+sudo sed -i '/^\s*gzip/d' /etc/nginx/sites-available/seventrip
+# Then test and restart
+sudo nginx -t && sudo systemctl start nginx
+```
+
+**Prevention:** The repo's `backend/nginx-optimized.conf` has NO gzip directives. Always deploy from repo.
 
 ### `Route.get() requires a callback function`
 
@@ -209,7 +221,7 @@ const images = safeJsonParse(row.images, []);
 
 **Cause:** `VITE_API_BASE_URL` uses `http://` but site is on `https://`
 
-**Fix:** Set `VITE_API_BASE_URL=https://api.seven-trip.com/api` and rebuild
+**Fix:** Set `VITE_API_BASE_URL=https://seven-trip.com/api` and rebuild
 
 ### Pages Return 404 (Except Homepage)
 
