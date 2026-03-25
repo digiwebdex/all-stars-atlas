@@ -1,7 +1,7 @@
 # Seven Trip — Working Deployment Commands
 
 > **Auto-updated** with every change. Copy-paste ready commands for your VPS.
-> Last updated: 2026-03-17 (v4.1.6 — Dashboard Hardening, E-Ticket PDF Fix, API Resilience)
+> Last updated: 2026-03-25 (v4.1.7 — Nginx Gzip Fix, Domain Migration to seven-trip.com)
 
 ---
 
