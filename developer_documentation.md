@@ -81,7 +81,7 @@
 In your `.env` file (created from `.env.example`):
 
 ```env
-VITE_API_BASE_URL=https://api.seventrip.com.bd/api
+VITE_API_BASE_URL=https://seven-trip.com/api
 ```
 
 This is read by `src/lib/config.ts`:
@@ -94,7 +94,7 @@ export const config = {
 ```
 
 **For local development:** Point to `http://localhost:3001/api` (where your backend runs).
-**For production:** Point to `https://api.seventrip.com.bd/api`.
+**For production:** Point to `https://seven-trip.com/api`.
 
 ### How API Calls Work
 
@@ -580,7 +580,7 @@ Test files go in `src/test/` or next to the component as `MyComponent.test.tsx`.
 
 | Variable              | Required | Description                              | Example                               |
 | --------------------- | -------- | ---------------------------------------- | ------------------------------------- |
-| `VITE_API_BASE_URL`   | Yes      | Your backend API base URL                | `https://api.seventrip.com.bd/api`    |
+| `VITE_API_BASE_URL`   | Yes      | Your backend API base URL                | `https://seven-trip.com/api`    |
 
 > All `VITE_*` variables are embedded at build time. Changing them requires a rebuild.
 
