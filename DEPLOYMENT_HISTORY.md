@@ -269,18 +269,58 @@ cd ~/projects/all-stars-atlas && git pull origin main && cd backend && npm insta
 
 ---
 
+### Deploy #9 — 2026-03-25 — Nginx Gzip Crash Fix & Domain Migration
+
+**Version:** v4.1.7
+**Type:** Nginx Config Fix
+**Duration:** ~5 minutes
+
+**What happened:**
+- Nginx crashed due to duplicate `gzip` directive in site config (already defined in `/etc/nginx/nginx.conf`)
+- Site was down for ~3.5 hours (06:12 UTC → 09:34 UTC)
+- API proxy was also pointing to wrong port (5000 instead of 3001)
+
+**Root Cause:** The site config `/etc/nginx/sites-enabled/seventrip` contained `gzip` directives that conflicted with the global `/etc/nginx/nginx.conf` gzip settings. Nginx refused to start after a server reboot.
+
+**Fix Applied:**
+```bash
+# Replaced entire site config without gzip directives
+sudo tee /etc/nginx/sites-available/seventrip > /dev/null << 'NGINX'
+# (clean config without gzip, port 3001)
+NGINX
+sudo ln -sf /etc/nginx/sites-available/seventrip /etc/nginx/sites-enabled/seventrip
+sudo nginx -t && sudo systemctl start nginx
+
+# Fixed API proxy port
+sudo sed -i 's|proxy_pass http://127.0.0.1:5000/api/;|proxy_pass http://127.0.0.1:3001/api/;|' /etc/nginx/sites-available/seventrip
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+**Also updated:**
+- Domain references: `seven-trip.com.bd` → `seven-trip.com` across all documentation
+- API architecture: separate `api.seventrip.com.bd` subdomain → unified `seven-trip.com/api` path
+- Repo `nginx-optimized.conf`: fixed port 5000 → 3001, confirmed no gzip directives
+
+**Verification:**
+- ✅ `curl -sI https://seven-trip.com` returns HTTP/2 200
+- ✅ Nginx running with correct config
+- ✅ API proxy correctly points to port 3001
+
+---
+
 ## 📊 Deployment Statistics
 
 | Metric | Value |
 |--------|-------|
-| **Total Deployments** | 10 |
+| **Total Deployments** | 11 |
 | **Full Stack** | 6 |
 | **Backend Only** | 3 |
-| **Nginx Only** | 1 |
+| **Nginx Only** | 2 |
 | **Database Only** | 1 |
 | **Average Deploy Time** | ~3 minutes (git pull → build → copy → restart) |
 | **Zero-Downtime** | Yes (PM2 restart, Nginx reload) |
 | **Rollback Required** | 0 |
+| **Longest Outage** | 3.5 hours (2026-03-25, Nginx gzip duplicate) |
 
 ---
 
@@ -294,12 +334,13 @@ Before every deployment:
 - [ ] Verify `.env` has correct `VITE_API_BASE_URL`
 - [ ] If DB changes: prepare migration SQL and test locally first
 - [ ] If Nginx changes: test with `sudo nginx -t` before reload
+- [ ] **NEVER add gzip directives to site config** (managed in `/etc/nginx/nginx.conf`)
 
 After every deployment:
 
 - [ ] Check `pm2 status` — seventrip-api is `online`
 - [ ] Check `pm2 logs seventrip-api --lines 10` — no startup errors
-- [ ] Visit https://seven-trip.com.bd — homepage loads
-- [ ] Visit https://api.seventrip.com.bd/api/health — API responds
+- [ ] Visit https://seven-trip.com — homepage loads
+- [ ] Visit https://seven-trip.com/api/health — API responds
 - [ ] Test the specific feature that was deployed
 - [ ] Check browser console for errors
