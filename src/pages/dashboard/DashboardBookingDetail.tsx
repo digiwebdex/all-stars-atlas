@@ -253,6 +253,22 @@ const DashboardBookingDetail = () => {
     }
   };
 
+  const handleTicketRequest = async () => {
+    if (!booking) return;
+    setTicketRequestLoading(true);
+    try {
+      await api.post("/dashboard/ticket-issue-request", { bookingId: booking.rawId, notes: ticketRequestNotes || undefined });
+      toast({ title: "Request Submitted ✓", description: "Ticket issue request sent to admin. You'll be notified when it's processed." });
+      setTicketRequestOpen(false);
+      setTicketRequestNotes("");
+      refetch();
+    } catch (e: any) {
+      toast({ title: "Failed", description: e.message || "Could not submit request", variant: "destructive" });
+    } finally {
+      setTicketRequestLoading(false);
+    }
+  };
+
   const handleDownload = async () => {
     if (!booking) return;
     try {
