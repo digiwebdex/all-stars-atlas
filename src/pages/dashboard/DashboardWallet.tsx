@@ -5,7 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Wallet, ArrowUpRight, ArrowDownLeft, Plus, Send, CreditCard, Smartphone, Building2, Banknote, FileImage, X } from "lucide-react";
+import { Wallet, ArrowUpRight, ArrowDownLeft, Plus, Send, CreditCard, Smartphone, Building2, Banknote, FileImage, X, Copy, Check } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import DataLoader from "@/components/DataLoader";
@@ -37,6 +37,7 @@ const DashboardWallet = () => {
   const [slipPreview, setSlipPreview] = useState<string | null>(null);
   const [depositNotes, setDepositNotes] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
+  const [copiedAcct, setCopiedAcct] = useState<string | null>(null);
 
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ["dashboard", "wallet"],
@@ -44,6 +45,14 @@ const DashboardWallet = () => {
   });
 
   const { data: gwStatus } = usePaymentGatewayStatus();
+  
+  // Fetch bank accounts when bank method is selected
+  const { data: bankData } = useQuery({
+    queryKey: ["dashboard", "bank-list"],
+    queryFn: () => api.get<any>("/dashboard/bank-accounts"),
+    enabled: fundMethod === "bank" && addFundsOpen,
+  });
+  const bankAccounts = ((bankData as any)?.banks || (bankData as any)?.data || []) as any[];
 
   const wallet = (data as any) || {};
   const balance = wallet.balance ?? 0;
@@ -324,9 +333,37 @@ const DashboardWallet = () => {
             {/* Deposit slip upload - only for bank transfer */}
             {fundMethod === "bank" && (
               <div className="space-y-3 p-3 rounded-xl bg-muted/50 border border-border">
-                <p className="text-xs font-semibold text-muted-foreground">
-                  Transfer to our bank account (see Bank List), then upload deposit slip below.
-                </p>
+                {/* Company Bank Accounts */}
+                {bankAccounts.length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-xs font-semibold text-foreground">Transfer to one of these accounts:</p>
+                    {bankAccounts.map((bank: any, i: number) => (
+                      <div key={bank.id || i} className="p-2.5 rounded-lg bg-background border border-border text-xs space-y-1">
+                        <p className="font-semibold text-sm">{bank.bankName || bank.name}</p>
+                        <div className="flex justify-between items-center">
+                          <span className="text-muted-foreground">A/C Name</span>
+                          <span className="font-medium">{bank.accountName}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-muted-foreground">A/C Number</span>
+                          <div className="flex items-center gap-1">
+                            <span className="font-mono font-semibold">{bank.accountNumber}</span>
+                            <button onClick={() => { navigator.clipboard.writeText(bank.accountNumber); setCopiedAcct(bank.accountNumber); setTimeout(() => setCopiedAcct(null), 2000); }} className="p-0.5">
+                              {copiedAcct === bank.accountNumber ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3 text-muted-foreground" />}
+                            </button>
+                          </div>
+                        </div>
+                        {bank.branch && <div className="flex justify-between"><span className="text-muted-foreground">Branch</span><span>{bank.branch}</span></div>}
+                        {bank.routingNumber && <div className="flex justify-between"><span className="text-muted-foreground">Routing</span><span className="font-mono">{bank.routingNumber}</span></div>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {bankAccounts.length === 0 && (
+                  <p className="text-xs font-semibold text-muted-foreground">
+                    Transfer to our bank account (see Bank List in sidebar), then upload deposit slip below.
+                  </p>
+                )}
                 <div>
                   <Label className="text-xs font-semibold text-muted-foreground mb-1.5 block">Deposit Slip / Receipt</Label>
                   {slipPreview ? (
