@@ -15,6 +15,7 @@ import {
   Search, MoreHorizontal, Eye, Edit2, Download, CheckCircle2, Clock, XCircle, Ticket, Loader2,
   Plane, User, Phone, Mail, CreditCard, FileText, AlertTriangle, Save, CalendarDays, MapPin, Shield,
   Send, Ban, Link2, Archive, Trash2, RotateCcw, Upload, ExternalLink, DollarSign, ArrowLeftRight,
+  Terminal, Activity, Bug, Building2, Receipt,
 } from "lucide-react";
 import BookingActions from "@/components/flights/BookingActions";
 import FlightStatusBadge from "@/components/flights/FlightStatusBadge";
