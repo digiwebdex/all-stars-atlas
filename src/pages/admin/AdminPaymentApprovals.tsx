@@ -154,6 +154,11 @@ const AdminPaymentApprovals = () => {
                     <TableCell className="text-right font-semibold text-sm">৳{(p.amount || 0).toLocaleString()}</TableCell>
                     <TableCell>
                       <div className="flex gap-1">
+                        {p.receiptUrl && (
+                          <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-primary" title="View deposit slip" onClick={() => window.open(`${window.location.origin}${p.receiptUrl}`, '_blank')}>
+                            <ImageIcon className="w-3.5 h-3.5" />
+                          </Button>
+                        )}
                         {p.status === "Pending" && (
                           <>
                             <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-success" onClick={() => handleApprove(p.id)} disabled={actionLoading === p.id}>
