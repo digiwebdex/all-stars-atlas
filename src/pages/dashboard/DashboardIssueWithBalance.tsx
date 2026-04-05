@@ -47,13 +47,25 @@ const DashboardIssueWithBalance = () => {
 
   // Pay with balance mutation
   const payMutation = useMutation({
-    mutationFn: (data: { bookingId: string; amount: number }) =>
-      api.post("/dashboard/wallet/pay", data),
+    mutationFn: async (data: { bookingId: string; amount: number }) => {
+      // 1. Pay from wallet
+      await api.post("/dashboard/wallet/pay", data);
+      // 2. Auto-create ticket issue request for admin
+      try {
+        await api.post("/dashboard/ticket-issue-request", {
+          bookingId: data.bookingId,
+          notes: "Paid from wallet balance. Please issue ticket.",
+        });
+      } catch (e) {
+        // Ticket request is secondary — payment already succeeded
+        console.error("Auto ticket issue request failed:", e);
+      }
+    },
     onSuccess: () => {
       setConfirmDialog(false);
       setSelectedBooking(null);
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
-      toast({ title: "Payment Successful", description: "Booking paid with wallet balance. Ticket will be issued shortly." });
+      toast({ title: "Payment Successful", description: "Wallet debited. Ticket issue request sent to admin." });
     },
     onError: (err: any) => {
       toast({ title: "Payment Failed", description: err.message || "Insufficient balance or error", variant: "destructive" });
