@@ -188,21 +188,52 @@ class ApiClient {
   }
 
   async upload<T>(endpoint: string, formData: FormData): Promise<T> {
-    const token = this.getToken();
+    const url = this.buildUrl(endpoint);
     const headers: Record<string, string> = {};
+    const token = this.getToken();
+
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }
-    // Don't set Content-Type — browser will set multipart/form-data with boundary
-    const response = await fetch(this.buildUrl(endpoint), {
-      method: 'POST',
-      headers,
-      body: formData,
-    });
+
+    let response: Response;
+    try {
+      response = await fetch(url, {
+        method: 'POST',
+        headers,
+        body: formData,
+      });
+    } catch {
+      throw {
+        message: `Cannot reach server (${this.getRequestBaseUrl()}). Please check your internet connection or try again later.`,
+        status: 0,
+      } as ApiError;
+    }
+
+    if (response.status === 401 && token) {
+      const refreshed = await this.refreshAccessToken();
+      if (refreshed) {
+        const retryHeaders: Record<string, string> = {
+          Authorization: `Bearer ${this.getToken()}`,
+        };
+        response = await fetch(url, {
+          method: 'POST',
+          headers: retryHeaders,
+          body: formData,
+        });
+      } else {
+        this.clearTokens();
+        window.dispatchEvent(new CustomEvent('auth:logout'));
+        throw { message: 'Session expired. Please login again.', status: 401 } as ApiError;
+      }
+    }
 
     if (!response.ok) {
       const data = await response.json().catch(() => ({}));
-      throw { message: data.message || 'Upload failed', status: response.status } as ApiError;
+      throw {
+        message: data.message || (response.status === 413 ? 'File too large for server upload limit.' : 'Upload failed'),
+        status: response.status,
+      } as ApiError;
     }
 
     return response.json();

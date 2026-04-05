@@ -277,8 +277,12 @@ const AdminSettings = () => {
               if (res?.url) {
                 setLogoUrl(res.url);
                 toast.success('Logo updated! Changes will appear across all pages.');
+              } else {
+                toast.error('Upload finished but no logo URL was returned.');
               }
-            } catch { toast.error('Failed to upload logo'); }
+            } catch (err: any) {
+              toast.error(err?.message || 'Failed to upload logo');
+            }
             finally { setLogoUploading(false); e.target.value = ''; }
           }} />
         </CardContent>
