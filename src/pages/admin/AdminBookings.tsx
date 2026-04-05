@@ -10,13 +10,15 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Search, MoreHorizontal, Eye, Edit2, Download, CheckCircle2, Clock, XCircle, Ticket, Loader2,
-  Plane, User, Phone, Mail, CreditCard, FileText, AlertTriangle, Save, CalendarDays, MapPin, Shield,
-  Send, Ban, Link2, Archive, Trash2, RotateCcw, Upload, ExternalLink, DollarSign, ArrowLeftRight,
-  Terminal, Activity, Bug, Building2, Receipt,
+  Plane, User, Phone, CreditCard, FileText, AlertTriangle, Save, Shield,
+  Send, Ban, Archive, Trash2, RotateCcw, Upload, ExternalLink,
 } from "lucide-react";
+import AdminBookingTabs from "@/components/admin/AdminBookingTabs";
+import BookingActions from "@/components/flights/BookingActions";
+import FlightStatusBadge from "@/components/flights/FlightStatusBadge";
+import FareRulesModal from "@/components/flights/FareRulesModal";
 import BookingActions from "@/components/flights/BookingActions";
 import FlightStatusBadge from "@/components/flights/FlightStatusBadge";
 import FareRulesModal from "@/components/flights/FareRulesModal";
