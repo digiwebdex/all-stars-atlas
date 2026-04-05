@@ -1044,6 +1044,12 @@ router.post('/wallet/pay', async (req, res) => {
       [bookingId]
     );
 
+    // Deduct from wallet table
+    await db.query(
+      `UPDATE wallet SET balance = GREATEST(balance - ?, 0) WHERE user_id = ?`,
+      [verifiedAmount, userId]
+    );
+
     // Try auto-ticketing
     try {
       const { autoTicketAfterPayment } = require('../services/auto-ticket');
