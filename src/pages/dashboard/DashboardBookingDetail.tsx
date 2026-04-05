@@ -128,6 +128,9 @@ const DashboardBookingDetail = () => {
   const [ssrOpen, setSsrOpen] = useState(false);
   const [payDialogOpen, setPayDialogOpen] = useState(false);
   const [payLoading, setPayLoading] = useState(false);
+  const [ticketRequestOpen, setTicketRequestOpen] = useState(false);
+  const [ticketRequestNotes, setTicketRequestNotes] = useState("");
+  const [ticketRequestLoading, setTicketRequestLoading] = useState(false);
 
   const { data, isLoading, error, refetch } = useDashboardBookings({ search: id, limit: 1 });
   const resolved = (data as any) || {};
