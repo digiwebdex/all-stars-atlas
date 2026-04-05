@@ -1039,26 +1039,37 @@ router.post('/wallet/pay', async (req, res) => {
   }
 });
 
-// ── Wallet Deposit Request ──────────────────────────────
-router.post('/wallet/deposit', async (req, res) => {
+// ── Wallet Deposit Request (with optional deposit slip) ──
+router.post('/wallet/deposit', paymentSlipUpload.single('depositSlip'), async (req, res) => {
   try {
     const userId = req.user.sub || req.user.id;
-    const { amount, method } = req.body;
-    if (!amount || amount < 10) {
+    const { amount, method, notes } = req.body;
+    const amt = parseFloat(amount);
+    if (!amt || amt < 10) {
       return res.status(400).json({ message: 'Minimum deposit is ৳10' });
     }
-    if (amount > 500000) {
+    if (amt > 500000) {
       return res.status(400).json({ message: 'Maximum single deposit is ৳500,000' });
     }
 
-    const txnId = require('uuid').v4();
+    const txnId = uuidv4();
+    const reference = `DEP-${txnId.substring(0, 8).toUpperCase()}`;
+    const receiptUrl = req.file ? `/uploads/payment-slips/${req.file.filename}` : null;
+    const dbMethod = method === 'bank' ? 'bank_transfer' : (method || 'bank_transfer');
+    const meta = JSON.stringify({
+      source: 'wallet_deposit',
+      receiptUrl,
+      originalFileName: req.file?.originalname || null,
+      notes: notes || null,
+    });
+
     await db.query(
-      `INSERT INTO transactions (id, user_id, type, amount, description, status, created_at)
-       VALUES (?, ?, 'deposit', ?, ?, 'pending', NOW())`,
-      [txnId, userId, amount, `Wallet deposit via ${method || 'bank_transfer'} — pending approval`]
+      `INSERT INTO transactions (id, user_id, type, amount, description, status, payment_method, reference, meta, created_at)
+       VALUES (?, ?, 'deposit', ?, ?, 'pending', ?, ?, ?, NOW())`,
+      [txnId, userId, amt, `Wallet deposit via ${dbMethod} — pending approval`, dbMethod, reference, meta]
     );
 
-    res.json({ success: true, message: 'Deposit request created', transactionId: txnId });
+    res.json({ success: true, message: 'Deposit request created. Admin will review and approve.', transactionId: txnId, reference });
   } catch (err) {
     console.error('Wallet deposit error:', err);
     res.status(500).json({ message: 'Failed to create deposit request' });
