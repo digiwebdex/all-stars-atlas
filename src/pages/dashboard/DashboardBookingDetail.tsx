@@ -128,9 +128,6 @@ const DashboardBookingDetail = () => {
   const [ssrOpen, setSsrOpen] = useState(false);
   const [payDialogOpen, setPayDialogOpen] = useState(false);
   const [payLoading, setPayLoading] = useState(false);
-  const [ticketRequestOpen, setTicketRequestOpen] = useState(false);
-  const [ticketRequestNotes, setTicketRequestNotes] = useState("");
-  const [ticketRequestLoading, setTicketRequestLoading] = useState(false);
 
   const { data, isLoading, error, refetch } = useDashboardBookings({ search: id, limit: 1 });
   const resolved = (data as any) || {};
@@ -243,7 +240,16 @@ const DashboardBookingDetail = () => {
     setPayLoading(true);
     try {
       await api.post("/dashboard/wallet/pay", { bookingId: booking.rawId, amount });
-      toast({ title: "Payment Successful ✓", description: "Booking paid with wallet balance. Ticket will be issued shortly." });
+      // Auto-create ticket issue request for admin
+      try {
+        await api.post("/dashboard/ticket-issue-request", {
+          bookingId: booking.rawId,
+          notes: "Paid from wallet balance. Please issue ticket.",
+        });
+      } catch (e) {
+        console.error("Auto ticket issue request failed:", e);
+      }
+      toast({ title: "Payment Successful ✓", description: "Wallet debited. Ticket issue request sent to admin." });
       setPayDialogOpen(false);
       refetch();
     } catch (e: any) {
@@ -253,11 +259,6 @@ const DashboardBookingDetail = () => {
     }
   };
 
-  const handleTicketRequest = async () => {
-    if (!booking) return;
-    setTicketRequestLoading(true);
-    try {
-      await api.post("/dashboard/ticket-issue-request", { bookingId: booking.rawId, notes: ticketRequestNotes || undefined });
       toast({ title: "Request Submitted ✓", description: "Ticket issue request sent to admin. You'll be notified when it's processed." });
       setTicketRequestOpen(false);
       setTicketRequestNotes("");
@@ -324,11 +325,6 @@ const DashboardBookingDetail = () => {
             {['on_hold', 'pending', 'confirmed'].includes(booking.status) && (
               <Button className="bg-emerald-500 hover:bg-emerald-600 text-white font-bold shadow-sm" onClick={() => setPayDialogOpen(true)}>
                 <Wallet className="w-4 h-4 mr-1.5" /> Issue With Balance
-              </Button>
-            )}
-            {['on_hold', 'confirmed', 'pending'].includes(booking.status) && booking.status !== 'ticketed' && (
-              <Button className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold shadow-sm" onClick={() => setTicketRequestOpen(true)}>
-                <Ticket className="w-4 h-4 mr-1.5" /> Request Ticket Issue
               </Button>
             )}
             <div className="ml-auto flex flex-wrap gap-2">
