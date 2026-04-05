@@ -83,6 +83,8 @@ const DEFAULT_PAYMENT_METHODS = [
 const AdminSettings = () => {
   const [logoUrl, setLogoUrl] = useState('/images/seven-trip-logo.png');
   const [logoUploading, setLogoUploading] = useState(false);
+  const [logoSizes, setLogoSizes] = useState({ homepage: 140, header: 80, footer: 48, auth: 96 });
+  const [logoSizesSaving, setLogoSizesSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [visibleFields, setVisibleFields] = useState<Record<string, boolean>>({});
   const [apiKeyValues, setApiKeyValues] = useState<Record<string, Record<string, string>>>({});
@@ -102,7 +104,10 @@ const AdminSettings = () => {
 
   // Load logo + all settings from backend on mount
   useEffect(() => {
-    api.get<any>('/cms/logo').then(d => { if (d?.url) setLogoUrl(d.url); }).catch(() => {});
+    api.get<any>('/cms/logo').then(d => {
+      if (d?.url) setLogoUrl(d.url);
+      if (d?.sizes) setLogoSizes(prev => ({ ...prev, ...d.sizes }));
+    }).catch(() => {});
     (async () => {
       try {
         const data = await api.get<any>('/admin/settings');
@@ -285,6 +290,62 @@ const AdminSettings = () => {
             }
             finally { setLogoUploading(false); e.target.value = ''; }
           }} />
+        </CardContent>
+      </Card>
+
+      {/* Logo Sizing Controls */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center"><Settings className="w-5 h-5 text-primary" /></div>
+            <div><CardTitle className="text-lg">Logo Size Controls</CardTitle><CardDescription>Adjust logo height (in pixels) for each area of the site</CardDescription></div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {([
+            { key: 'homepage' as const, label: 'Homepage Hero', desc: 'Large logo above the search widget', min: 60, max: 300 },
+            { key: 'header' as const, label: 'Header / Navbar', desc: 'Navigation bar across all pages', min: 24, max: 200 },
+            { key: 'footer' as const, label: 'Footer', desc: 'Bottom of every page', min: 20, max: 120 },
+            { key: 'auth' as const, label: 'Auth Pages', desc: 'Login, Register, Forgot Password', min: 32, max: 200 },
+          ]).map(({ key, label, desc, min, max }) => (
+            <div key={key} className="space-y-2">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="text-sm font-semibold">{label}</Label>
+                  <p className="text-[11px] text-muted-foreground">{desc}</p>
+                </div>
+                <Badge variant="secondary" className="font-mono text-xs">{logoSizes[key]}px</Badge>
+              </div>
+              <div className="flex items-center gap-4">
+                <span className="text-[10px] text-muted-foreground w-8">{min}</span>
+                <input
+                  type="range"
+                  min={min}
+                  max={max}
+                  value={logoSizes[key]}
+                  onChange={e => setLogoSizes(prev => ({ ...prev, [key]: parseInt(e.target.value) }))}
+                  className="flex-1 h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
+                />
+                <span className="text-[10px] text-muted-foreground w-8 text-right">{max}</span>
+              </div>
+              <div className="flex items-center justify-center p-3 rounded-lg border border-dashed border-border bg-muted/20">
+                <img src={logoUrl} alt="Preview" style={{ height: `${logoSizes[key]}px` }} className="w-auto object-contain max-w-full" />
+              </div>
+            </div>
+          ))}
+          <Button
+            disabled={logoSizesSaving}
+            onClick={async () => {
+              setLogoSizesSaving(true);
+              try {
+                await api.put('/admin/cms/logo-sizes', logoSizes);
+                toast.success('Logo sizes saved! Changes apply site-wide immediately.');
+              } catch { toast.error('Failed to save logo sizes'); }
+              finally { setLogoSizesSaving(false); }
+            }}
+          >
+            {logoSizesSaving ? <><Loader2 className="w-4 h-4 mr-1 animate-spin" /> Saving...</> : 'Save Logo Sizes'}
+          </Button>
         </CardContent>
       </Card>
 
