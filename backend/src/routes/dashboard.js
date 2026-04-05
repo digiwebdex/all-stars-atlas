@@ -24,6 +24,113 @@ const paymentSlipUpload = multer({
   limits: { fileSize: 5 * 1024 * 1024 },
 });
 
+const APPROVED_TRANSACTION_STATUSES = new Set(['completed', 'approved']);
+
+function parseTransactionMeta(meta) {
+  if (!meta) return {};
+  if (typeof meta === 'object') return meta;
+  return safeJsonParse(meta, {});
+}
+
+function isLegacyWalletCredit(txn) {
+  const meta = parseTransactionMeta(txn.meta);
+  const description = String(txn.description || '').toLowerCase();
+  const status = String(txn.status || '').toLowerCase();
+
+  return txn.type === 'payment'
+    && Number(txn.amount || 0) > 0
+    && APPROVED_TRANSACTION_STATUSES.has(status)
+    && (
+      meta.source === 'wallet_deposit'
+      || meta.source === 'payment_request'
+      || meta.purpose === 'wallet_topup'
+      || description.includes('wallet deposit')
+      || description.startsWith('payment request for')
+    );
+}
+
+function isCreditLikeTransaction(txn) {
+  return ['credit', 'deposit', 'refund', 'transfer_in'].includes(txn.type) || isLegacyWalletCredit(txn);
+}
+
+function getSignedTransactionAmount(txn) {
+  const amount = Math.abs(Number(txn.amount || 0));
+  return isCreditLikeTransaction(txn) ? amount : -amount;
+}
+
+function getTransactionEntryType(txn) {
+  const method = String(txn.payment_method || '').toLowerCase();
+  const description = String(txn.description || '').toLowerCase();
+
+  if (isLegacyWalletCredit(txn) || txn.type === 'deposit') {
+    if (method === 'bkash') return 'BKash';
+    if (method === 'nagad') return 'Nagad';
+    if (method === 'rocket') return 'Rocket';
+    return 'Bank Deposit';
+  }
+
+  if (txn.type === 'refund') return 'Refund';
+  if (txn.type === 'transfer_in') return 'Balance Transfer In';
+  if (txn.type === 'transfer_out') return 'Balance Transfer Out';
+  if (txn.type === 'payment') {
+    if (description.includes('hotel')) return 'Hotel';
+    if (description.includes('visa')) return 'Visa';
+    return 'AirTicket';
+  }
+
+  return txn.type;
+}
+
+function computeWalletTotalsFromTransactions(rows = []) {
+  return rows.reduce((acc, txn) => {
+    const status = String(txn.status || '').toLowerCase();
+    if (!APPROVED_TRANSACTION_STATUSES.has(status)) return acc;
+
+    const signedAmount = getSignedTransactionAmount(txn);
+    if (signedAmount >= 0) acc.totalCredited += signedAmount;
+    else acc.totalDebited += Math.abs(signedAmount);
+
+    return acc;
+  }, { totalCredited: 0, totalDebited: 0 });
+}
+
+async function getEffectiveWalletState(userId) {
+  const [walletRows] = await db.query('SELECT balance FROM wallet WHERE user_id = ?', [userId]);
+  const walletBalance = Number(walletRows[0]?.balance || 0);
+
+  const [approvedTransactions] = await db.query(
+    `SELECT id, booking_id, type, amount, description, status, payment_method, reference, meta, created_at
+     FROM transactions
+     WHERE user_id = ? AND status IN ('completed', 'approved')
+     ORDER BY created_at DESC`,
+    [userId]
+  );
+
+  const { totalCredited, totalDebited } = computeWalletTotalsFromTransactions(approvedTransactions);
+  const derivedBalance = Math.max(0, totalCredited - totalDebited);
+
+  return {
+    hasWalletRow: walletRows.length > 0,
+    walletBalance,
+    totalCredited,
+    totalDebited,
+    derivedBalance,
+    effectiveBalance: walletBalance > 0 ? walletBalance : derivedBalance,
+  };
+}
+
+async function syncWalletFromDerivedBalance(userId, walletState) {
+  if ((walletState.hasWalletRow && walletState.walletBalance > 0) || walletState.derivedBalance <= 0) {
+    return;
+  }
+
+  await db.query(
+    `INSERT INTO wallet (user_id, balance) VALUES (?, ?)
+     ON DUPLICATE KEY UPDATE balance = VALUES(balance)`,
+    [userId, walletState.derivedBalance]
+  );
+}
+
 // All routes require auth
 router.use(authenticate);
 
@@ -141,33 +248,76 @@ router.get('/bookings', async (req, res) => {
 // GET /dashboard/transactions
 router.get('/transactions', async (req, res) => {
   try {
-    const { type, status, page = 1, limit = 20 } = req.query;
+    const { type, status, search, page = 1, limit = 20 } = req.query;
     let sql = 'SELECT * FROM transactions WHERE user_id = ?';
     const params = [req.user.sub];
-    if (type) { sql += ' AND type = ?'; params.push(type); }
     if (status) { sql += ' AND status = ?'; params.push(status); }
+    if (search) {
+      sql += ' AND (reference LIKE ? OR description LIKE ?)';
+      const q = `%${search}%`;
+      params.push(q, q);
+    }
 
-    const offset = (parseInt(page) - 1) * parseInt(limit);
-    const [countResult] = await db.query(sql.replace('SELECT *', 'SELECT COUNT(*) as total'), params);
-
-    // Summary
-    const [inflow] = await db.query("SELECT COALESCE(SUM(amount),0) as total FROM transactions WHERE user_id = ? AND type = 'refund' AND status = 'completed'", [req.user.sub]);
-    const [outflow] = await db.query("SELECT COALESCE(SUM(amount),0) as total FROM transactions WHERE user_id = ? AND type != 'refund' AND status = 'completed'", [req.user.sub]);
-
-    sql += ` ORDER BY created_at DESC LIMIT ? OFFSET ?`;
-    params.push(parseInt(limit), offset);
+    sql += ' ORDER BY created_at DESC';
     const [rows] = await db.query(sql, params);
 
-    const data = rows.map(t => ({
-      id: t.id, type: t.type, amount: parseFloat(t.amount), currency: t.currency,
-      status: t.status, paymentMethod: t.payment_method, reference: t.reference,
-      description: t.description, meta: t.meta ? safeJsonParse(t.meta, null) : null, createdAt: t.created_at,
-    }));
+    const walletState = await getEffectiveWalletState(req.user.sub);
+    await syncWalletFromDerivedBalance(req.user.sub, walletState);
+
+    let runningBalance = walletState.effectiveBalance;
+    const normalizedRows = rows.map((t) => {
+      const signedAmount = getSignedTransactionAmount(t);
+      const isApproved = APPROVED_TRANSACTION_STATUSES.has(String(t.status || '').toLowerCase());
+      const entryType = getTransactionEntryType(t);
+
+      const row = {
+        id: t.id,
+        type: signedAmount >= 0 ? 'credit' : 'debit',
+        entryType,
+        amount: Math.abs(Number(t.amount || 0)),
+        numAmount: signedAmount,
+        currency: t.currency,
+        status: t.status,
+        paymentMethod: t.payment_method,
+        reference: t.reference,
+        description: t.description,
+        meta: parseTransactionMeta(t.meta),
+        date: t.created_at,
+        createdAt: t.created_at,
+        createdOn: t.created_at,
+        createdBy: 'System',
+        runningBalance: isApproved ? runningBalance : null,
+      };
+
+      if (isApproved) {
+        runningBalance -= signedAmount;
+      }
+
+      return row;
+    });
+
+    const filteredRows = type
+      ? normalizedRows.filter((row) => row.entryType === type || row.type === type)
+      : normalizedRows;
+
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+    const pagedRows = filteredRows.slice(offset, offset + parseInt(limit));
+
+    const data = pagedRows;
 
     res.json({
-      data, total: countResult[0].total, page: parseInt(page), limit: parseInt(limit),
-      totalPages: Math.ceil(countResult[0].total / parseInt(limit)),
-      summary: { totalInflow: parseFloat(inflow[0].total), totalOutflow: parseFloat(outflow[0].total), balance: parseFloat(inflow[0].total) - parseFloat(outflow[0].total) }
+      data,
+      total: filteredRows.length,
+      page: parseInt(page),
+      limit: parseInt(limit),
+      totalPages: Math.ceil(filteredRows.length / parseInt(limit)) || 1,
+      summary: {
+        totalInflow: walletState.totalCredited,
+        totalOutflow: walletState.totalDebited,
+        totalSpent: `৳${walletState.totalDebited.toLocaleString('en-BD', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`,
+        totalRefunds: `৳${walletState.totalCredited.toLocaleString('en-BD', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`,
+        balance: `৳${walletState.effectiveBalance.toLocaleString('en-BD', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`,
+      }
     });
   } catch (err) { console.error(err); res.status(500).json({ message: 'Something went wrong', status: 500 }); }
 });
@@ -805,43 +955,42 @@ router.get('/bookings/:id/ancillaries', async (req, res) => {
 router.get('/wallet', async (req, res) => {
   try {
     const userId = req.user.sub || req.user.id;
-
-    // Primary: read balance from wallet table (source of truth after admin approval)
-    const [walletRows] = await db.query('SELECT balance FROM wallet WHERE user_id = ?', [userId]);
-    const walletBalance = Number(walletRows[0]?.balance || 0);
-
-    // Fallback/supplementary: compute from transactions for total credited/debited stats
-    const [credits] = await db.query(
-      `SELECT COALESCE(SUM(amount), 0) as total FROM transactions 
-       WHERE user_id = ? AND type IN ('credit','deposit') AND status IN ('completed','approved')`,
-      [userId]
-    );
-    const [debits] = await db.query(
-      `SELECT COALESCE(SUM(ABS(amount)), 0) as total FROM transactions 
-       WHERE user_id = ? AND type IN ('debit','payment','withdrawal','transfer_out') AND status IN ('completed','approved')`,
-      [userId]
-    );
-    const totalCredited = Number(credits[0]?.total || 0);
-    const totalDebited = Number(debits[0]?.total || 0);
-
-    // Use wallet table balance as primary (admin approval writes here)
-    const balance = walletBalance > 0 ? walletBalance : (totalCredited - totalDebited);
+    const walletState = await getEffectiveWalletState(userId);
+    await syncWalletFromDerivedBalance(userId, walletState);
 
     // Recent transactions (all types, all statuses for history)
     const [txns] = await db.query(
-      `SELECT id, type, amount, description, status, created_at as date
+      `SELECT id, booking_id, type, amount, description, status, payment_method, reference, meta, created_at as date
        FROM transactions WHERE user_id = ? ORDER BY created_at DESC LIMIT 50`,
       [userId]
     );
 
-    // Normalize transaction types for display
-    const normalizedTxns = txns.map(t => ({
-      ...t,
-      type: ['credit', 'deposit', 'refund'].includes(t.type) ? 'credit' : 'debit',
-      originalType: t.type,
-    }));
+    let runningBalance = walletState.effectiveBalance;
+    const normalizedTxns = txns.map((t) => {
+      const signedAmount = getSignedTransactionAmount(t);
+      const isApproved = APPROVED_TRANSACTION_STATUSES.has(String(t.status || '').toLowerCase());
+      const normalized = {
+        ...t,
+        amount: Math.abs(Number(t.amount || 0)),
+        type: signedAmount >= 0 ? 'credit' : 'debit',
+        originalType: t.type,
+        entryType: getTransactionEntryType(t),
+        balance: isApproved ? runningBalance : null,
+      };
 
-    res.json({ balance, totalCredited, totalDebited, transactions: normalizedTxns });
+      if (isApproved) {
+        runningBalance -= signedAmount;
+      }
+
+      return normalized;
+    });
+
+    res.json({
+      balance: walletState.effectiveBalance,
+      totalCredited: walletState.totalCredited,
+      totalDebited: walletState.totalDebited,
+      transactions: normalizedTxns,
+    });
   } catch (err) {
     console.error('Wallet error:', err);
     res.json({ balance: 0, totalCredited: 0, totalDebited: 0, transactions: [] });
@@ -976,21 +1125,9 @@ router.post('/wallet/pay', async (req, res) => {
       return res.status(400).json({ message: 'Valid booking ID and amount are required' });
     }
 
-    // Check wallet balance — use wallet table as primary source
-    const [walletRows] = await db.query('SELECT balance FROM wallet WHERE user_id = ?', [userId]);
-    let balance = Number(walletRows[0]?.balance || 0);
-
-    // Fallback: if wallet table empty, compute from transactions
-    if (balance <= 0) {
-      const [balRows] = await db.query(
-        `SELECT 
-          COALESCE(SUM(CASE WHEN type IN ('credit','refund','deposit') AND status IN ('completed','approved') THEN amount ELSE 0 END), 0) -
-          COALESCE(SUM(CASE WHEN type IN ('debit','payment','withdrawal','transfer_out') AND status IN ('completed','approved') THEN ABS(amount) ELSE 0 END), 0) as balance
-        FROM transactions WHERE user_id = ?`,
-        [userId]
-      );
-      balance = Number(balRows[0]?.balance || 0);
-    }
+    const walletState = await getEffectiveWalletState(userId);
+    await syncWalletFromDerivedBalance(userId, walletState);
+    const balance = walletState.effectiveBalance;
 
     if (balance < amount) {
       return res.status(400).json({ message: `Insufficient balance. Available: ৳${balance.toLocaleString()}, Required: ৳${amount.toLocaleString()}` });
@@ -1033,9 +1170,9 @@ router.post('/wallet/pay', async (req, res) => {
     // Create debit transaction
     const txnId = require('uuid').v4();
     await db.query(
-      `INSERT INTO transactions (id, user_id, type, amount, description, status, created_at)
-       VALUES (?, ?, 'payment', ?, ?, 'completed', NOW())`,
-      [txnId, userId, -Math.abs(verifiedAmount), `Wallet payment for booking ${booking.booking_ref || bookingId}`]
+      `INSERT INTO transactions (id, user_id, booking_id, type, amount, description, status, created_at)
+       VALUES (?, ?, ?, 'payment', ?, ?, 'completed', NOW())`,
+      [txnId, userId, bookingId, -Math.abs(verifiedAmount), `Wallet payment for booking ${booking.booking_ref || bookingId}`]
     );
 
     // Update booking status
@@ -1111,15 +1248,9 @@ router.post('/wallet/transfer', async (req, res) => {
       return res.status(400).json({ message: 'Valid recipient and amount are required' });
     }
 
-    // Check sender balance
-    const [balRows] = await db.query(
-      `SELECT 
-        COALESCE(SUM(CASE WHEN type IN ('credit','refund','deposit') AND status IN ('completed','approved') THEN amount ELSE 0 END), 0) -
-        COALESCE(SUM(CASE WHEN type IN ('debit','payment','withdrawal','transfer_out') AND status IN ('completed','approved') THEN ABS(amount) ELSE 0 END), 0) as balance
-      FROM transactions WHERE user_id = ?`,
-      [userId]
-    );
-    const balance = Number(balRows[0]?.balance || 0);
+    const walletState = await getEffectiveWalletState(userId);
+    await syncWalletFromDerivedBalance(userId, walletState);
+    const balance = walletState.effectiveBalance;
     if (balance < amount) {
       return res.status(400).json({ message: `Insufficient balance. Available: ৳${balance.toLocaleString()}` });
     }
