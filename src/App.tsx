@@ -88,7 +88,7 @@ const DashboardWallet = lazy(() => import("@/pages/dashboard/DashboardWallet"));
 const DashboardSSRHistory = lazy(() => import("@/pages/dashboard/DashboardSSRHistory"));
 const DashboardBankList = lazy(() => import("@/pages/dashboard/DashboardBankList"));
 const DashboardMFSList = lazy(() => import("@/pages/dashboard/DashboardMFSList"));
-const DashboardSendPaymentRequest = lazy(() => import("@/pages/dashboard/DashboardSendPaymentRequest"));
+
 const DashboardIssueWithBalance = lazy(() => import("@/pages/dashboard/DashboardIssueWithBalance"));
 const DashboardTimeline = lazy(() => import("@/pages/dashboard/DashboardTimeline"));
 const DashboardCancelBooking = lazy(() => import("@/pages/dashboard/DashboardCancelBooking"));
@@ -218,7 +218,7 @@ const App = () => (
                 <Route path="ssr-history" element={<DashboardSSRHistory />} />
                 <Route path="bank-list" element={<DashboardBankList />} />
                 <Route path="mfs-list" element={<DashboardMFSList />} />
-                <Route path="send-payment-request" element={<DashboardSendPaymentRequest />} />
+                
                 <Route path="issue-with-balance" element={<DashboardIssueWithBalance />} />
                 <Route path="timeline" element={<DashboardTimeline />} />
                 <Route path="cancel-booking" element={<DashboardCancelBooking />} />
