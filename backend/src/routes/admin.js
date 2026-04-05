@@ -844,7 +844,7 @@ router.get('/payment-approvals', async (req, res) => {
                FROM transactions t 
                JOIN users u ON t.user_id = u.id
                LEFT JOIN bookings b ON t.booking_id = b.id
-               WHERE t.payment_method IN ('bank_transfer', 'bkash', 'nagad', 'rocket')`;
+               WHERE (t.payment_method IN ('bank_transfer', 'bkash', 'nagad', 'rocket') OR t.type = 'deposit')`;
     const params = [];
     
     if (status && status !== 'All') {

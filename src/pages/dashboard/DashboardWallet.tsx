@@ -5,12 +5,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Wallet, ArrowUpRight, ArrowDownLeft, Plus, Send, CreditCard, Smartphone, Building2, Banknote } from "lucide-react";
+import { Wallet, ArrowUpRight, ArrowDownLeft, Plus, Send, CreditCard, Smartphone, Building2, Banknote, FileImage, X } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import DataLoader from "@/components/DataLoader";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { downloadCSV } from "@/lib/csv-export";
 import { useToast } from "@/hooks/use-toast";
 import { usePaymentGatewayStatus } from "@/hooks/usePaymentGateways";
@@ -33,6 +32,11 @@ const DashboardWallet = () => {
   const [transferAmount, setTransferAmount] = useState("");
   const [transferNote, setTransferNote] = useState("");
   const [transferLoading, setTransferLoading] = useState(false);
+  // Deposit slip state
+  const [slipFile, setSlipFile] = useState<File | null>(null);
+  const [slipPreview, setSlipPreview] = useState<string | null>(null);
+  const [depositNotes, setDepositNotes] = useState("");
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ["dashboard", "wallet"],
@@ -48,10 +52,37 @@ const DashboardWallet = () => {
   const totalDebited = wallet.totalDebited ?? 0;
 
   const availableMethods = PAYMENT_METHODS.filter((m) => {
-    if (!m.gateway) return true; // bank transfer always available
-    if (!gwStatus) return true; // show all while loading
+    if (!m.gateway) return true;
+    if (!gwStatus) return true;
     return (gwStatus as any)[m.gateway]?.enabled !== false;
   });
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: "File too large", description: "Max 5MB allowed", variant: "destructive" });
+      return;
+    }
+    setSlipFile(file);
+    const reader = new FileReader();
+    reader.onload = (ev) => setSlipPreview(ev.target?.result as string);
+    reader.readAsDataURL(file);
+  };
+
+  const removeSlip = () => {
+    setSlipFile(null);
+    setSlipPreview(null);
+    if (fileRef.current) fileRef.current.value = "";
+  };
+
+  const resetAddFunds = () => {
+    setAddFundsOpen(false);
+    setFundAmount("");
+    setFundMethod("ssl");
+    removeSlip();
+    setDepositNotes("");
+  };
 
   const handleAddFunds = async () => {
     const amt = Number(fundAmount);
@@ -67,44 +98,30 @@ const DashboardWallet = () => {
     setFundLoading(true);
     try {
       if (fundMethod === "bank") {
-        // For bank transfer, create a pending deposit request
-        await api.post("/dashboard/wallet/deposit", { amount: amt, method: "bank_transfer" });
-        toast({ title: "Deposit request created", description: "Please transfer ৳" + amt.toLocaleString() + " to the company bank account. Check Bank List for details." });
-        setAddFundsOpen(false);
-        setFundAmount("");
+        // Bank transfer: send as multipart with optional deposit slip
+        const fd = new FormData();
+        fd.append("amount", String(amt));
+        fd.append("method", "bank");
+        if (depositNotes) fd.append("notes", depositNotes);
+        if (slipFile) fd.append("depositSlip", slipFile);
+        await api.upload("/dashboard/wallet/deposit", fd);
+        toast({ title: "Deposit request submitted", description: `৳${amt.toLocaleString()} deposit request sent. Admin will review and approve it.` });
+        resetAddFunds();
         refetch();
       } else if (fundMethod === "ssl") {
         const result = await api.post<any>("/payments/ssl/init", {
-          amount: amt,
-          purpose: "wallet_topup",
-          customerName: "Wallet Top-up",
-          customerEmail: "",
+          amount: amt, purpose: "wallet_topup", customerName: "Wallet Top-up", customerEmail: "",
         });
-        if (result?.gatewayUrl) {
-          window.location.href = result.gatewayUrl;
-        } else {
-          toast({ title: "Payment gateway error", description: "Could not initiate payment. Try another method.", variant: "destructive" });
-        }
+        if (result?.gatewayUrl) { window.location.href = result.gatewayUrl; }
+        else { toast({ title: "Payment gateway error", description: "Could not initiate payment.", variant: "destructive" }); }
       } else if (fundMethod === "bkash") {
-        const result = await api.post<any>("/payments/bkash/create", {
-          amount: amt,
-          purpose: "wallet_topup",
-        });
-        if (result?.bkashURL) {
-          window.location.href = result.bkashURL;
-        } else {
-          toast({ title: "bKash error", description: "Could not initiate bKash payment.", variant: "destructive" });
-        }
+        const result = await api.post<any>("/payments/bkash/create", { amount: amt, purpose: "wallet_topup" });
+        if (result?.bkashURL) { window.location.href = result.bkashURL; }
+        else { toast({ title: "bKash error", description: "Could not initiate bKash payment.", variant: "destructive" }); }
       } else if (fundMethod === "nagad") {
-        const result = await api.post<any>("/payments/nagad/init", {
-          amount: amt,
-          purpose: "wallet_topup",
-        });
-        if (result?.redirectUrl) {
-          window.location.href = result.redirectUrl;
-        } else {
-          toast({ title: "Nagad error", description: "Could not initiate Nagad payment.", variant: "destructive" });
-        }
+        const result = await api.post<any>("/payments/nagad/init", { amount: amt, purpose: "wallet_topup" });
+        if (result?.redirectUrl) { window.location.href = result.redirectUrl; }
+        else { toast({ title: "Nagad error", description: "Could not initiate Nagad payment.", variant: "destructive" }); }
       }
     } catch (err: any) {
       toast({ title: "Failed", description: err?.message || "Could not process deposit", variant: "destructive" });
@@ -131,15 +148,11 @@ const DashboardWallet = () => {
     setTransferLoading(true);
     try {
       await api.post("/dashboard/wallet/transfer", {
-        recipientIdentifier: transferTo.trim(),
-        amount: amt,
-        note: transferNote.trim() || undefined,
+        recipientIdentifier: transferTo.trim(), amount: amt, note: transferNote.trim() || undefined,
       });
       toast({ title: "Transfer successful", description: `৳${amt.toLocaleString()} sent to ${transferTo}` });
       setTransferOpen(false);
-      setTransferTo("");
-      setTransferAmount("");
-      setTransferNote("");
+      setTransferTo(""); setTransferAmount(""); setTransferNote("");
       refetch();
     } catch (err: any) {
       toast({ title: "Transfer failed", description: err?.message || "Could not complete transfer", variant: "destructive" });
@@ -250,8 +263,8 @@ const DashboardWallet = () => {
       </DataLoader>
 
       {/* ── Add Funds Dialog ── */}
-      <Dialog open={addFundsOpen} onOpenChange={setAddFundsOpen}>
-        <DialogContent className="sm:max-w-md">
+      <Dialog open={addFundsOpen} onOpenChange={(v) => { if (!v) resetAddFunds(); else setAddFundsOpen(true); }}>
+        <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Banknote className="w-5 h-5 text-primary" /> Add Funds to Wallet
@@ -307,12 +320,49 @@ const DashboardWallet = () => {
                 ))}
               </div>
             </div>
+
+            {/* Deposit slip upload - only for bank transfer */}
+            {fundMethod === "bank" && (
+              <div className="space-y-3 p-3 rounded-xl bg-muted/50 border border-border">
+                <p className="text-xs font-semibold text-muted-foreground">
+                  Transfer to our bank account (see Bank List), then upload deposit slip below.
+                </p>
+                <div>
+                  <Label className="text-xs font-semibold text-muted-foreground mb-1.5 block">Deposit Slip / Receipt</Label>
+                  {slipPreview ? (
+                    <div className="relative inline-block">
+                      <img src={slipPreview} alt="Deposit slip" className="max-h-32 rounded-lg border border-border object-contain" />
+                      <Button variant="destructive" size="icon" className="absolute -top-2 -right-2 h-6 w-6 rounded-full" onClick={removeSlip}>
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <div
+                      onClick={() => fileRef.current?.click()}
+                      className="border-2 border-dashed border-border rounded-lg p-4 text-center cursor-pointer hover:border-primary/50 hover:bg-muted/30 transition-colors"
+                    >
+                      <FileImage className="w-6 h-6 mx-auto text-muted-foreground mb-1" />
+                      <p className="text-xs text-muted-foreground">Upload deposit slip (JPG, PNG, PDF — Max 5MB)</p>
+                    </div>
+                  )}
+                  <input ref={fileRef} type="file" accept="image/*,.pdf" className="hidden" onChange={handleFileChange} />
+                </div>
+                <div>
+                  <Label className="text-xs font-semibold text-muted-foreground mb-1 block">Notes (optional)</Label>
+                  <Input
+                    placeholder="Transaction ID, bank name, etc."
+                    value={depositNotes}
+                    onChange={(e) => setDepositNotes(e.target.value)}
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setAddFundsOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={resetAddFunds}>Cancel</Button>
             <Button onClick={handleAddFunds} disabled={fundLoading || !fundAmount} className="gap-1.5">
-              {fundLoading ? "Processing..." : `Pay ৳${Number(fundAmount || 0).toLocaleString()}`}
+              {fundLoading ? "Processing..." : fundMethod === "bank" ? `Submit Deposit ৳${Number(fundAmount || 0).toLocaleString()}` : `Pay ৳${Number(fundAmount || 0).toLocaleString()}`}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -332,35 +382,17 @@ const DashboardWallet = () => {
               <p className="text-xs text-muted-foreground">Your Balance</p>
               <p className="text-lg font-bold">৳{Number(balance).toLocaleString('en-BD', { minimumFractionDigits: 2 })}</p>
             </div>
-
             <div>
               <Label className="text-xs font-semibold text-muted-foreground mb-1.5 block">Recipient (Email or Phone)</Label>
-              <Input
-                placeholder="recipient@email.com or 01XXXXXXXXX"
-                value={transferTo}
-                onChange={(e) => setTransferTo(e.target.value)}
-              />
+              <Input placeholder="recipient@email.com or 01XXXXXXXXX" value={transferTo} onChange={(e) => setTransferTo(e.target.value)} />
             </div>
-
             <div>
               <Label className="text-xs font-semibold text-muted-foreground mb-1.5 block">Amount (৳)</Label>
-              <Input
-                type="number"
-                placeholder="Enter amount"
-                value={transferAmount}
-                onChange={(e) => setTransferAmount(e.target.value)}
-                min={1}
-                className="text-lg font-bold"
-              />
+              <Input type="number" placeholder="Enter amount" value={transferAmount} onChange={(e) => setTransferAmount(e.target.value)} min={1} className="text-lg font-bold" />
             </div>
-
             <div>
               <Label className="text-xs font-semibold text-muted-foreground mb-1.5 block">Note (Optional)</Label>
-              <Input
-                placeholder="What's this for?"
-                value={transferNote}
-                onChange={(e) => setTransferNote(e.target.value)}
-              />
+              <Input placeholder="What's this for?" value={transferNote} onChange={(e) => setTransferNote(e.target.value)} />
             </div>
           </div>
 

@@ -52,7 +52,6 @@ const sidebarItems: SidebarItem[] = [
     iconBg: "bg-amber-100 dark:bg-amber-500/20",
     children: [
       { label: "Instant Payment", href: "/dashboard/payments" },
-      { label: "Send Payment Request", href: "/dashboard/send-payment-request" },
       { label: "Payment History", href: "/dashboard/transactions" },
       { label: "Bank List", href: "/dashboard/bank-list" },
       { label: "MFS List", href: "/dashboard/mfs-list" },
