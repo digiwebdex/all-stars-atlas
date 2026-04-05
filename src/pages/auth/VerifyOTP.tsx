@@ -100,7 +100,7 @@ const VerifyOTP = () => {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <Link to="/" className="flex justify-center mb-4">
-            <img src="/images/seven-trip-logo.png" alt="Seven Trip" className="h-24 w-auto" />
+            <img src={logoUrl} alt="Seven Trip" className="h-24 w-auto" />
           </Link>
           <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-2">
             <Shield className="w-7 h-7 text-primary" />
