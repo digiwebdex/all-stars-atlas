@@ -243,6 +243,7 @@ const AdminLayout = () => {
   const { user, logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const logoUrl = useSiteLogo();
 
   const sidebarWidth = sidebarCollapsed ? "w-[56px]" : "w-60";
   const mainMargin = sidebarCollapsed ? "md:ml-[56px]" : "md:ml-60";
@@ -259,7 +260,7 @@ const AdminLayout = () => {
             {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
           <Link to="/admin" className="flex items-center gap-3 mr-6">
-            <img src={useSiteLogo()} alt="Seven Trip" className="h-8 w-auto" />
+            <img src={logoUrl} alt="Seven Trip" className="h-8 w-auto" />
             <span className="hidden sm:flex items-center gap-1.5 text-[11px] font-bold text-muted-foreground px-2 py-1 rounded-md bg-muted border border-border">
               <Shield className="w-3 h-3" />
               Admin

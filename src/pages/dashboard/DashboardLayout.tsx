@@ -271,6 +271,7 @@ const DashboardLayout = () => {
   const { user, logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const logoUrl = useSiteLogo();
 
   useEffect(() => {
     const handleLogout = () => { logout(); navigate("/"); };
@@ -309,7 +310,7 @@ const DashboardLayout = () => {
 
           <Link to="/" className="flex items-center gap-2 mr-6">
             <img
-              src={useSiteLogo()}
+              src={logoUrl}
               alt="Seven Trip"
               className="h-9 w-auto"
             />
