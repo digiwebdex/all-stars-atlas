@@ -25,7 +25,7 @@ const DashboardSendPaymentRequest = () => {
   const mutation = useMutation({
     mutationFn: async (formData: FormData) => {
       const token = localStorage.getItem("token");
-      const res = await fetch(`${API_BASE}/dashboard/payment-requests`, {
+      const res = await fetch(`${config.apiBaseUrl}/dashboard/payment-requests`, {
         method: "POST",
         headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         body: formData,
