@@ -14,6 +14,7 @@ import DashboardBreadcrumb from "@/components/dashboard/DashboardBreadcrumb";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useSiteLogo } from "@/hooks/useSiteLogo";
 
 type SidebarItem = {
   label: string;
@@ -308,7 +309,7 @@ const DashboardLayout = () => {
 
           <Link to="/" className="flex items-center gap-2 mr-6">
             <img
-              src="/images/seven-trip-logo.png"
+              src={useSiteLogo()}
               alt="Seven Trip"
               className="h-9 w-auto"
             />
