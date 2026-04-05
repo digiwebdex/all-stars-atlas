@@ -7,10 +7,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Shield, ArrowRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { useSiteLogo } from "@/hooks/useSiteLogo";
+import { useSiteLogo, useLogoSizes } from "@/hooks/useSiteLogo";
 
 const VerifyOTP = () => {
   const logoUrl = useSiteLogo();
+  const logoSizes = useLogoSizes();
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [loading, setLoading] = useState(false);
   const [newPassword, setNewPassword] = useState("");
@@ -100,7 +101,7 @@ const VerifyOTP = () => {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <Link to="/" className="flex justify-center mb-4">
-            <img src={logoUrl} alt="Seven Trip" className="h-24 w-auto" />
+            <img src={logoUrl} alt="Seven Trip" style={{ height: `${logoSizes.auth}px` }} className="w-auto" />
           </Link>
           <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-2">
             <Shield className="w-7 h-7 text-primary" />

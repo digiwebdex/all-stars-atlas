@@ -13,7 +13,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { useAuth } from "@/hooks/useAuth";
 import { getPrefetchHandlers } from "@/lib/prefetch";
 import LoginModal from "@/components/LoginModal";
-import { useSiteLogo } from "@/hooks/useSiteLogo";
+import { useSiteLogo, useLogoSizes } from "@/hooks/useSiteLogo";
 
 const mainNav = [
   { label: "Flight", href: "/flights", icon: Plane },
@@ -29,6 +29,7 @@ const Header = () => {
   const isHome = location.pathname === "/";
   const { isAuthenticated, user, logout } = useAuth();
   const logoUrl = useSiteLogo();
+  const logoSizes = useLogoSizes();
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 30);
@@ -67,7 +68,7 @@ const Header = () => {
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-16 sm:h-20 lg:h-24">
             <Link to="/" className="flex items-center gap-2 lg:gap-2.5 group -ml-2 lg:-ml-4">
-              <img src={logoUrl} alt="Seven Trip" className="h-[80px] sm:h-[100px] lg:h-[140px] w-auto drop-shadow-[0_0_12px_rgba(29,106,229,0.5)]" />
+              <img src={logoUrl} alt="Seven Trip" style={{ height: `${logoSizes.header}px` }} className="w-auto drop-shadow-[0_0_12px_rgba(29,106,229,0.5)]" />
             </Link>
 
             {/* Navigation removed — search widget handles service tabs */}

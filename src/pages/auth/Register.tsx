@@ -11,13 +11,14 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { api } from "@/lib/api";
 import IdUploadModal from "@/components/IdUploadModal";
-import { useSiteLogo } from "@/hooks/useSiteLogo";
+import { useSiteLogo, useLogoSizes } from "@/hooks/useSiteLogo";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
 
 const Register = () => {
   const logoUrl = useSiteLogo();
+  const logoSizes = useLogoSizes();
   const [showPassword, setShowPassword] = useState(false);
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -110,7 +111,7 @@ const Register = () => {
           <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wMyI+PHBhdGggZD0iTTM2IDE0VjBoLTJWMTRIMjBWMGgtMnYxNEgwdjJoMTR2MTRIMHYyaDE0djE0aDJ2LTE0aDE0djE0aDJ2LTE0aDE0di0ySDM2VjE2aDEydi0ySDM2eiIvPjwvZz48L2c+PC9zdmc+')] opacity-40" />
           <div className="relative text-white max-w-md">
             <Link to="/" className="flex items-center gap-3 mb-8">
-              <img src={logoUrl} alt="Seven Trip" className="h-20 w-auto brightness-0 invert drop-shadow-[0_0_12px_rgba(29,106,229,0.5)]" />
+              <img src={logoUrl} alt="Seven Trip" style={{ height: `${logoSizes.auth}px` }} className="w-auto brightness-0 invert drop-shadow-[0_0_12px_rgba(29,106,229,0.5)]" />
             </Link>
             <h2 className="text-3xl font-black mb-4 leading-tight">Start Your Journey With Us Today</h2>
             <p className="text-white/60 text-sm mb-8 leading-relaxed">Join 500,000+ travellers who trust Seven Trip for their travel needs.</p>
@@ -128,7 +129,7 @@ const Register = () => {
           <Card className="w-full max-w-md border-0 shadow-none bg-transparent">
             <CardHeader className="text-center pb-2">
               <Link to="/" className="flex items-center justify-center gap-2 mb-4 lg:hidden">
-                <img src={logoUrl} alt="Seven Trip" className="h-16 w-auto" />
+                <img src={logoUrl} alt="Seven Trip" style={{ height: `${Math.round(logoSizes.auth * 0.67)}px` }} className="w-auto" />
               </Link>
               <CardTitle className="text-2xl">Create Account</CardTitle>
               <CardDescription>Start booking with Seven Trip today</CardDescription>
