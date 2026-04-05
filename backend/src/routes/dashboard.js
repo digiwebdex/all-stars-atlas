@@ -1044,9 +1044,13 @@ router.get('/ssr-history', async (req, res) => {
 router.get('/bank-accounts', async (req, res) => {
   try {
     const [rows] = await db.query(
-      `SELECT setting_value FROM system_settings WHERE setting_key = 'payment_bank_accounts'`
+      `SELECT setting_value FROM system_settings WHERE setting_key IN ('bank_accounts', 'payment_bank_accounts')`
     );
-    const banks = rows.length > 0 ? safeJsonParse(rows[0].setting_value, []) : [];
+    let banks = [];
+    for (const row of rows) {
+      const parsed = safeJsonParse(row.setting_value, []);
+      if (Array.isArray(parsed) && parsed.length > 0) { banks = parsed; break; }
+    }
     res.json({ banks });
   } catch (err) {
     console.error('Bank accounts error:', err);
