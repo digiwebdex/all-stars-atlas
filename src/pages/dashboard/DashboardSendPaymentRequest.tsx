@@ -4,11 +4,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Send, CheckCircle } from "lucide-react";
-import { useState } from "react";
+import { Send, CheckCircle, X, FileImage } from "lucide-react";
+import { useState, useRef } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
+import { config } from "@/lib/config";
 
 const DashboardSendPaymentRequest = () => {
   const { toast } = useToast();
@@ -18,9 +18,24 @@ const DashboardSendPaymentRequest = () => {
   const [method, setMethod] = useState("");
   const [notes, setNotes] = useState("");
   const [sent, setSent] = useState(false);
+  const [slipFile, setSlipFile] = useState<File | null>(null);
+  const [slipPreview, setSlipPreview] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const mutation = useMutation({
-    mutationFn: (data: any) => api.post("/dashboard/payment-requests", data),
+    mutationFn: async (formData: FormData) => {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`${config.apiBaseUrl}/dashboard/payment-requests`, {
+        method: "POST",
+        headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: formData,
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || "Failed to submit payment request");
+      }
+      return res.json();
+    },
     onSuccess: () => {
       setSent(true);
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
@@ -31,12 +46,37 @@ const DashboardSendPaymentRequest = () => {
     },
   });
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: "File too large", description: "Max 5MB allowed", variant: "destructive" });
+      return;
+    }
+    setSlipFile(file);
+    const reader = new FileReader();
+    reader.onload = (ev) => setSlipPreview(ev.target?.result as string);
+    reader.readAsDataURL(file);
+  };
+
+  const removeSlip = () => {
+    setSlipFile(null);
+    setSlipPreview(null);
+    if (fileRef.current) fileRef.current.value = "";
+  };
+
   const handleSubmit = () => {
     if (!bookingRef || !amount) {
       toast({ title: "Missing fields", description: "Please fill booking ref and amount.", variant: "destructive" });
       return;
     }
-    mutation.mutate({ bookingRef, amount: Number(amount), paymentMethod: method, notes });
+    const fd = new FormData();
+    fd.append("bookingRef", bookingRef);
+    fd.append("amount", amount);
+    if (method) fd.append("paymentMethod", method);
+    if (notes) fd.append("notes", notes);
+    if (slipFile) fd.append("depositSlip", slipFile);
+    mutation.mutate(fd);
   };
 
   if (sent) {
@@ -48,7 +88,7 @@ const DashboardSendPaymentRequest = () => {
             <CheckCircle className="w-16 h-16 text-emerald-500 mx-auto mb-4" />
             <h2 className="text-xl font-bold mb-2">Payment Request Sent!</h2>
             <p className="text-muted-foreground mb-4">Your payment request for booking <strong>{bookingRef}</strong> has been submitted. Admin will review and process it shortly.</p>
-            <Button onClick={() => { setSent(false); setBookingRef(""); setAmount(""); setMethod(""); setNotes(""); }}>Send Another</Button>
+            <Button onClick={() => { setSent(false); setBookingRef(""); setAmount(""); setMethod(""); setNotes(""); removeSlip(); }}>Send Another</Button>
           </CardContent>
         </Card>
       </div>
@@ -84,6 +124,30 @@ const DashboardSendPaymentRequest = () => {
               </SelectContent>
             </Select>
           </div>
+
+          {/* Deposit Slip Upload */}
+          <div className="space-y-2">
+            <Label>Deposit Slip / Payment Receipt</Label>
+            {slipPreview ? (
+              <div className="relative inline-block">
+                <img src={slipPreview} alt="Deposit slip" className="max-h-40 rounded-lg border border-border object-contain" />
+                <Button variant="destructive" size="icon" className="absolute -top-2 -right-2 h-6 w-6 rounded-full" onClick={removeSlip}>
+                  <X className="h-3 w-3" />
+                </Button>
+              </div>
+            ) : (
+              <div
+                onClick={() => fileRef.current?.click()}
+                className="border-2 border-dashed border-border rounded-lg p-6 text-center cursor-pointer hover:border-primary/50 hover:bg-muted/50 transition-colors"
+              >
+                <FileImage className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
+                <p className="text-sm text-muted-foreground">Click to upload deposit slip</p>
+                <p className="text-xs text-muted-foreground mt-1">JPG, PNG or PDF — Max 5MB</p>
+              </div>
+            )}
+            <input ref={fileRef} type="file" accept="image/*,.pdf" className="hidden" onChange={handleFileChange} />
+          </div>
+
           <div className="space-y-2">
             <Label>Notes (optional)</Label>
             <Textarea placeholder="Any additional notes..." value={notes} onChange={e => setNotes(e.target.value)} rows={3} />
