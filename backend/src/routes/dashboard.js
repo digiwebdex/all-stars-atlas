@@ -805,29 +805,43 @@ router.get('/bookings/:id/ancillaries', async (req, res) => {
 router.get('/wallet', async (req, res) => {
   try {
     const userId = req.user.sub || req.user.id;
-    // Try to get wallet balance from transactions summary
+
+    // Primary: read balance from wallet table (source of truth after admin approval)
+    const [walletRows] = await db.query('SELECT balance FROM wallet WHERE user_id = ?', [userId]);
+    const walletBalance = Number(walletRows[0]?.balance || 0);
+
+    // Fallback/supplementary: compute from transactions for total credited/debited stats
     const [credits] = await db.query(
-      `SELECT COALESCE(SUM(amount), 0) as total FROM transactions WHERE user_id = ? AND type = 'credit'`,
+      `SELECT COALESCE(SUM(amount), 0) as total FROM transactions 
+       WHERE user_id = ? AND type IN ('credit','deposit') AND status IN ('completed','approved')`,
       [userId]
     );
     const [debits] = await db.query(
-      `SELECT COALESCE(SUM(ABS(amount)), 0) as total FROM transactions WHERE user_id = ? AND type = 'debit'`,
+      `SELECT COALESCE(SUM(ABS(amount)), 0) as total FROM transactions 
+       WHERE user_id = ? AND type IN ('debit','payment','withdrawal','transfer_out') AND status IN ('completed','approved')`,
       [userId]
     );
     const totalCredited = Number(credits[0]?.total || 0);
     const totalDebited = Number(debits[0]?.total || 0);
-    const balance = totalCredited - totalDebited;
 
-    // Recent wallet transactions
+    // Use wallet table balance as primary (admin approval writes here)
+    const balance = walletBalance > 0 ? walletBalance : (totalCredited - totalDebited);
+
+    // Recent transactions (all types, all statuses for history)
     const [txns] = await db.query(
-      `SELECT id, type, amount, description, created_at as date, 
-       (SELECT COALESCE(SUM(CASE WHEN t2.type='credit' THEN t2.amount ELSE -ABS(t2.amount) END), 0) 
-        FROM transactions t2 WHERE t2.user_id = ? AND t2.created_at <= transactions.created_at) as balance
+      `SELECT id, type, amount, description, status, created_at as date
        FROM transactions WHERE user_id = ? ORDER BY created_at DESC LIMIT 50`,
-      [userId, userId]
+      [userId]
     );
 
-    res.json({ balance, totalCredited, totalDebited, transactions: txns });
+    // Normalize transaction types for display
+    const normalizedTxns = txns.map(t => ({
+      ...t,
+      type: ['credit', 'deposit', 'refund'].includes(t.type) ? 'credit' : 'debit',
+      originalType: t.type,
+    }));
+
+    res.json({ balance, totalCredited, totalDebited, transactions: normalizedTxns });
   } catch (err) {
     console.error('Wallet error:', err);
     res.json({ balance: 0, totalCredited: 0, totalDebited: 0, transactions: [] });
