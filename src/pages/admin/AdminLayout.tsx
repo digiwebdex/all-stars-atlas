@@ -27,6 +27,7 @@ type SidebarItem = {
 const sidebarItems: SidebarItem[] = [
   { label: "Dashboard", href: "/admin", icon: LayoutDashboard, iconColor: "text-blue-400", iconBg: "bg-blue-500/15" },
   { label: "Bookings", href: "/admin/bookings", icon: Ticket, iconColor: "text-violet-400", iconBg: "bg-violet-500/15" },
+  { label: "Ticket Requests", href: "/admin/ticket-requests", icon: FileText, iconColor: "text-green-400", iconBg: "bg-green-500/15", badge: "NEW" },
   { label: "Users", href: "/admin/users", icon: Users, iconColor: "text-cyan-400", iconBg: "bg-cyan-500/15" },
   {
     label: "Finance",

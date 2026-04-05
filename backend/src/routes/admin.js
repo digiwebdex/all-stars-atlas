@@ -1059,4 +1059,132 @@ router.post('/terminal/close', async (req, res) => {
   }
 });
 
+// ── Ticket Issue Requests (Admin) ──
+
+// GET /admin/ticket-issue-requests — list all pending ticket issue requests
+router.get('/ticket-issue-requests', async (req, res) => {
+  try {
+    const status = req.query.status || 'all';
+    let sql = `SELECT tir.*, b.booking_ref, b.pnr, b.status as booking_status, b.total_amount, b.payment_status,
+               b.details, b.passenger_info, b.contact_info, b.booking_type,
+               u.name as user_name, u.email as user_email, u.phone as user_phone
+               FROM ticket_issue_requests tir
+               JOIN bookings b ON tir.booking_id = b.id
+               JOIN users u ON tir.user_id = u.id`;
+    const params = [];
+    if (status !== 'all') {
+      sql += ' WHERE tir.status = ?';
+      params.push(status);
+    }
+    sql += ' ORDER BY tir.created_at DESC';
+    const [rows] = await db.query(sql, params);
+    res.json({ data: rows });
+  } catch (err) {
+    console.error('[Admin] Ticket issue requests error:', err);
+    res.status(500).json({ message: 'Failed to fetch ticket issue requests' });
+  }
+});
+
+// PUT /admin/ticket-issue-requests/:id — process a ticket issue request (issue or reject)
+router.put('/ticket-issue-requests/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { action, adminNotes } = req.body; // action: 'issue' or 'reject'
+
+    const [requests] = await db.query(
+      `SELECT tir.*, b.id as bid, b.pnr, b.status as booking_status, b.details, b.user_id as booking_user_id
+       FROM ticket_issue_requests tir
+       JOIN bookings b ON tir.booking_id = b.id
+       WHERE tir.id = ?`, [id]
+    );
+    if (requests.length === 0) return res.status(404).json({ message: 'Request not found' });
+
+    const request = requests[0];
+
+    if (action === 'reject') {
+      await db.query(
+        'UPDATE ticket_issue_requests SET status = ?, admin_notes = ?, processed_by = ?, processed_at = NOW() WHERE id = ?',
+        ['rejected', adminNotes || null, req.user.sub, id]
+      );
+      return res.json({ success: true, message: 'Request rejected' });
+    }
+
+    if (action === 'issue') {
+      // Mark as processing
+      await db.query('UPDATE ticket_issue_requests SET status = ?, processed_by = ? WHERE id = ?', ['processing', req.user.sub, id]);
+
+      // Try to issue ticket via GDS
+      const details = safeJsonParse(request.details) || {};
+      const outbound = details.outbound || details;
+      const source = outbound.source || details.source || '';
+      const gdsPnr = request.pnr || details.gdsPnr || outbound.gdsPnr;
+      const gdsBookingId = details.gdsBookingId || outbound.gdsBookingId;
+      let gdsResult = null;
+      let gdsError = null;
+
+      if (gdsPnr || gdsBookingId) {
+        try {
+          if (source === 'sabre') {
+            gdsResult = await sabreFlights.issueTicket({ pnr: gdsPnr });
+          } else if (source === 'bdfare') {
+            gdsResult = await bdfFlights.issueTicket({ orderId: details.bdfOrderId, pnr: gdsPnr });
+          } else if (source === 'flyhub') {
+            gdsResult = await flyhubFlights.issueTicket({ bookingId: gdsBookingId || gdsPnr, pnr: gdsPnr });
+          } else if (source === 'tti') {
+            gdsResult = await ttiFlights.issueTicket({ pnr: gdsPnr, bookingId: gdsBookingId });
+          }
+        } catch (err) {
+          gdsError = err.message;
+        }
+      }
+
+      if (gdsResult && gdsResult.success) {
+        // Update booking status
+        await db.query('UPDATE bookings SET status = ?, ticket_status = ? WHERE id = ?', ['ticketed', 'issued', request.bid]);
+
+        // Create ticket records
+        if (gdsResult.ticketNumbers?.length > 0) {
+          for (const ticketNo of gdsResult.ticketNumbers) {
+            await db.query(
+              'INSERT INTO tickets (id, booking_id, user_id, ticket_no, pnr, status, details) VALUES (?, ?, ?, ?, ?, ?, ?)',
+              [uuidv4(), request.bid, request.booking_user_id, ticketNo, gdsPnr,
+               'active', JSON.stringify({ source, issuedBy: req.user.email, issuedAt: new Date().toISOString(), viaRequest: id })]
+            );
+          }
+        }
+
+        // Mark request as issued
+        await db.query(
+          'UPDATE ticket_issue_requests SET status = ?, admin_notes = ?, processed_at = NOW() WHERE id = ?',
+          ['issued', adminNotes || `Issued via GDS. Tickets: ${(gdsResult.ticketNumbers || []).join(', ')}`, id]
+        );
+
+        return res.json({
+          success: true,
+          message: 'Ticket issued successfully',
+          ticketNumbers: gdsResult.ticketNumbers || [],
+          gdsResult,
+        });
+      } else {
+        // GDS failed — mark request back to pending with error note
+        const errorMsg = gdsError || gdsResult?.error || 'GDS ticketing failed';
+        await db.query(
+          'UPDATE ticket_issue_requests SET status = ?, admin_notes = ? WHERE id = ?',
+          ['pending', `GDS Error: ${errorMsg}. ${adminNotes || ''}`.trim(), id]
+        );
+        return res.status(422).json({
+          success: false,
+          message: 'GDS ticket issuance failed',
+          gdsError: errorMsg,
+        });
+      }
+    }
+
+    res.status(400).json({ message: 'Invalid action. Use "issue" or "reject".' });
+  } catch (err) {
+    console.error('[Admin] Ticket issue request processing error:', err);
+    res.status(500).json({ message: 'Failed to process request' });
+  }
+});
+
 module.exports = router;

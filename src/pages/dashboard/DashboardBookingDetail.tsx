@@ -11,7 +11,7 @@ import {
   Plane, ArrowLeft, Copy, Download, CreditCard, Luggage, Shield,
   Users, Package, XCircle, AlertTriangle, Ban,
   FileText, Wallet, Clock, Eye, ChevronUp, ChevronDown, RefreshCw,
-  CheckCircle, Utensils, Armchair, Accessibility, Baby,
+  CheckCircle, Utensils, Armchair, Accessibility, Baby, Ticket,
 } from "lucide-react";
 import { generateTicketPDF } from "@/lib/pdf-generator";
 import { AIRPORTS } from "@/lib/airports";
@@ -128,6 +128,9 @@ const DashboardBookingDetail = () => {
   const [ssrOpen, setSsrOpen] = useState(false);
   const [payDialogOpen, setPayDialogOpen] = useState(false);
   const [payLoading, setPayLoading] = useState(false);
+  const [ticketRequestOpen, setTicketRequestOpen] = useState(false);
+  const [ticketRequestNotes, setTicketRequestNotes] = useState("");
+  const [ticketRequestLoading, setTicketRequestLoading] = useState(false);
 
   const { data, isLoading, error, refetch } = useDashboardBookings({ search: id, limit: 1 });
   const resolved = (data as any) || {};
@@ -250,6 +253,22 @@ const DashboardBookingDetail = () => {
     }
   };
 
+  const handleTicketRequest = async () => {
+    if (!booking) return;
+    setTicketRequestLoading(true);
+    try {
+      await api.post("/dashboard/ticket-issue-request", { bookingId: booking.rawId, notes: ticketRequestNotes || undefined });
+      toast({ title: "Request Submitted ✓", description: "Ticket issue request sent to admin. You'll be notified when it's processed." });
+      setTicketRequestOpen(false);
+      setTicketRequestNotes("");
+      refetch();
+    } catch (e: any) {
+      toast({ title: "Failed", description: e.message || "Could not submit request", variant: "destructive" });
+    } finally {
+      setTicketRequestLoading(false);
+    }
+  };
+
   const handleDownload = async () => {
     if (!booking) return;
     try {
@@ -305,6 +324,11 @@ const DashboardBookingDetail = () => {
             {['on_hold', 'pending', 'confirmed'].includes(booking.status) && (
               <Button className="bg-emerald-500 hover:bg-emerald-600 text-white font-bold shadow-sm" onClick={() => setPayDialogOpen(true)}>
                 <Wallet className="w-4 h-4 mr-1.5" /> Issue With Balance
+              </Button>
+            )}
+            {['on_hold', 'confirmed', 'pending'].includes(booking.status) && booking.status !== 'ticketed' && (
+              <Button className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold shadow-sm" onClick={() => setTicketRequestOpen(true)}>
+                <Ticket className="w-4 h-4 mr-1.5" /> Request Ticket Issue
               </Button>
             )}
             <div className="ml-auto flex flex-wrap gap-2">
@@ -627,6 +651,29 @@ const DashboardBookingDetail = () => {
               <DialogFooter>
                 <Button variant="outline" onClick={() => setVoidOpen(false)}>Cancel</Button>
                 <Button variant="destructive" onClick={handleVoid} disabled={voidLoading}>{voidLoading ? "Submitting..." : "Submit Void Request"}</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          {/* ━━ Ticket Issue Request Dialog ━━ */}
+          <Dialog open={ticketRequestOpen} onOpenChange={setTicketRequestOpen}>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader><DialogTitle className="flex items-center gap-2"><Ticket className="w-5 h-5 text-primary" /> Request Ticket Issue</DialogTitle></DialogHeader>
+              <div className="space-y-3">
+                <p className="text-sm text-muted-foreground">Submit a ticket issue request for <strong>{booking.id}</strong>? Admin will review and issue your ticket.</p>
+                <div className="p-3 bg-primary/5 border border-primary/20 rounded-lg text-sm space-y-1">
+                  <div className="flex justify-between"><span className="text-muted-foreground">PNR</span><span className="font-mono font-bold">{booking.pnr}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Route</span><span className="font-bold">{booking.origin}-{booking.destination}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Amount</span><span className="font-bold">{booking.amount}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Payment Status</span><span className="font-bold capitalize">{booking.paymentStatus}</span></div>
+                </div>
+                <Textarea placeholder="Notes for admin (optional)" value={ticketRequestNotes} onChange={e => setTicketRequestNotes(e.target.value)} rows={3} />
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setTicketRequestOpen(false)}>Cancel</Button>
+                <Button onClick={handleTicketRequest} disabled={ticketRequestLoading}>
+                  {ticketRequestLoading ? "Submitting..." : "Submit Request"}
+                </Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>

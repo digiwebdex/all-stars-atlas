@@ -1125,4 +1125,71 @@ router.post('/wallet/transfer', async (req, res) => {
   }
 });
 
+// ── Ticket Issue Requests ──
+
+// POST /dashboard/ticket-issue-request — user requests admin to issue ticket
+router.post('/ticket-issue-request', async (req, res) => {
+  try {
+    const userId = req.user.sub;
+    const { bookingId, notes } = req.body;
+    if (!bookingId) return res.status(400).json({ message: 'bookingId is required' });
+
+    // Verify booking belongs to user
+    const [bookings] = await db.query('SELECT id, status, pnr, booking_ref, payment_status FROM bookings WHERE id = ? AND user_id = ?', [bookingId, userId]);
+    if (bookings.length === 0) return res.status(404).json({ message: 'Booking not found' });
+
+    const booking = bookings[0];
+    if (['cancelled', 'refunded', 'void', 'failed'].includes(booking.status)) {
+      return res.status(400).json({ message: 'Cannot request ticket issue for this booking status' });
+    }
+    if (booking.status === 'ticketed') {
+      return res.status(400).json({ message: 'Ticket has already been issued' });
+    }
+
+    // Check if there's already a pending request
+    const [existing] = await db.query(
+      "SELECT id FROM ticket_issue_requests WHERE booking_id = ? AND status IN ('pending', 'processing')", [bookingId]
+    );
+    if (existing.length > 0) {
+      return res.status(400).json({ message: 'A ticket issue request is already pending for this booking' });
+    }
+
+    const id = uuidv4();
+    await db.query(
+      'INSERT INTO ticket_issue_requests (id, booking_id, user_id, status, notes) VALUES (?, ?, ?, ?, ?)',
+      [id, bookingId, userId, 'pending', notes || null]
+    );
+
+    // Notify admin (optional — uses existing notify system)
+    try {
+      const { notifyBookingStatus } = require('../services/notify');
+      await notifyBookingStatus(booking.booking_ref, 'ticket_issue_requested', null);
+    } catch (e) { console.log('[Ticket Request] Notification skipped:', e.message); }
+
+    res.json({ success: true, requestId: id, message: 'Ticket issue request submitted. Admin will process it shortly.' });
+  } catch (err) {
+    console.error('[Dashboard] Ticket issue request error:', err);
+    res.status(500).json({ message: 'Failed to submit request' });
+  }
+});
+
+// GET /dashboard/ticket-issue-requests — user's own requests
+router.get('/ticket-issue-requests', async (req, res) => {
+  try {
+    const userId = req.user.sub;
+    const [rows] = await db.query(
+      `SELECT tir.*, b.booking_ref, b.pnr, b.status as booking_status, b.total_amount, b.details
+       FROM ticket_issue_requests tir
+       JOIN bookings b ON tir.booking_id = b.id
+       WHERE tir.user_id = ?
+       ORDER BY tir.created_at DESC`,
+      [userId]
+    );
+    res.json({ data: rows });
+  } catch (err) {
+    console.error('[Dashboard] Ticket issue requests list error:', err);
+    res.status(500).json({ message: 'Failed to fetch requests' });
+  }
+});
+
 module.exports = router;
