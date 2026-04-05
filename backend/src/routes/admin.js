@@ -1077,6 +1077,71 @@ router.post('/terminal/close', async (req, res) => {
   }
 });
 
+// ── Direct Ticket Issue from Booking Detail ──
+router.put('/bookings/:id/issue-ticket', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { pnr: overridePnr } = req.body;
+
+    const [bookings] = await db.query('SELECT * FROM bookings WHERE id = ?', [id]);
+    if (bookings.length === 0) return res.status(404).json({ message: 'Booking not found' });
+
+    const booking = bookings[0];
+    const details = safeJsonParse(booking.details) || {};
+    const outbound = details.outbound || details;
+    const source = outbound.source || details.source || '';
+    const gdsPnr = overridePnr || booking.pnr || details.gdsPnr || outbound.gdsPnr;
+    const gdsBookingId = details.gdsBookingId || outbound.gdsBookingId;
+
+    let gdsResult = null;
+    let gdsError = null;
+
+    if (gdsPnr || gdsBookingId) {
+      try {
+        if (source === 'sabre') {
+          gdsResult = await sabreFlights.issueTicket({ pnr: gdsPnr });
+        } else if (source === 'bdfare') {
+          gdsResult = await bdfFlights.issueTicket({ orderId: details.bdfOrderId, pnr: gdsPnr });
+        } else if (source === 'flyhub') {
+          gdsResult = await flyhubFlights.issueTicket({ bookingId: gdsBookingId || gdsPnr, pnr: gdsPnr });
+        } else if (source === 'tti') {
+          gdsResult = await ttiFlights.issueTicket({ pnr: gdsPnr, bookingId: gdsBookingId });
+        }
+      } catch (err) {
+        gdsError = err.message;
+      }
+    }
+
+    if (gdsResult && gdsResult.success) {
+      await db.query('UPDATE bookings SET status = ?, payment_status = ?, ticket_status = ? WHERE id = ?', ['ticketed', 'paid', 'issued', id]);
+
+      if (gdsResult.ticketNumbers?.length > 0) {
+        for (const ticketNo of gdsResult.ticketNumbers) {
+          await db.query(
+            'INSERT INTO tickets (id, booking_id, user_id, ticket_no, pnr, status, details) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            [uuidv4(), id, booking.user_id, ticketNo, gdsPnr, 'active',
+             JSON.stringify({ source, issuedBy: req.user.email, issuedAt: new Date().toISOString() })]
+          );
+        }
+      }
+
+      // Also mark any pending ticket issue requests as issued
+      await db.query(
+        'UPDATE ticket_issue_requests SET status = ?, processed_by = ?, processed_at = NOW(), admin_notes = ? WHERE booking_id = ? AND status IN (?, ?)',
+        ['issued', req.user.sub, `Issued via GDS. Tickets: ${(gdsResult.ticketNumbers || []).join(', ')}`, id, 'pending', 'processing']
+      );
+
+      return res.json({ success: true, ticketNumbers: gdsResult.ticketNumbers || [], gdsResult });
+    } else {
+      const errorMsg = gdsError || gdsResult?.error || 'GDS ticketing failed';
+      return res.status(422).json({ success: false, message: 'GDS ticket issuance failed', gdsError: errorMsg });
+    }
+  } catch (err) {
+    console.error('[Admin] Direct ticket issue error:', err);
+    res.status(500).json({ message: 'Failed to issue ticket' });
+  }
+});
+
 // ── Ticket Issue Requests (Admin) ──
 
 // GET /admin/ticket-issue-requests — list all pending ticket issue requests
