@@ -1669,6 +1669,91 @@ function parseHotelPropertyDescription(xml, params) {
   }
 }
 
+/**
+ * SabreCommandLLSRQ — Execute a Sabre terminal command (like *PNR, *FF, etc.)
+ * @param {string} command - The Sabre command to execute
+ * @returns {Object} { success, response, command }
+ */
+async function executeTerminalCommand(command) {
+  const config = await getSabreConfig();
+  if (!config) throw new Error('Sabre SOAP not configured');
+
+  const soapUrl = getSoapEndpoint(config);
+  let session;
+  try {
+    session = await createSession(config);
+  } catch (err) {
+    throw new Error(`Session create failed: ${err.message}`);
+  }
+
+  const envelope = `<?xml version="1.0" encoding="UTF-8"?>
+<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+  <SOAP-ENV:Header>
+    <MessageHeader xmlns="http://www.ebxml.org/namespaces/messageHeader">
+      <From><PartyId>Agency</PartyId></From>
+      <To><PartyId>Sabre_API</PartyId></To>
+      <ConversationId>${session.conversationId}</ConversationId>
+      <Action>SabreCommandLLSRQ</Action>
+    </MessageHeader>
+    <Security xmlns="http://schemas.xmlsoap.org/ws/2002/12/secext">
+      <BinarySecurityToken>${session.token}</BinarySecurityToken>
+    </Security>
+  </SOAP-ENV:Header>
+  <SOAP-ENV:Body>
+    <SabreCommandLLSRQ xmlns="http://webservices.sabre.com/sabreXML/2011/10" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" Version="1.8.1" TimeStamp="${new Date().toISOString()}">
+      <Request Output="SCREEN" CDATA="true">
+        <HostCommand>${command.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</HostCommand>
+      </Request>
+    </SabreCommandLLSRQ>
+  </SOAP-ENV:Body>
+</SOAP-ENV:Envelope>`;
+
+  try {
+    const res = await fetch(soapUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/xml; charset=utf-8', 'SOAPAction': 'SabreCommandLLSRQ' },
+      body: envelope,
+      signal: AbortSignal.timeout(20000),
+    });
+
+    const xml = await res.text();
+
+    // Extract response text
+    const responseMatch = xml.match(/<Response[^>]*>([\s\S]*?)<\/Response>/);
+    if (responseMatch) {
+      // Clean CDATA and XML tags
+      let responseText = responseMatch[1]
+        .replace(/<!\[CDATA\[/g, '')
+        .replace(/\]\]>/g, '')
+        .replace(/<[^>]+>/g, '')
+        .trim();
+      return { success: true, response: responseText, command };
+    }
+
+    // Check for errors
+    const faultMatch = xml.match(/faultstring>([^<]+)/) || xml.match(/Message>([^<]+)/);
+    if (faultMatch) {
+      return { success: false, response: `Error: ${faultMatch[1]}`, command };
+    }
+
+    return { success: false, response: 'No response from Sabre terminal', command };
+  } catch (err) {
+    if (isSoapSessionError(err.message)) {
+      await resetSoapSessionCacheWithClose(config);
+    }
+    return { success: false, response: `Terminal error: ${err.message}`, command };
+  }
+}
+
+/**
+ * Close the current terminal session explicitly
+ */
+async function closeTerminalSession() {
+  const config = await getSabreConfig();
+  if (!config) return;
+  await resetSoapSessionCacheWithClose(config);
+}
+
 module.exports = {
   createSession,
   closeSession,
@@ -1678,6 +1763,8 @@ module.exports = {
   clearSoapSessionCache,
   getStructuredFareRules,
   exchangeBooking,
+  executeTerminalCommand,
+  closeTerminalSession,
   // Hotel SOAP
   getHotelAvail,
   getHotelPropertyDescription,
