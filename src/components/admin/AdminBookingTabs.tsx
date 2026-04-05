@@ -707,9 +707,13 @@ const AdminBookingTabs = ({
             {actionLoading ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Save className="w-4 h-4 mr-1" />}
             Save Changes
           </Button>
-          {(viewBooking.status === "on_hold" || viewBooking.status === "pending") && (
-            <Button variant="outline" className="border-emerald-500 text-emerald-600" onClick={() => { updateBooking(viewBooking, { status: "confirmed", paymentStatus: "paid" }); setViewBooking(null); }}>
-              <CheckCircle2 className="w-4 h-4 mr-1" /> Approve & Confirm
+          {(viewBooking.status === "on_hold" || viewBooking.status === "pending" || viewBooking.status === "confirmed") && (
+            <Button variant="outline" className="border-emerald-500 text-emerald-600" onClick={() => {
+              setConfirmPnr(viewBooking.pnr || viewBooking.details?.gdsPnr || "");
+              setConfirmTicketNo(viewBooking.ticketNo || "");
+              setConfirmIssueOpen(true);
+            }}>
+              <CheckCircle2 className="w-4 h-4 mr-1" /> Approve & Issue Ticket
             </Button>
           )}
           {viewBooking.status === "confirmed" && (
