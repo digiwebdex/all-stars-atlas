@@ -24,10 +24,11 @@ const DashboardSendPaymentRequest = () => {
 
   const mutation = useMutation({
     mutationFn: async (formData: FormData) => {
-      const token = localStorage.getItem("token");
+      const token = localStorage.getItem("token") || localStorage.getItem("auth_token") || sessionStorage.getItem("token") || sessionStorage.getItem("auth_token");
+      if (!token) throw new Error("Not authenticated – please log in again");
       const res = await fetch(`${config.apiBaseUrl}/dashboard/payment-requests`, {
         method: "POST",
-        headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        headers: { Authorization: `Bearer ${token}` },
         body: formData,
       });
       if (!res.ok) {
