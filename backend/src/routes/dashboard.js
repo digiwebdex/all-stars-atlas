@@ -976,15 +976,21 @@ router.post('/wallet/pay', async (req, res) => {
       return res.status(400).json({ message: 'Valid booking ID and amount are required' });
     }
 
-    // Check wallet balance (credits - debits)
-    const [balRows] = await db.query(
-      `SELECT 
-        COALESCE(SUM(CASE WHEN type IN ('credit','refund','deposit') THEN amount ELSE 0 END), 0) -
-        COALESCE(SUM(CASE WHEN type IN ('debit','payment','withdrawal') THEN ABS(amount) ELSE 0 END), 0) as balance
-      FROM transactions WHERE user_id = ? AND status IN ('completed','approved')`,
-      [userId]
-    );
-    const balance = Number(balRows[0]?.balance || 0);
+    // Check wallet balance — use wallet table as primary source
+    const [walletRows] = await db.query('SELECT balance FROM wallet WHERE user_id = ?', [userId]);
+    let balance = Number(walletRows[0]?.balance || 0);
+
+    // Fallback: if wallet table empty, compute from transactions
+    if (balance <= 0) {
+      const [balRows] = await db.query(
+        `SELECT 
+          COALESCE(SUM(CASE WHEN type IN ('credit','refund','deposit') AND status IN ('completed','approved') THEN amount ELSE 0 END), 0) -
+          COALESCE(SUM(CASE WHEN type IN ('debit','payment','withdrawal','transfer_out') AND status IN ('completed','approved') THEN ABS(amount) ELSE 0 END), 0) as balance
+        FROM transactions WHERE user_id = ?`,
+        [userId]
+      );
+      balance = Number(balRows[0]?.balance || 0);
+    }
 
     if (balance < amount) {
       return res.status(400).json({ message: `Insufficient balance. Available: ৳${balance.toLocaleString()}, Required: ৳${amount.toLocaleString()}` });
