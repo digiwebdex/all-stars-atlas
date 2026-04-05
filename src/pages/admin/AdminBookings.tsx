@@ -16,12 +16,6 @@ import {
   Send, Ban, Archive, Trash2, RotateCcw, Upload, ExternalLink,
 } from "lucide-react";
 import AdminBookingTabs from "@/components/admin/AdminBookingTabs";
-import BookingActions from "@/components/flights/BookingActions";
-import FlightStatusBadge from "@/components/flights/FlightStatusBadge";
-import FareRulesModal from "@/components/flights/FareRulesModal";
-import BookingActions from "@/components/flights/BookingActions";
-import FlightStatusBadge from "@/components/flights/FlightStatusBadge";
-import FareRulesModal from "@/components/flights/FareRulesModal";
 import { useToast } from "@/hooks/use-toast";
 import { useAdminBookings } from "@/hooks/useApiData";
 import { api } from "@/lib/api";
