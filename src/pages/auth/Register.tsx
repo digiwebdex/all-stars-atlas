@@ -11,6 +11,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { api } from "@/lib/api";
 import IdUploadModal from "@/components/IdUploadModal";
+import { useSiteLogo } from "@/hooks/useSiteLogo";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "application/pdf"];

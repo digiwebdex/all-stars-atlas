@@ -9,6 +9,7 @@ import { Mail, Lock, Eye, EyeOff, CheckCircle2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import IdUploadModal from "@/components/IdUploadModal";
+import { useSiteLogo } from "@/hooks/useSiteLogo";
 
 const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
