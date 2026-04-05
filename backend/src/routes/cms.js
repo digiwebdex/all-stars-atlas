@@ -346,8 +346,12 @@ router.get('/logo', async (req, res) => {
   try {
     const [rows] = await db.query("SELECT setting_value FROM system_settings WHERE setting_key = 'site_logo'");
     const logoUrl = rows.length > 0 ? rows[0].setting_value : '/images/seven-trip-logo.png';
-    res.json({ url: logoUrl });
-  } catch (err) { console.error('[CMS] logo GET error:', err); res.json({ url: '/images/seven-trip-logo.png' }); }
+    // Also fetch logo sizes
+    const [sizeRows] = await db.query("SELECT setting_value FROM system_settings WHERE setting_key = 'logo_sizes'");
+    let sizes = {};
+    if (sizeRows.length > 0) { try { sizes = JSON.parse(sizeRows[0].setting_value); } catch {} }
+    res.json({ url: logoUrl, sizes });
+  } catch (err) { console.error('[CMS] logo GET error:', err); res.json({ url: '/images/seven-trip-logo.png', sizes: {} }); }
 });
 
 // Admin: POST /admin/cms/logo — upload new site logo
@@ -375,8 +379,23 @@ adminRouter.post('/logo', upload.single('file'), async (req, res) => {
 adminRouter.delete('/logo', async (req, res) => {
   try {
     await db.query("DELETE FROM system_settings WHERE setting_key = 'site_logo'");
-    res.json({ url: '/images/seven-trip-logo.png', message: 'Logo reset to default' });
+    await db.query("DELETE FROM system_settings WHERE setting_key = 'logo_sizes'");
+    res.json({ url: '/images/seven-trip-logo.png', sizes: {}, message: 'Logo reset to default' });
   } catch (err) { console.error('[CMS] logo delete error:', err); res.status(500).json({ message: 'Something went wrong', status: 500 }); }
+});
+
+// Admin: PUT /admin/cms/logo-sizes — save logo sizes for different areas
+adminRouter.put('/logo-sizes', async (req, res) => {
+  try {
+    const sizes = JSON.stringify(req.body);
+    const [existing] = await db.query("SELECT setting_key FROM system_settings WHERE setting_key = 'logo_sizes'");
+    if (existing.length > 0) {
+      await db.query("UPDATE system_settings SET setting_value = ? WHERE setting_key = 'logo_sizes'", [sizes]);
+    } else {
+      await db.query("INSERT INTO system_settings (setting_key, setting_value, category) VALUES ('logo_sizes', ?, 'branding')", [sizes]);
+    }
+    res.json({ ...req.body, message: 'Logo sizes updated' });
+  } catch (err) { console.error('[CMS] logo-sizes PUT error:', err); res.status(500).json({ message: 'Something went wrong', status: 500 }); }
 });
 
 // ====== HOMEPAGE CONTENT ======
