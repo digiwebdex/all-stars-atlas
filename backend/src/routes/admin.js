@@ -893,15 +893,33 @@ router.put('/payment-approvals/:id', async (req, res) => {
     
     await db.query('UPDATE transactions SET status = ?, description = COALESCE(?, description) WHERE id = ?', [dbStatus, note || null, req.params.id]);
     
-    // If approved, also update the booking payment status
+    // If approved, credit the user's wallet and update booking
     if (status === 'Approved') {
-      const [txn] = await db.query('SELECT booking_id, user_id, amount, reference FROM transactions WHERE id = ?', [req.params.id]);
+      const [txn] = await db.query('SELECT booking_id, user_id, amount, reference, type FROM transactions WHERE id = ?', [req.params.id]);
       if (txn.length > 0) {
+        const userId = txn[0].user_id;
+        const amount = parseFloat(txn[0].amount) || 0;
+
+        // Credit user wallet balance
+        if (amount > 0) {
+          await db.query(
+            `INSERT INTO wallet (user_id, balance) VALUES (?, ?) 
+             ON DUPLICATE KEY UPDATE balance = balance + ?`,
+            [userId, amount, amount]
+          );
+          // Log wallet credit transaction
+          await db.query(
+            `INSERT INTO wallet_transactions (user_id, type, amount, balance_after, description) 
+             VALUES (?, 'credit', ?, (SELECT balance FROM wallet WHERE user_id = ?), ?)`,
+            [userId, amount, userId, `Deposit approved (Ref: ${txn[0].reference || req.params.id})`]
+          );
+        }
+
         if (txn[0].booking_id) {
           await db.query("UPDATE bookings SET payment_status = 'paid' WHERE id = ?", [txn[0].booking_id]);
         }
         // Notify user of payment approval
-        notifyPayment(txn[0].user_id, txn[0].amount, txn[0].reference || req.params.id).catch(console.error);
+        notifyPayment(userId, amount, txn[0].reference || req.params.id).catch(console.error);
       }
     }
     
