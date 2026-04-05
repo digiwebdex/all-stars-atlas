@@ -342,5 +342,6 @@ After every deployment:
 - [ ] Check `pm2 logs seventrip-api --lines 10` — no startup errors
 - [ ] Visit https://seven-trip.com — homepage loads
 - [ ] Visit https://seven-trip.com/api/health — API responds
+- [ ] Visit https://seven-trip.com/api/cms/logo — returns the expected logo URL
 - [ ] Test the specific feature that was deployed
 - [ ] Check browser console for errors

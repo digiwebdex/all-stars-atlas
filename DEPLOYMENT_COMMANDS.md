@@ -105,6 +105,17 @@ The gzip/brotli directives are in `/etc/nginx/nginx.conf` — do NOT add them in
 pm2 restart seventrip-api && pm2 logs seventrip-api --lines 50
 ```
 
+### Logo upload fails or logo does not change
+Cause: backend writes to `system_settings` using a non-existent `id` column, or uploaded files are not exposed through the `/uploads/` Nginx proxy.
+
+```bash
+cd ~/projects/all-stars-atlas && git pull origin main
+cd backend && pm2 restart seventrip-api
+cd .. && sudo cp backend/nginx-optimized.conf /etc/nginx/sites-available/seventrip
+sudo nginx -t && sudo systemctl reload nginx
+pm2 logs seventrip-api --lines 80
+```
+
 ### SyntaxError: Unexpected token '...'
 Cause: accidental literal `...` left inside a JS file (commonly from partial patch markers).
 
