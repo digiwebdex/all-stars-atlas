@@ -805,29 +805,43 @@ router.get('/bookings/:id/ancillaries', async (req, res) => {
 router.get('/wallet', async (req, res) => {
   try {
     const userId = req.user.sub || req.user.id;
-    // Try to get wallet balance from transactions summary
+
+    // Primary: read balance from wallet table (source of truth after admin approval)
+    const [walletRows] = await db.query('SELECT balance FROM wallet WHERE user_id = ?', [userId]);
+    const walletBalance = Number(walletRows[0]?.balance || 0);
+
+    // Fallback/supplementary: compute from transactions for total credited/debited stats
     const [credits] = await db.query(
-      `SELECT COALESCE(SUM(amount), 0) as total FROM transactions WHERE user_id = ? AND type = 'credit'`,
+      `SELECT COALESCE(SUM(amount), 0) as total FROM transactions 
+       WHERE user_id = ? AND type IN ('credit','deposit') AND status IN ('completed','approved')`,
       [userId]
     );
     const [debits] = await db.query(
-      `SELECT COALESCE(SUM(ABS(amount)), 0) as total FROM transactions WHERE user_id = ? AND type = 'debit'`,
+      `SELECT COALESCE(SUM(ABS(amount)), 0) as total FROM transactions 
+       WHERE user_id = ? AND type IN ('debit','payment','withdrawal','transfer_out') AND status IN ('completed','approved')`,
       [userId]
     );
     const totalCredited = Number(credits[0]?.total || 0);
     const totalDebited = Number(debits[0]?.total || 0);
-    const balance = totalCredited - totalDebited;
 
-    // Recent wallet transactions
+    // Use wallet table balance as primary (admin approval writes here)
+    const balance = walletBalance > 0 ? walletBalance : (totalCredited - totalDebited);
+
+    // Recent transactions (all types, all statuses for history)
     const [txns] = await db.query(
-      `SELECT id, type, amount, description, created_at as date, 
-       (SELECT COALESCE(SUM(CASE WHEN t2.type='credit' THEN t2.amount ELSE -ABS(t2.amount) END), 0) 
-        FROM transactions t2 WHERE t2.user_id = ? AND t2.created_at <= transactions.created_at) as balance
+      `SELECT id, type, amount, description, status, created_at as date
        FROM transactions WHERE user_id = ? ORDER BY created_at DESC LIMIT 50`,
-      [userId, userId]
+      [userId]
     );
 
-    res.json({ balance, totalCredited, totalDebited, transactions: txns });
+    // Normalize transaction types for display
+    const normalizedTxns = txns.map(t => ({
+      ...t,
+      type: ['credit', 'deposit', 'refund'].includes(t.type) ? 'credit' : 'debit',
+      originalType: t.type,
+    }));
+
+    res.json({ balance, totalCredited, totalDebited, transactions: normalizedTxns });
   } catch (err) {
     console.error('Wallet error:', err);
     res.json({ balance: 0, totalCredited: 0, totalDebited: 0, transactions: [] });
@@ -962,15 +976,21 @@ router.post('/wallet/pay', async (req, res) => {
       return res.status(400).json({ message: 'Valid booking ID and amount are required' });
     }
 
-    // Check wallet balance (credits - debits)
-    const [balRows] = await db.query(
-      `SELECT 
-        COALESCE(SUM(CASE WHEN type IN ('credit','refund','deposit') THEN amount ELSE 0 END), 0) -
-        COALESCE(SUM(CASE WHEN type IN ('debit','payment','withdrawal') THEN ABS(amount) ELSE 0 END), 0) as balance
-      FROM transactions WHERE user_id = ? AND status IN ('completed','approved')`,
-      [userId]
-    );
-    const balance = Number(balRows[0]?.balance || 0);
+    // Check wallet balance — use wallet table as primary source
+    const [walletRows] = await db.query('SELECT balance FROM wallet WHERE user_id = ?', [userId]);
+    let balance = Number(walletRows[0]?.balance || 0);
+
+    // Fallback: if wallet table empty, compute from transactions
+    if (balance <= 0) {
+      const [balRows] = await db.query(
+        `SELECT 
+          COALESCE(SUM(CASE WHEN type IN ('credit','refund','deposit') AND status IN ('completed','approved') THEN amount ELSE 0 END), 0) -
+          COALESCE(SUM(CASE WHEN type IN ('debit','payment','withdrawal','transfer_out') AND status IN ('completed','approved') THEN ABS(amount) ELSE 0 END), 0) as balance
+        FROM transactions WHERE user_id = ?`,
+        [userId]
+      );
+      balance = Number(balRows[0]?.balance || 0);
+    }
 
     if (balance < amount) {
       return res.status(400).json({ message: `Insufficient balance. Available: ৳${balance.toLocaleString()}, Required: ৳${amount.toLocaleString()}` });
@@ -1022,6 +1042,12 @@ router.post('/wallet/pay', async (req, res) => {
     await db.query(
       `UPDATE bookings SET status = 'confirmed', payment_status = 'paid', updated_at = NOW() WHERE id = ?`,
       [bookingId]
+    );
+
+    // Deduct from wallet table
+    await db.query(
+      `UPDATE wallet SET balance = GREATEST(balance - ?, 0) WHERE user_id = ?`,
+      [verifiedAmount, userId]
     );
 
     // Try auto-ticketing
