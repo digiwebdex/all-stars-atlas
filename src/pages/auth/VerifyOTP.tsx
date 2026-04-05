@@ -10,6 +10,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useSiteLogo } from "@/hooks/useSiteLogo";
 
 const VerifyOTP = () => {
+  const logoUrl = useSiteLogo();
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [loading, setLoading] = useState(false);
   const [newPassword, setNewPassword] = useState("");

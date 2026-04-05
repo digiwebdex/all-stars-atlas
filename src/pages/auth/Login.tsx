@@ -12,6 +12,7 @@ import IdUploadModal from "@/components/IdUploadModal";
 import { useSiteLogo } from "@/hooks/useSiteLogo";
 
 const Login = () => {
+  const logoUrl = useSiteLogo();
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

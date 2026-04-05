@@ -10,6 +10,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useSiteLogo } from "@/hooks/useSiteLogo";
 
 const ForgotPassword = () => {
+  const logoUrl = useSiteLogo();
   const [email, setEmail] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
