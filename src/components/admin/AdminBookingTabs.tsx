@@ -707,7 +707,7 @@ const AdminBookingTabs = ({
             {actionLoading ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Save className="w-4 h-4 mr-1" />}
             Save Changes
           </Button>
-          {(viewBooking.status === "on_hold" || viewBooking.status === "pending" || viewBooking.status === "confirmed") && (
+          {viewBooking.paymentStatus === "paid" && !["ticketed", "cancelled", "completed", "refunded", "void", "failed"].includes(viewBooking.status) && (
             <Button variant="outline" className="border-emerald-500 text-emerald-600" onClick={() => {
               setConfirmPnr(viewBooking.pnr || viewBooking.details?.gdsPnr || "");
               setConfirmTicketNo(viewBooking.ticketNo || "");
