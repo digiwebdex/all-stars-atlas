@@ -590,14 +590,26 @@ const AdminBookings = () => {
           </DialogHeader>
 
           {viewBooking && (
-            <Tabs defaultValue="overview" className="mt-2">
-              <TabsList className="grid grid-cols-5 w-full">
-                <TabsTrigger value="overview">Overview</TabsTrigger>
-                <TabsTrigger value="passengers">Passengers</TabsTrigger>
-                <TabsTrigger value="flight">Flight Info</TabsTrigger>
-                <TabsTrigger value="documents">Documents</TabsTrigger>
-                <TabsTrigger value="actions">Actions</TabsTrigger>
-              </TabsList>
+            <AdminBookingTabs
+              viewBooking={viewBooking}
+              editMode={editMode}
+              editData={editData}
+              setEditData={setEditData}
+              actionLoading={actionLoading}
+              saveEdits={saveEdits}
+              updateBooking={updateBooking}
+              setViewBooking={setViewBooking}
+              setEditMode={setEditMode}
+              setIssueTicketOpen={setIssueTicketOpen}
+              setCancelFlightOpen={setCancelFlightOpen}
+              setSendPayLinkOpen={setSendPayLinkOpen}
+              setPayLinkEmail={setPayLinkEmail}
+              safeParsePax={safeParsePax}
+              getPassengers={getPassengers}
+              refetch={refetch}
+              fmtDate={fmtDate}
+            />
+          )}
 
               {/* ── Overview Tab ── */}
               <TabsContent value="overview" className="space-y-4 mt-4">
