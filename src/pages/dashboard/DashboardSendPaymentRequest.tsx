@@ -4,12 +4,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Send, CheckCircle, Upload, X, FileImage } from "lucide-react";
+import { Send, CheckCircle, X, FileImage } from "lucide-react";
 import { useState, useRef } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
-import { API_BASE } from "@/lib/config";
+import { config } from "@/lib/config";
 
 const DashboardSendPaymentRequest = () => {
   const { toast } = useToast();
