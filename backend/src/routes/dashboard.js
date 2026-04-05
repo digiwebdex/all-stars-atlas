@@ -1,12 +1,28 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
 const db = require('../config/db');
 const { authenticate, formatUser } = require('../middleware/auth');
 const { notifyPayment } = require('../services/notify');
 const { safeJsonParse } = require('../utils/json');
 
 const router = express.Router();
+const UPLOAD_DIR = process.env.UPLOAD_DIR || path.join(__dirname, '../../uploads');
+const PAYMENT_SLIPS_DIR = path.join(UPLOAD_DIR, 'payment-slips');
+if (!fs.existsSync(PAYMENT_SLIPS_DIR)) fs.mkdirSync(PAYMENT_SLIPS_DIR, { recursive: true });
+
+const paymentSlipStorage = multer.diskStorage({
+  destination: (_req, _file, cb) => cb(null, PAYMENT_SLIPS_DIR),
+  filename: (_req, file, cb) => cb(null, `${Date.now()}-${file.originalname.replace(/\s/g, '-')}`),
+});
+
+const paymentSlipUpload = multer({
+  storage: paymentSlipStorage,
+  limits: { fileSize: 5 * 1024 * 1024 },
+});
 
 // All routes require auth
 router.use(authenticate);
@@ -890,21 +906,47 @@ router.get('/mfs-accounts', async (req, res) => {
 });
 
 // ── Send Payment Request ────────────────────────────────
-router.post('/payment-requests', async (req, res) => {
+router.post('/payment-requests', paymentSlipUpload.single('depositSlip'), async (req, res) => {
   try {
     const userId = req.user.sub || req.user.id;
     const { bookingRef, amount, paymentMethod, notes } = req.body;
+
     if (!bookingRef || !amount) {
       return res.status(400).json({ message: 'Booking reference and amount are required' });
     }
 
-    const id = require('uuid').v4();
+    const methodMap = {
+      bank: 'bank_transfer',
+      bank_transfer: 'bank_transfer',
+      bkash: 'bkash',
+      nagad: 'nagad',
+      rocket: 'rocket',
+      card: 'card',
+      balance: 'card',
+    };
+    const dbMethod = methodMap[paymentMethod] || 'bank_transfer';
+
+    let bookingId = null;
+    const [bookings] = await db.query('SELECT id FROM bookings WHERE booking_ref = ? AND user_id = ?', [bookingRef, userId]);
+    if (bookings.length > 0) bookingId = bookings[0].id;
+
+    const id = uuidv4();
+    const receiptUrl = req.file ? `/uploads/payment-slips/${req.file.filename}` : null;
+    const reference = `PAY-${id.substring(0, 8).toUpperCase()}`;
+    const meta = JSON.stringify({
+      source: 'payment_request',
+      bookingRef,
+      receiptUrl,
+      originalFileName: req.file?.originalname || null,
+      notes: notes || null,
+    });
+
     await db.query(
-      `INSERT INTO transactions (id, user_id, type, amount, description, status, created_at) VALUES (?, ?, 'payment_request', ?, ?, 'pending', NOW())`,
-      [id, userId, amount, `Payment request for ${bookingRef} via ${paymentMethod || 'unspecified'}. ${notes || ''}`]
+      `INSERT INTO transactions (id, user_id, booking_id, type, amount, status, payment_method, reference, description, meta) VALUES (?, ?, ?, 'payment', ?, 'pending', ?, ?, ?, ?)`,
+      [id, userId, bookingId, parseFloat(amount) || 0, dbMethod, reference, `Payment request for ${bookingRef} via ${paymentMethod || 'unspecified'}. ${notes || ''}`.trim(), meta]
     );
 
-    res.json({ success: true, id, message: 'Payment request submitted' });
+    res.status(201).json({ success: true, id, reference, receiptUrl, message: 'Payment request submitted' });
   } catch (err) {
     console.error('Payment request error:', err);
     res.status(500).json({ message: 'Failed to submit payment request' });
