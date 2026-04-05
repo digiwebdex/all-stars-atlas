@@ -70,6 +70,10 @@ const AdminBookingTabs = ({
 
   // Terminal state
   const [terminalCmd, setTerminalCmd] = useState("");
+  const [confirmIssueOpen, setConfirmIssueOpen] = useState(false);
+  const [confirmPnr, setConfirmPnr] = useState("");
+  const [confirmTicketNo, setConfirmTicketNo] = useState("");
+  const [confirmLoading, setConfirmLoading] = useState(false);
   const [terminalHistory, setTerminalHistory] = useState<{ command: string; response: string; timestamp: string; success: boolean }[]>([]);
   const [terminalLoading, setTerminalLoading] = useState(false);
   const [terminalSessionId, setTerminalSessionId] = useState<string | null>(null);
