@@ -125,7 +125,19 @@ const AdminBookingTabs = ({
   };
 
   // Extract fare breakdown from booking details
-  const fareData = viewBooking?.details?.outbound || viewBooking?.details || {};
+  const rawDetails = viewBooking?.details || {};
+  const outbound = rawDetails.outbound || {};
+  // Merge top-level details fare fields with outbound, preferring top-level (which has the total computed fare)
+  const fareData = {
+    ...outbound,
+    baseFare: rawDetails.baseFare ?? outbound.baseFare ?? 0,
+    taxes: rawDetails.taxes ?? outbound.taxes ?? 0,
+    tax: rawDetails.tax ?? rawDetails.taxes ?? outbound.tax ?? outbound.taxes ?? 0,
+    markup: rawDetails.markup ?? outbound.markup ?? 0,
+    discount: rawDetails.discount ?? outbound.discount ?? 0,
+    serviceCharge: rawDetails.serviceCharge ?? outbound.serviceCharge ?? 0,
+    fareBreakdown: rawDetails.fareBreakdown || outbound.fareBreakdown || null,
+  };
   const passengers = getPassengers(viewBooking);
 
   return (
