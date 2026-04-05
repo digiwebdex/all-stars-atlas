@@ -1032,4 +1032,31 @@ router.put('/discounts', async (req, res) => {
   } catch (err) { console.error(err); res.status(500).json({ message: 'Something went wrong', status: 500 }); }
 });
 
+// ── GDS Terminal Command ──
+const sabreSoap = require('./sabre-soap');
+
+router.post('/terminal/execute', async (req, res) => {
+  try {
+    const { command } = req.body;
+    if (!command || typeof command !== 'string' || command.trim().length === 0) {
+      return res.status(400).json({ success: false, message: 'Command is required' });
+    }
+    console.log(`[Admin Terminal] User ${req.user?.email || req.user?.id} executing: ${command.trim()}`);
+    const result = await sabreSoap.executeTerminalCommand(command.trim());
+    res.json(result);
+  } catch (err) {
+    console.error('[Admin Terminal] Error:', err.message);
+    res.status(500).json({ success: false, response: err.message, command: req.body?.command });
+  }
+});
+
+router.post('/terminal/close', async (req, res) => {
+  try {
+    await sabreSoap.closeTerminalSession();
+    res.json({ success: true, message: 'Session closed' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 module.exports = router;
