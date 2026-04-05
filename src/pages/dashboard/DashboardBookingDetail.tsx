@@ -326,6 +326,11 @@ const DashboardBookingDetail = () => {
                 <Wallet className="w-4 h-4 mr-1.5" /> Issue With Balance
               </Button>
             )}
+            {['on_hold', 'confirmed', 'pending'].includes(booking.status) && booking.status !== 'ticketed' && (
+              <Button className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold shadow-sm" onClick={() => setTicketRequestOpen(true)}>
+                <Ticket className="w-4 h-4 mr-1.5" /> Request Ticket Issue
+              </Button>
+            )}
             <div className="ml-auto flex flex-wrap gap-2">
               <Button variant="outline" className="font-semibold border-2 border-foreground/80" onClick={() => setTimelineOpen(true)}><Clock className="w-4 h-4 mr-1.5" /> Timeline</Button>
               <Button variant="outline" className="font-semibold border-2 border-foreground/80" onClick={() => setSsrOpen(true)}><Eye className="w-4 h-4 mr-1.5" /> View SSR</Button>
