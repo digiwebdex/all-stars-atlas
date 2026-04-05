@@ -22,6 +22,7 @@ const LoginModal = ({ open, onOpenChange }: LoginModalProps) => {
   const { login } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const logoUrl = useSiteLogo();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -62,7 +63,7 @@ const LoginModal = ({ open, onOpenChange }: LoginModalProps) => {
         <div className="p-6 pb-2">
           <div className="flex items-center gap-3 mb-1">
             <span className="text-muted-foreground text-sm">Welcome to</span>
-            <img src={useSiteLogo()} alt="Seven Trip" className="h-8 w-auto" />
+            <img src={logoUrl} alt="Seven Trip" className="h-8 w-auto" />
           </div>
           <h2 className="text-xl font-extrabold text-foreground">Seven Trip Ltd.</h2>
         </div>
