@@ -338,6 +338,46 @@ adminRouter.delete('/email-templates/:id', async (req, res) => {
   } catch (err) { console.error(err); res.status(500).json({ message: 'Something went wrong', status: 500 }); }
 });
 
+// ====== SITE LOGO ======
+// Public: GET /cms/logo — returns current logo URL
+router.get('/logo', async (req, res) => {
+  try {
+    const [rows] = await db.query("SELECT setting_value FROM system_settings WHERE setting_key = 'site_logo'");
+    const logoUrl = rows.length > 0 ? rows[0].setting_value : '/images/seven-trip-logo.png';
+    res.json({ url: logoUrl });
+  } catch (err) { console.error('[CMS] logo GET error:', err); res.json({ url: '/images/seven-trip-logo.png' }); }
+});
+
+// Admin: POST /admin/cms/logo — upload new site logo
+adminRouter.post('/logo', upload.single('file'), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ message: 'No file uploaded', status: 400 });
+    const allowedTypes = ['image/png', 'image/jpeg', 'image/webp', 'image/svg+xml'];
+    if (!allowedTypes.includes(req.file.mimetype)) {
+      fs.unlinkSync(req.file.path);
+      return res.status(400).json({ message: 'Invalid file type. Use PNG, JPG, WebP or SVG.', status: 400 });
+    }
+    const url = `/uploads/${req.file.filename}`;
+    // Save to system_settings
+    const [existing] = await db.query("SELECT id FROM system_settings WHERE setting_key = 'site_logo'");
+    if (existing.length > 0) {
+      await db.query("UPDATE system_settings SET setting_value = ? WHERE setting_key = 'site_logo'", [url]);
+    } else {
+      const id = uuidv4();
+      await db.query("INSERT INTO system_settings (id, setting_key, setting_value, category) VALUES (?, 'site_logo', ?, 'branding')", [id, url]);
+    }
+    res.json({ url, message: 'Logo updated successfully' });
+  } catch (err) { console.error('[CMS] logo upload error:', err); res.status(500).json({ message: 'Something went wrong', status: 500 }); }
+});
+
+// Admin: DELETE /admin/cms/logo — reset to default logo
+adminRouter.delete('/logo', async (req, res) => {
+  try {
+    await db.query("DELETE FROM system_settings WHERE setting_key = 'site_logo'");
+    res.json({ url: '/images/seven-trip-logo.png', message: 'Logo reset to default' });
+  } catch (err) { console.error('[CMS] logo delete error:', err); res.status(500).json({ message: 'Something went wrong', status: 500 }); }
+});
+
 // ====== HOMEPAGE CONTENT ======
 // Public: GET /cms/homepage — returns homepage JSON from system_settings
 router.get('/homepage', async (req, res) => {

@@ -6,7 +6,7 @@ import { Switch } from "@/components/ui/switch";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { Settings, Globe, Mail, CreditCard, Shield, Bell, Database, Plug, Eye, EyeOff, Plus, Trash2, Building2, CloudUpload, ExternalLink, Info, Users, Loader2, Search, Plane, Palmtree, FileText, Stethoscope, Car, Smartphone, PhoneCall, Receipt } from "lucide-react";
+import { Settings, Globe, Mail, CreditCard, Shield, Bell, Database, Plug, Eye, EyeOff, Plus, Trash2, Building2, CloudUpload, ExternalLink, Info, Users, Loader2, Search, Plane, Palmtree, FileText, Stethoscope, Car, Smartphone, PhoneCall, Receipt, Image, Upload, RotateCcw } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -81,6 +81,8 @@ const DEFAULT_PAYMENT_METHODS = [
 ];
 
 const AdminSettings = () => {
+  const [logoUrl, setLogoUrl] = useState('/images/seven-trip-logo.png');
+  const [logoUploading, setLogoUploading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [visibleFields, setVisibleFields] = useState<Record<string, boolean>>({});
   const [apiKeyValues, setApiKeyValues] = useState<Record<string, Record<string, string>>>({});
@@ -98,8 +100,9 @@ const AdminSettings = () => {
   const [generalForm, setGeneralForm] = useState({ siteName: 'Seven Trip', supportEmail: 'support@seven-trip.com', currency: 'bdt', language: 'en' });
   const [searchTabs, setSearchTabs] = useState<SearchTabConfig>({ ...DEFAULT_SEARCH_TABS });
 
-  // Load all settings from backend on mount
+  // Load logo + all settings from backend on mount
   useEffect(() => {
+    api.get<any>('/cms/logo').then(d => { if (d?.url) setLogoUrl(d.url); }).catch(() => {});
     (async () => {
       try {
         const data = await api.get<any>('/admin/settings');
@@ -230,6 +233,56 @@ const AdminSettings = () => {
         <h1 className="text-xl sm:text-2xl font-bold">System Settings</h1>
         <Badge variant="outline" className="text-[10px]"><Database className="w-3 h-3 mr-1" /> All settings stored in database</Badge>
       </div>
+
+      {/* Site Logo */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center"><Image className="w-5 h-5 text-primary" /></div>
+            <div><CardTitle className="text-lg">Site Logo</CardTitle><CardDescription>Upload your brand logo (PNG, JPG, WebP, SVG — max 5MB)</CardDescription></div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col sm:flex-row items-start gap-6">
+            <div className="w-48 h-24 rounded-lg border-2 border-dashed border-border bg-muted/30 flex items-center justify-center p-3 overflow-hidden">
+              <img src={logoUrl} alt="Current logo" className="max-h-full max-w-full object-contain" />
+            </div>
+            <div className="flex flex-col gap-3">
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" disabled={logoUploading} onClick={() => document.getElementById('logo-upload-input')?.click()}>
+                  <Upload className="w-4 h-4 mr-1" /> {logoUploading ? 'Uploading...' : 'Upload New Logo'}
+                </Button>
+                <Button variant="ghost" size="sm" onClick={async () => {
+                  try {
+                    await api.delete('/admin/cms/logo');
+                    setLogoUrl('/images/seven-trip-logo.png');
+                    toast.success('Logo reset to default');
+                  } catch { toast.error('Failed to reset logo'); }
+                }}>
+                  <RotateCcw className="w-4 h-4 mr-1" /> Reset Default
+                </Button>
+              </div>
+              <p className="text-[11px] text-muted-foreground">Recommended: transparent PNG, at least 400px wide. Changes apply site-wide immediately.</p>
+            </div>
+          </div>
+          <input id="logo-upload-input" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" className="hidden" onChange={async (e) => {
+            const file = e.target.files?.[0];
+            if (!file) return;
+            if (file.size > 5 * 1024 * 1024) { toast.error('File too large (max 5MB)'); return; }
+            setLogoUploading(true);
+            try {
+              const fd = new FormData();
+              fd.append('file', file);
+              const res = await api.upload<any>('/admin/cms/logo', fd);
+              if (res?.url) {
+                setLogoUrl(res.url);
+                toast.success('Logo updated! Changes will appear across all pages.');
+              }
+            } catch { toast.error('Failed to upload logo'); }
+            finally { setLogoUploading(false); e.target.value = ''; }
+          }} />
+        </CardContent>
+      </Card>
 
       {/* General */}
       <Card>

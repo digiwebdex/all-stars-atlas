@@ -7,8 +7,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Mail, ArrowRight, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { useSiteLogo } from "@/hooks/useSiteLogo";
 
 const ForgotPassword = () => {
+  const logoUrl = useSiteLogo();
   const [email, setEmail] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -63,7 +65,7 @@ const ForgotPassword = () => {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <Link to="/" className="flex justify-center mb-4">
-            <img src="/images/seven-trip-logo.png" alt="Seven Trip" className="h-24 w-auto" />
+            <img src={logoUrl} alt="Seven Trip" className="h-24 w-auto" />
           </Link>
           <CardTitle className="text-xl">Forgot Password?</CardTitle>
           <p className="text-sm text-muted-foreground mt-1">Enter your email and we'll send you a verification code</p>
