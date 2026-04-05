@@ -9,11 +9,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Separator } from "@/components/ui/separator";
 import {
   Search, MoreHorizontal, Eye, Edit2, Download, CheckCircle2, Clock, XCircle, Ticket, Loader2,
-  Plane, User, Phone, CreditCard, FileText, AlertTriangle, Save, Shield,
-  Send, Ban, Archive, Trash2, RotateCcw, Upload, ExternalLink,
+  AlertTriangle, Save, Send, Ban, Archive, Trash2, RotateCcw,
 } from "lucide-react";
 import AdminBookingTabs from "@/components/admin/AdminBookingTabs";
 import { useToast } from "@/hooks/use-toast";
