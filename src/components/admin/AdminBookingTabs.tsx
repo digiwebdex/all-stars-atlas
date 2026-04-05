@@ -754,6 +754,92 @@ const AdminBookingTabs = ({
           </div>
         )}
       </TabsContent>
+
+      {/* ━━ Approve & Issue Ticket Dialog ━━ */}
+      <Dialog open={confirmIssueOpen} onOpenChange={setConfirmIssueOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Ticket className="w-5 h-5 text-emerald-600" /> Approve & Issue Ticket
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <div><Label className="text-muted-foreground text-xs">Booking Ref</Label><p className="font-bold font-mono">{viewBooking.booking_ref || viewBooking.id?.slice(0, 8)}</p></div>
+              <div><Label className="text-muted-foreground text-xs">Route</Label><p className="font-bold">{viewBooking.details?.outbound?.origin || viewBooking.details?.origin || "—"} → {viewBooking.details?.outbound?.destination || viewBooking.details?.destination || "—"}</p></div>
+              <div><Label className="text-muted-foreground text-xs">Amount</Label><p className="font-bold text-primary">৳{(viewBooking.amount || viewBooking.total_amount || 0).toLocaleString()}</p></div>
+              <div><Label className="text-muted-foreground text-xs">GDS Source</Label><p className="font-bold uppercase">{viewBooking.details?.outbound?.source || viewBooking.details?.source || "—"}</p></div>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <Label className="text-sm font-medium">PNR</Label>
+                <Input value={confirmPnr} onChange={e => setConfirmPnr(e.target.value)} placeholder="Enter or edit PNR" className="font-mono mt-1" />
+              </div>
+              <div>
+                <Label className="text-sm font-medium">Ticket Number(s)</Label>
+                <Input value={confirmTicketNo} onChange={e => setConfirmTicketNo(e.target.value)} placeholder="e.g. 143-2401234567 (comma-separated for multiple)" className="font-mono mt-1" />
+                <p className="text-xs text-muted-foreground mt-1">Leave empty to auto-issue via GDS API, or enter manually</p>
+              </div>
+            </div>
+
+            <div className="p-3 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-lg text-sm">
+              <p className="font-semibold text-amber-700 dark:text-amber-400">⚠️ This will:</p>
+              <ul className="list-disc ml-4 text-amber-600 dark:text-amber-400 text-xs mt-1 space-y-0.5">
+                <li>Set booking status to <strong>Ticketed</strong></li>
+                <li>Set payment status to <strong>Paid</strong></li>
+                {!confirmTicketNo && <li>Call GDS API to issue real airline ticket</li>}
+                {confirmTicketNo && <li>Record ticket number(s) manually</li>}
+              </ul>
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setConfirmIssueOpen(false)}>Cancel</Button>
+            <Button
+              className="bg-emerald-600 hover:bg-emerald-700 text-white"
+              disabled={confirmLoading}
+              onClick={async () => {
+                setConfirmLoading(true);
+                try {
+                  if (confirmTicketNo.trim()) {
+                    // Manual ticket — just update booking
+                    await updateBooking(viewBooking, {
+                      status: "ticketed",
+                      paymentStatus: "paid",
+                      pnr: confirmPnr || viewBooking.pnr,
+                      ticketNo: confirmTicketNo.trim(),
+                    });
+                    toast({ title: "✅ Ticket Recorded", description: `Ticket ${confirmTicketNo} saved.` });
+                  } else {
+                    // Auto-issue via GDS — use the issue ticket flow
+                    const result: any = await api.put(`/admin/bookings/${viewBooking.rawId || viewBooking.id}/issue-ticket`, {
+                      pnr: confirmPnr || viewBooking.pnr,
+                    });
+                    if (result.success) {
+                      toast({
+                        title: "✅ Ticket Issued via GDS",
+                        description: result.ticketNumbers?.length ? `Tickets: ${result.ticketNumbers.join(", ")}` : "Ticket issued successfully",
+                      });
+                    } else {
+                      throw new Error(result.gdsError || result.message || "GDS issuance failed");
+                    }
+                  }
+                  setConfirmIssueOpen(false);
+                  refetch();
+                  setViewBooking(null);
+                } catch (err: any) {
+                  toast({ title: "Failed", description: err.message || "Could not issue ticket", variant: "destructive" });
+                } finally {
+                  setConfirmLoading(false);
+                }
+              }}
+            >
+              {confirmLoading ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Ticket className="w-4 h-4 mr-1" />}
+              {confirmTicketNo.trim() ? "Save Ticket" : "Issue via GDS"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Tabs>
   );
 };
