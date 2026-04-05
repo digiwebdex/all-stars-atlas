@@ -641,28 +641,6 @@ const DashboardBookingDetail = () => {
             </DialogContent>
           </Dialog>
 
-          {/* ━━ Ticket Issue Request Dialog ━━ */}
-          <Dialog open={ticketRequestOpen} onOpenChange={setTicketRequestOpen}>
-            <DialogContent className="sm:max-w-md">
-              <DialogHeader><DialogTitle className="flex items-center gap-2"><Ticket className="w-5 h-5 text-primary" /> Request Ticket Issue</DialogTitle></DialogHeader>
-              <div className="space-y-3">
-                <p className="text-sm text-muted-foreground">Submit a ticket issue request for <strong>{booking.id}</strong>? Admin will review and issue your ticket.</p>
-                <div className="p-3 bg-primary/5 border border-primary/20 rounded-lg text-sm space-y-1">
-                  <div className="flex justify-between"><span className="text-muted-foreground">PNR</span><span className="font-mono font-bold">{booking.pnr}</span></div>
-                  <div className="flex justify-between"><span className="text-muted-foreground">Route</span><span className="font-bold">{booking.origin}-{booking.destination}</span></div>
-                  <div className="flex justify-between"><span className="text-muted-foreground">Amount</span><span className="font-bold">{booking.amount}</span></div>
-                  <div className="flex justify-between"><span className="text-muted-foreground">Payment Status</span><span className="font-bold capitalize">{booking.paymentStatus}</span></div>
-                </div>
-                <Textarea placeholder="Notes for admin (optional)" value={ticketRequestNotes} onChange={e => setTicketRequestNotes(e.target.value)} rows={3} />
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setTicketRequestOpen(false)}>Cancel</Button>
-                <Button onClick={handleTicketRequest} disabled={ticketRequestLoading}>
-                  {ticketRequestLoading ? "Submitting..." : "Submit Request"}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
 
           {/* ━━ Timeline Dialog ━━ */}
           <Dialog open={timelineOpen} onOpenChange={setTimelineOpen}>
