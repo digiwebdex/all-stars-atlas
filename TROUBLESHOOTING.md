@@ -219,6 +219,28 @@ sudo nginx -t && sudo systemctl start nginx
 
 ### Mixed Content Warnings
 
+### Logo Upload Fails / Logo Never Changes
+
+**Symptoms:**
+- Admin logo upload returns 500 or generic failure
+- `GET /api/cms/logo` always falls back to `/images/seven-trip-logo.png`
+- Uploaded file exists but browser cannot load `/uploads/...`
+
+**Causes:**
+1. Backend tries to insert into `system_settings.id`, but that table uses `setting_key` as its primary key
+2. Nginx is missing the `/uploads/` proxy block to the backend
+3. PM2 was not restarted after backend changes
+
+**Fix:**
+```bash
+cd ~/projects/all-stars-atlas && git pull origin main
+cd backend && pm2 restart seventrip-api
+cd .. && sudo cp backend/nginx-optimized.conf /etc/nginx/sites-available/seventrip
+sudo nginx -t && sudo systemctl reload nginx
+curl -s https://seven-trip.com/api/cms/logo
+pm2 logs seventrip-api --lines 80
+```
+
 **Cause:** `VITE_API_BASE_URL` uses `http://` but site is on `https://`
 
 **Fix:** Set `VITE_API_BASE_URL=https://seven-trip.com/api` and rebuild

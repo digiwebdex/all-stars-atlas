@@ -1826,7 +1826,7 @@ Permanently deletes a booking and all related tickets and transactions. **Irreve
   "originalName": "beach-sunset.jpg",
   "mimeType": "image/jpeg",
   "size": 245000,
-  "url": "https://seven-trip.com/api/uploads/beach-sunset-abc123.jpg",
+  "url": "https://seven-trip.com/uploads/beach-sunset-abc123.jpg",
   "altText": "Sunset at Cox's Bazar beach",
   "folder": "destinations",
   "uploadedBy": { "id": "uuid", "name": "Admin" },
@@ -1957,7 +1957,7 @@ SMTP_FROM="Seven Trip <noreply@seven-trip.com>"
 FRONTEND_URL=https://seven-trip.com
 
 # File uploads
-UPLOAD_DIR=/var/www/seventrip-api/uploads
+UPLOAD_DIR=./uploads
 MAX_FILE_SIZE=10485760
 
 # Optional: External APIs
