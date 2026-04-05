@@ -245,7 +245,9 @@ adminRouter.delete('/destinations/:id', async (req, res) => {
 });
 
 // ====== MEDIA ======
-const uploadDir = process.env.UPLOAD_DIR || './uploads';
+const uploadDir = path.isAbsolute(process.env.UPLOAD_DIR || '')
+  ? process.env.UPLOAD_DIR
+  : path.resolve(__dirname, '../../', process.env.UPLOAD_DIR || 'uploads');
 if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
 
 const storage = multer.diskStorage({
@@ -359,12 +361,11 @@ adminRouter.post('/logo', upload.single('file'), async (req, res) => {
     }
     const url = `/uploads/${req.file.filename}`;
     // Save to system_settings
-    const [existing] = await db.query("SELECT id FROM system_settings WHERE setting_key = 'site_logo'");
+    const [existing] = await db.query("SELECT setting_key FROM system_settings WHERE setting_key = 'site_logo'");
     if (existing.length > 0) {
       await db.query("UPDATE system_settings SET setting_value = ? WHERE setting_key = 'site_logo'", [url]);
     } else {
-      const id = uuidv4();
-      await db.query("INSERT INTO system_settings (id, setting_key, setting_value, category) VALUES (?, 'site_logo', ?, 'branding')", [id, url]);
+      await db.query("INSERT INTO system_settings (setting_key, setting_value, category) VALUES ('site_logo', ?, 'branding')", [url]);
     }
     res.json({ url, message: 'Logo updated successfully' });
   } catch (err) { console.error('[CMS] logo upload error:', err); res.status(500).json({ message: 'Something went wrong', status: 500 }); }
@@ -393,12 +394,11 @@ router.get('/homepage', async (req, res) => {
 adminRouter.put('/homepage', async (req, res) => {
   try {
     const content = JSON.stringify(req.body);
-    const [existing] = await db.query("SELECT id FROM system_settings WHERE setting_key = 'homepage_content'");
+    const [existing] = await db.query("SELECT setting_key FROM system_settings WHERE setting_key = 'homepage_content'");
     if (existing.length > 0) {
       await db.query("UPDATE system_settings SET setting_value = ? WHERE setting_key = 'homepage_content'", [content]);
     } else {
-      const id = uuidv4();
-      await db.query("INSERT INTO system_settings (id, setting_key, setting_value, category) VALUES (?, 'homepage_content', ?, 'cms')", [id, content]);
+      await db.query("INSERT INTO system_settings (setting_key, setting_value, category) VALUES ('homepage_content', ?, 'cms')", [content]);
     }
     res.json(req.body);
   } catch (err) { console.error('[CMS] homepage PUT error:', err); res.status(500).json({ message: 'Something went wrong', status: 500 }); }
