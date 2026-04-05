@@ -3320,21 +3320,29 @@ const FlightResults = () => {
       if (!itineraryMap[f._itineraryId]) itineraryMap[f._itineraryId] = {};
       itineraryMap[f._itineraryId].returnFlight = f;
     }
-    const itineraryPaired = new Set<string>();
     for (const entry of Object.values(itineraryMap)) {
       if (entry.outbound && entry.returnFlight) {
         addPair(entry.outbound, entry.returnFlight);
-        itineraryPaired.add(entry.outbound.id);
-        itineraryPaired.add(entry.returnFlight.id);
       }
     }
 
-    // 2) N×N cross-product by airline — keep all API options (do not collapse schedules)
+    const isSabreItineraryLocked = (flight: any) => {
+      const source = String(flight?.source || "").toLowerCase();
+      const itineraryId = String(flight?._itineraryId || "");
+      return !!itineraryId && (source.includes("sabre") || itineraryId.startsWith("sabre-") || !!flight?._sabreSeqNumber);
+    };
+
+    // 2) N×N cross-product by airline — only for providers without exact itinerary linkage.
+    // For Sabre, mixing different itineraryIds can break married connections and drop a middle segment during booking.
     const obByAirline: Record<string, any[]> = {};
     const rtByAirline: Record<string, any[]> = {};
 
-    const sortedOutbound = [...outboundFlights].sort((a, b) => flightPayable(a) - flightPayable(b));
-    const sortedReturn = [...returnFlights].sort((a, b) => flightPayable(a) - flightPayable(b));
+    const sortedOutbound = [...outboundFlights]
+      .filter((f) => !isSabreItineraryLocked(f))
+      .sort((a, b) => flightPayable(a) - flightPayable(b));
+    const sortedReturn = [...returnFlights]
+      .filter((f) => !isSabreItineraryLocked(f))
+      .sort((a, b) => flightPayable(a) - flightPayable(b));
 
     for (const f of sortedOutbound) {
       const airline = f.airlineCode || 'unknown';
