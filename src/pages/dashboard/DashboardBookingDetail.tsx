@@ -11,7 +11,7 @@ import {
   Plane, ArrowLeft, Copy, Download, CreditCard, Luggage, Shield,
   Users, Package, XCircle, AlertTriangle, Ban,
   FileText, Wallet, Clock, Eye, ChevronUp, ChevronDown, RefreshCw,
-  CheckCircle, Utensils, Armchair, Accessibility, Baby,
+  CheckCircle, Utensils, Armchair, Accessibility, Baby, Ticket,
 } from "lucide-react";
 import { generateTicketPDF } from "@/lib/pdf-generator";
 import { AIRPORTS } from "@/lib/airports";
