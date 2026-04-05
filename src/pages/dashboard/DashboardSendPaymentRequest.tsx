@@ -8,7 +8,7 @@ import { Send, CheckCircle, X, FileImage } from "lucide-react";
 import { useState, useRef } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
-import { config } from "@/lib/config";
+import { api } from "@/lib/api";
 
 const DashboardSendPaymentRequest = () => {
   const { toast } = useToast();
@@ -24,18 +24,7 @@ const DashboardSendPaymentRequest = () => {
 
   const mutation = useMutation({
     mutationFn: async (formData: FormData) => {
-      const token = localStorage.getItem("auth_token") || localStorage.getItem("token");
-      if (!token) throw new Error("Not authenticated – please log in again");
-      const res = await fetch(`${config.apiBaseUrl}/dashboard/payment-requests`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-        body: formData,
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || "Failed to submit payment request");
-      }
-      return res.json();
+      return api.upload("/dashboard/payment-requests", formData);
     },
     onSuccess: () => {
       setSent(true);
