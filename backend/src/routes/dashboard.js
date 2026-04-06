@@ -1220,10 +1220,16 @@ router.post('/wallet/pay', async (req, res) => {
     );
 
     // Deduct from wallet table
-    await db.query(
-      `UPDATE wallet SET balance = GREATEST(balance - ?, 0) WHERE user_id = ?`,
-      [verifiedAmount, userId]
-    );
+    try {
+      await db.query(
+        `UPDATE wallet SET balance = GREATEST(balance - ?, 0) WHERE user_id = ?`,
+        [verifiedAmount, userId]
+      );
+    } catch (walletErr) {
+      if (!isMissingTableError(walletErr, 'wallet')) {
+        console.error('Wallet deduct error (non-critical):', walletErr?.message);
+      }
+    }
 
     // Try auto-ticketing
     try {
@@ -1356,7 +1362,7 @@ router.post('/ticket-issue-request', async (req, res) => {
     const [existing] = await db.query(
       "SELECT id FROM ticket_issue_requests WHERE booking_id = ? AND status IN ('pending', 'processing')", [bookingId]
     );
-    if (existing.length > 0) {
+    if (existing && existing.length > 0) {
       return res.status(400).json({ message: 'A ticket issue request is already pending for this booking' });
     }
 
@@ -1365,18 +1371,49 @@ router.post('/ticket-issue-request', async (req, res) => {
       'INSERT INTO ticket_issue_requests (id, booking_id, user_id, status, notes) VALUES (?, ?, ?, ?, ?)',
       [id, bookingId, userId, 'pending', notes || null]
     );
-
-    // Notify admin (optional — uses existing notify system)
-    try {
-      const { notifyBookingStatus } = require('../services/notify');
-      await notifyBookingStatus(booking.booking_ref, 'ticket_issue_requested', null);
-    } catch (e) { console.log('[Ticket Request] Notification skipped:', e.message); }
-
-    res.json({ success: true, requestId: id, message: 'Ticket issue request submitted. Admin will process it shortly.' });
   } catch (err) {
+    // If ticket_issue_requests table doesn't exist, create it and retry
+    if (isMissingTableError(err, 'ticket_issue_requests')) {
+      try {
+        await db.query(`CREATE TABLE IF NOT EXISTS ticket_issue_requests (
+          id CHAR(36) PRIMARY KEY,
+          booking_id CHAR(36) NOT NULL,
+          user_id CHAR(36) NOT NULL,
+          status VARCHAR(20) DEFAULT 'pending',
+          notes TEXT,
+          admin_notes TEXT,
+          ticket_number VARCHAR(100),
+          pnr VARCHAR(20),
+          processed_at DATETIME,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          INDEX idx_booking (booking_id),
+          INDEX idx_user (user_id),
+          INDEX idx_status (status)
+        )`);
+        const id = uuidv4();
+        await db.query(
+          'INSERT INTO ticket_issue_requests (id, booking_id, user_id, status, notes) VALUES (?, ?, ?, ?, ?)',
+          [id, req.body.bookingId, req.user.sub, 'pending', req.body.notes || null]
+        );
+        return res.json({ success: true, requestId: id, message: 'Ticket issue request submitted. Admin will process it shortly.' });
+      } catch (retryErr) {
+        console.error('[Dashboard] Ticket issue request retry error:', retryErr);
+        return res.status(500).json({ message: 'Failed to submit request' });
+      }
+    }
     console.error('[Dashboard] Ticket issue request error:', err);
-    res.status(500).json({ message: 'Failed to submit request' });
+    return res.status(500).json({ message: 'Failed to submit request' });
   }
+
+  // Notify admin (optional — uses existing notify system)
+  try {
+    const { notifyBookingStatus } = require('../services/notify');
+    const [bookings2] = await db.query('SELECT booking_ref FROM bookings WHERE id = ?', [req.body.bookingId]);
+    await notifyBookingStatus(bookings2[0]?.booking_ref, 'ticket_issue_requested', null);
+  } catch (e) { console.log('[Ticket Request] Notification skipped:', e.message); }
+
+  res.json({ success: true, message: 'Ticket issue request submitted. Admin will process it shortly.' });
 });
 
 // GET /dashboard/ticket-issue-requests — user's own requests
