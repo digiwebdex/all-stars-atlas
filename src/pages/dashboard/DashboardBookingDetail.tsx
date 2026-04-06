@@ -147,9 +147,10 @@ const DashboardBookingDetail = () => {
     queryFn: () => api.get<any>("/dashboard/ticket-issue-requests"),
     enabled: !!booking,
   });
-  const issueRequest = ((issueRequestData as any)?.data || []).find(
+  const bookingRequests = ((issueRequestData as any)?.data || []).filter(
     (r: any) => r.booking_id === booking?.rawId || r.bookingId === booking?.rawId
   );
+  const issueRequest = bookingRequests.find((r: any) => r.ticket_number || r.ticketNumber || r.status === 'issued') || bookingRequests[0];
   const issuedTicketNo = issueRequest?.ticket_number || issueRequest?.ticketNumber || null;
   const effectiveTicketNo = booking?.ticketNo !== '—' ? booking?.ticketNo : issuedTicketNo;
   const isTicketed = booking?.status === 'ticketed' || issueRequest?.status === 'issued';
