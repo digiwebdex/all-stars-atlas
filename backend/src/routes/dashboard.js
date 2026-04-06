@@ -1220,10 +1220,16 @@ router.post('/wallet/pay', async (req, res) => {
     );
 
     // Deduct from wallet table
-    await db.query(
-      `UPDATE wallet SET balance = GREATEST(balance - ?, 0) WHERE user_id = ?`,
-      [verifiedAmount, userId]
-    );
+    try {
+      await db.query(
+        `UPDATE wallet SET balance = GREATEST(balance - ?, 0) WHERE user_id = ?`,
+        [verifiedAmount, userId]
+      );
+    } catch (walletErr) {
+      if (!isMissingTableError(walletErr, 'wallet')) {
+        console.error('Wallet deduct error (non-critical):', walletErr?.message);
+      }
+    }
 
     // Try auto-ticketing
     try {
@@ -1335,11 +1341,11 @@ router.post('/wallet/transfer', async (req, res) => {
 
 // POST /dashboard/ticket-issue-request — user requests admin to issue ticket
 router.post('/ticket-issue-request', async (req, res) => {
-  try {
-    const userId = req.user.sub;
-    const { bookingId, notes } = req.body;
-    if (!bookingId) return res.status(400).json({ message: 'bookingId is required' });
+  const userId = req.user.sub;
+  const { bookingId, notes } = req.body;
+  if (!bookingId) return res.status(400).json({ message: 'bookingId is required' });
 
+  try {
     // Verify booking belongs to user
     const [bookings] = await db.query('SELECT id, status, pnr, booking_ref, payment_status FROM bookings WHERE id = ? AND user_id = ?', [bookingId, userId]);
     if (bookings.length === 0) return res.status(404).json({ message: 'Booking not found' });
@@ -1352,11 +1358,29 @@ router.post('/ticket-issue-request', async (req, res) => {
       return res.status(400).json({ message: 'Ticket has already been issued' });
     }
 
+    // Ensure table exists
+    await db.query(`CREATE TABLE IF NOT EXISTS ticket_issue_requests (
+          id CHAR(36) PRIMARY KEY,
+          booking_id CHAR(36) NOT NULL,
+          user_id CHAR(36) NOT NULL,
+          status VARCHAR(20) DEFAULT 'pending',
+          notes TEXT,
+          admin_notes TEXT,
+          ticket_number VARCHAR(100),
+          pnr VARCHAR(20),
+          processed_at DATETIME,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          INDEX idx_booking (booking_id),
+          INDEX idx_user (user_id),
+          INDEX idx_status (status)
+    )`);
+
     // Check if there's already a pending request
     const [existing] = await db.query(
       "SELECT id FROM ticket_issue_requests WHERE booking_id = ? AND status IN ('pending', 'processing')", [bookingId]
     );
-    if (existing.length > 0) {
+    if (existing && existing.length > 0) {
       return res.status(400).json({ message: 'A ticket issue request is already pending for this booking' });
     }
 
@@ -1366,7 +1390,7 @@ router.post('/ticket-issue-request', async (req, res) => {
       [id, bookingId, userId, 'pending', notes || null]
     );
 
-    // Notify admin (optional — uses existing notify system)
+    // Notify admin (optional)
     try {
       const { notifyBookingStatus } = require('../services/notify');
       await notifyBookingStatus(booking.booking_ref, 'ticket_issue_requested', null);
@@ -1393,6 +1417,9 @@ router.get('/ticket-issue-requests', async (req, res) => {
     );
     res.json({ data: rows });
   } catch (err) {
+    if (isMissingTableError(err, 'ticket_issue_requests')) {
+      return res.json({ data: [] });
+    }
     console.error('[Dashboard] Ticket issue requests list error:', err);
     res.status(500).json({ message: 'Failed to fetch requests' });
   }
