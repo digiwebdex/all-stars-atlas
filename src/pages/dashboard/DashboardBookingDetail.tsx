@@ -372,15 +372,23 @@ const DashboardBookingDetail = () => {
           {/* ━━ Route + Status + Countdown ━━ */}
           <div className="flex flex-wrap items-center gap-3">
             <h2 className="text-2xl font-black tracking-tight">{booking.origin}-{booking.destination}</h2>
-            <Badge className={`${
-              booking.status === "on_hold" ? "bg-amber-500" :
-              booking.status === "ticketed" ? "bg-green-600" :
-              booking.status === "confirmed" ? "bg-emerald-500" :
-              booking.status === "processing" ? "bg-blue-500" :
-              booking.status === "cancelled" ? "bg-red-500" : "bg-muted"
-            } text-white text-sm px-3 py-1 font-bold`}>
-              {booking.status === "on_hold" ? "Reserved" : booking.status === "processing" ? "In Progress" : booking.status?.charAt(0).toUpperCase() + booking.status?.slice(1)}
-            </Badge>
+            {(() => {
+              // Derive display status: if issue request sent but booking still shows confirmed/on_hold, override to "In Progress"
+              const hasIssueRequest = hasIssuedWithBalance || booking.status === 'processing';
+              const displayStatus = isTicketed ? 'ticketed'
+                : (hasIssueRequest && !isTicketed && ['confirmed', 'on_hold', 'pending'].includes(booking.status)) ? 'processing'
+                : booking.status;
+              const statusLabel = displayStatus === 'on_hold' ? 'Reserved'
+                : displayStatus === 'processing' ? 'In Progress'
+                : displayStatus === 'ticketed' ? 'Ticketed'
+                : displayStatus?.charAt(0).toUpperCase() + displayStatus?.slice(1);
+              const statusColor = displayStatus === 'on_hold' ? 'bg-amber-500'
+                : displayStatus === 'ticketed' ? 'bg-green-600'
+                : displayStatus === 'processing' ? 'bg-blue-500'
+                : displayStatus === 'confirmed' ? 'bg-emerald-500'
+                : displayStatus === 'cancelled' ? 'bg-red-500' : 'bg-muted';
+              return <Badge className={`${statusColor} text-white text-sm px-3 py-1 font-bold`}>{statusLabel}</Badge>;
+            })()}
             {booking.paymentDeadline && booking.status === "on_hold" && countdown && (
               <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-warning/10 border border-warning/30 text-sm">
                 <AlertTriangle className="w-4 h-4 text-warning flex-shrink-0" />
