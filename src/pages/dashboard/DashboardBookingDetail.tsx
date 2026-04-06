@@ -627,7 +627,7 @@ const DashboardBookingDetail = () => {
           <Section title="Passenger Information">
             <div className="divide-y divide-border">
               {booking.passengers?.length > 0 ? booking.passengers.map((p: any, i: number) => (
-                <PassengerCard key={i} p={p} i={i} booking={booking} />
+                <PassengerCard key={i} p={p} i={i} booking={booking} effectiveTicketNo={effectiveTicketNo} />
               )) : (
                 <p className="text-sm text-muted-foreground text-center py-8">No passenger information available</p>
               )}
@@ -918,9 +918,10 @@ const DashboardBookingDetail = () => {
 };
 
 /* ── Passenger Card (collapsible) ─────────────────────── */
-const PassengerCard = ({ p, i, booking }: { p: any; i: number; booking: any }) => {
+const PassengerCard = ({ p, i, booking, effectiveTicketNo }: { p: any; i: number; booking: any; effectiveTicketNo?: string | null }) => {
   const [open, setOpen] = useState(true);
   const name = `${p.title || ""} ${p.firstName || ""} ${p.lastName || ""}`.trim().toUpperCase();
+  const ticketNo = effectiveTicketNo || (booking.ticketNo !== '—' ? booking.ticketNo : null);
   return (
     <div>
       <button className="w-full px-5 py-3 flex items-center justify-between hover:bg-muted/30 transition-colors" onClick={() => setOpen(!open)}>
@@ -945,8 +946,8 @@ const PassengerCard = ({ p, i, booking }: { p: any; i: number; booking: any }) =
                 {p.nationality && <><span className="text-muted-foreground">Nationality</span><span className="font-medium">{p.nationality}</span></>}
                 {p.email && <><span className="text-muted-foreground">Email</span><span className="font-medium text-xs break-all">{p.email}</span></>}
                 {p.phone && <><span className="text-muted-foreground">Phone Number</span><span className="font-medium">{p.phone}</span></>}
-                {booking.ticketNo && booking.ticketNo !== '—' && (
-                  <><span className="text-muted-foreground">Ticket Number</span><span className="font-medium font-mono text-green-600">{booking.ticketNo}</span></>
+                {ticketNo && (
+                  <><span className="text-muted-foreground font-semibold">Ticket Number</span><span className="font-bold font-mono text-green-600">{ticketNo}</span></>
                 )}
               </div>
             </div>
