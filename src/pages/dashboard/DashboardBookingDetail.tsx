@@ -298,13 +298,14 @@ const DashboardBookingDetail = () => {
         id: booking.id, pnr: booking.pnr !== "—" ? booking.pnr : undefined,
         gdsPnr: booking.gdsBookingId || undefined, airlinePnr: booking.airlinePnr || undefined,
         bookingRef: booking.id, source: booking.source,
+        ticketNo: effectiveTicketNo || undefined,
         airline: booking.airline || "Seven Trip", flightNo: booking.flightNumber || "",
         from: booking.origin, to: booking.destination,
         date: booking.departureTime || booking.date, time: booking.departureTime || "",
         passenger: booking.paxNames?.[0] || "Traveller", seat: "—", class: booking.cabinClass,
         isRoundTrip: booking.isRoundTrip,
         outbound: ob ? [seg(ob)] : [], returnSegments: rt ? [seg(rt)] : [],
-        passengers: booking.passengers?.map((p: any) => ({ title: p.title || "", firstName: p.firstName || "", lastName: p.lastName || "", passport: p.passport || "", seat: "" })) || [],
+        passengers: booking.passengers?.map((p: any) => ({ title: p.title || "", firstName: p.firstName || "", lastName: p.lastName || "", passport: p.passport || "", seat: "", ticketNumber: effectiveTicketNo || "" })) || [],
       });
       toast({ title: "Downloaded", description: "E-Ticket PDF saved" });
     } catch { toast({ title: "Failed", description: "Could not generate PDF.", variant: "destructive" }); }
