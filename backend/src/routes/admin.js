@@ -17,6 +17,11 @@ const lccFlights = require('./lcc-flights');
 const router = express.Router();
 router.use(authenticate, requireAdmin);
 
+function isMissingTableError(err, tableName) {
+  const message = String(err?.message || '');
+  return err?.code === 'ER_NO_SUCH_TABLE' || new RegExp(`\\b${tableName}\\b.*doesn't exist`, 'i').test(message);
+}
+
 // GET /admin/dashboard
 router.get('/dashboard', async (req, res) => {
   try {
@@ -902,17 +907,33 @@ router.put('/payment-approvals/:id', async (req, res) => {
 
         // Credit user wallet balance
         if (amount > 0) {
-          await db.query(
-            `INSERT INTO wallet (user_id, balance) VALUES (?, ?) 
-             ON DUPLICATE KEY UPDATE balance = balance + ?`,
-            [userId, amount, amount]
-          );
-          // Log wallet credit transaction
-          await db.query(
-            `INSERT INTO wallet_transactions (user_id, type, amount, balance_after, description) 
-             VALUES (?, 'credit', ?, (SELECT balance FROM wallet WHERE user_id = ?), ?)`,
-            [userId, amount, userId, `Deposit approved (Ref: ${txn[0].reference || req.params.id})`]
-          );
+          try {
+            const [walletRows] = await db.query('SELECT COALESCE(SUM(balance), 0) AS balance, COUNT(*) AS rowCount FROM wallet WHERE user_id = ?', [userId]);
+            const currentBalance = Number(walletRows[0]?.balance || 0);
+            const rowCount = Number(walletRows[0]?.rowCount || 0);
+
+            if (rowCount > 0) {
+              await db.query('UPDATE wallet SET balance = balance + ? WHERE user_id = ?', [amount, userId]);
+            } else {
+              await db.query('INSERT INTO wallet (user_id, balance) VALUES (?, ?)', [userId, amount]);
+            }
+
+            try {
+              await db.query(
+                `INSERT INTO wallet_transactions (user_id, type, amount, balance_after, description) 
+                 VALUES (?, 'credit', ?, ?, ?)`,
+                [userId, amount, currentBalance + amount, `Deposit approved (Ref: ${txn[0].reference || req.params.id})`]
+              );
+            } catch (walletTxnErr) {
+              if (!isMissingTableError(walletTxnErr, 'wallet_transactions')) {
+                throw walletTxnErr;
+              }
+            }
+          } catch (walletErr) {
+            if (!isMissingTableError(walletErr, 'wallet')) {
+              throw walletErr;
+            }
+          }
         }
 
         if (txn[0].booking_id) {
