@@ -1193,7 +1193,7 @@ router.get('/ticket-issue-requests', async (req, res) => {
 router.put('/ticket-issue-requests/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { action, adminNotes } = req.body; // action: 'issue' or 'reject'
+    const { action, adminNotes, ticketNumber, pnr: manualPnr } = req.body; // action: 'issue' or 'reject'
 
     const [requests] = await db.query(
       `SELECT tir.*, b.id as bid, b.pnr, b.status as booking_status, b.details, b.user_id as booking_user_id
@@ -1221,7 +1221,7 @@ router.put('/ticket-issue-requests/:id', async (req, res) => {
       const details = safeJsonParse(request.details) || {};
       const outbound = details.outbound || details;
       const source = outbound.source || details.source || '';
-      const gdsPnr = request.pnr || details.gdsPnr || outbound.gdsPnr;
+      const gdsPnr = manualPnr || request.pnr || details.gdsPnr || outbound.gdsPnr;
       const gdsBookingId = details.gdsBookingId || outbound.gdsBookingId;
       let gdsResult = null;
       let gdsError = null;
@@ -1242,31 +1242,56 @@ router.put('/ticket-issue-requests/:id', async (req, res) => {
         }
       }
 
-      if (gdsResult && gdsResult.success) {
-        // Update booking status
-        await db.query('UPDATE bookings SET status = ?, ticket_status = ? WHERE id = ?', ['ticketed', 'issued', request.bid]);
+      // Determine final ticket number — from GDS result, manual input, or admin notes
+      const finalTicketNo = ticketNumber || (gdsResult?.ticketNumbers?.[0]) || null;
+      const finalPnr = manualPnr || gdsPnr || request.pnr || null;
+
+      if ((gdsResult && gdsResult.success) || ticketNumber) {
+        // Update booking status + ticket_number on bookings table
+        const updateFields = ['status = ?', 'updated_at = NOW()'];
+        const updateParams = ['ticketed'];
+
+        // Try to set ticket_number column (may not exist on older schemas)
+        try {
+          if (finalTicketNo) {
+            await db.query('UPDATE bookings SET ticket_number = ? WHERE id = ?', [finalTicketNo, request.bid]);
+          }
+        } catch (colErr) {
+          // Column might not exist — try adding it
+          try {
+            await db.query('ALTER TABLE bookings ADD COLUMN ticket_number VARCHAR(100) NULL');
+            if (finalTicketNo) {
+              await db.query('UPDATE bookings SET ticket_number = ? WHERE id = ?', [finalTicketNo, request.bid]);
+            }
+          } catch (_) { /* ignore */ }
+        }
+
+        await db.query('UPDATE bookings SET status = ? WHERE id = ?', ['ticketed', request.bid]);
 
         // Create ticket records
-        if (gdsResult.ticketNumbers?.length > 0) {
-          for (const ticketNo of gdsResult.ticketNumbers) {
+        const ticketNos = gdsResult?.ticketNumbers?.length > 0 ? gdsResult.ticketNumbers : (finalTicketNo ? [finalTicketNo] : []);
+        for (const ticketNo of ticketNos) {
+          try {
             await db.query(
               'INSERT INTO tickets (id, booking_id, user_id, ticket_no, pnr, status, details) VALUES (?, ?, ?, ?, ?, ?, ?)',
-              [uuidv4(), request.bid, request.booking_user_id, ticketNo, gdsPnr,
+              [uuidv4(), request.bid, request.booking_user_id, ticketNo, finalPnr,
                'active', JSON.stringify({ source, issuedBy: req.user.email, issuedAt: new Date().toISOString(), viaRequest: id })]
             );
+          } catch (ticketErr) {
+            console.log('[Admin] Ticket record insert skipped:', ticketErr.message);
           }
         }
 
-        // Mark request as issued
+        // Mark request as issued with ticket number
         await db.query(
-          'UPDATE ticket_issue_requests SET status = ?, admin_notes = ?, processed_at = NOW() WHERE id = ?',
-          ['issued', adminNotes || `Issued via GDS. Tickets: ${(gdsResult.ticketNumbers || []).join(', ')}`, id]
+          'UPDATE ticket_issue_requests SET status = ?, admin_notes = ?, ticket_number = ?, pnr = ?, processed_at = NOW() WHERE id = ?',
+          ['issued', adminNotes || `Issued. Tickets: ${ticketNos.join(', ')}`, finalTicketNo, finalPnr, id]
         );
 
         return res.json({
           success: true,
           message: 'Ticket issued successfully',
-          ticketNumbers: gdsResult.ticketNumbers || [],
+          ticketNumbers: ticketNos,
           gdsResult,
         });
       } else {
