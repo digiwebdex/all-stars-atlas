@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Wallet, ArrowUpRight, ArrowDownLeft, Plus, Send, CreditCard, Smartphone, Building2, Banknote, FileImage, X, Copy, Check } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import DataLoader from "@/components/DataLoader";
@@ -38,6 +39,7 @@ const DashboardWallet = () => {
   const [depositNotes, setDepositNotes] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
   const [copiedAcct, setCopiedAcct] = useState<string | null>(null);
+  const [selectedBankIdx, setSelectedBankIdx] = useState<string>("");
 
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ["dashboard", "wallet"],
@@ -337,26 +339,47 @@ const DashboardWallet = () => {
                 {bankAccounts.length > 0 && (
                   <div className="space-y-2">
                     <p className="text-xs font-semibold text-foreground">Transfer to one of these accounts:</p>
-                    {bankAccounts.map((bank: any, i: number) => (
-                      <div key={bank.id || i} className="p-2.5 rounded-lg bg-background border border-border text-xs space-y-1">
-                        <p className="font-semibold text-sm">{bank.bankName || bank.name}</p>
-                        <div className="flex justify-between items-center">
-                          <span className="text-muted-foreground">A/C Name</span>
-                          <span className="font-medium">{bank.accountName}</span>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <span className="text-muted-foreground">A/C Number</span>
-                          <div className="flex items-center gap-1">
-                            <span className="font-mono font-semibold">{bank.accountNumber}</span>
-                            <button onClick={() => { navigator.clipboard.writeText(bank.accountNumber); setCopiedAcct(bank.accountNumber); setTimeout(() => setCopiedAcct(null), 2000); }} className="p-0.5">
-                              {copiedAcct === bank.accountNumber ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3 text-muted-foreground" />}
-                            </button>
+                    <Select value={selectedBankIdx} onValueChange={setSelectedBankIdx}>
+                      <SelectTrigger className="h-11">
+                        <SelectValue placeholder="Select a bank account..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {bankAccounts.map((bank: any, i: number) => (
+                          <SelectItem key={bank.id || i} value={String(i)}>
+                            <div className="flex items-center gap-2">
+                              <Building2 className="w-4 h-4 text-primary shrink-0" />
+                              <span className="font-medium">{bank.bankName || bank.name}</span>
+                              <span className="text-muted-foreground">— {bank.accountNumber || bank.accNo}</span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
+                    {/* Show selected bank details */}
+                    {selectedBankIdx !== "" && bankAccounts[Number(selectedBankIdx)] && (() => {
+                      const bank = bankAccounts[Number(selectedBankIdx)];
+                      return (
+                        <div className="p-2.5 rounded-lg bg-background border border-primary/20 text-xs space-y-1">
+                          <p className="font-semibold text-sm">{bank.bankName || bank.name}</p>
+                          <div className="flex justify-between items-center">
+                            <span className="text-muted-foreground">A/C Name</span>
+                            <span className="font-medium">{bank.accountName || bank.accName}</span>
                           </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-muted-foreground">A/C Number</span>
+                            <div className="flex items-center gap-1">
+                              <span className="font-mono font-semibold">{bank.accountNumber || bank.accNo}</span>
+                              <button onClick={() => { navigator.clipboard.writeText(bank.accountNumber || bank.accNo); setCopiedAcct(bank.accountNumber || bank.accNo); setTimeout(() => setCopiedAcct(null), 2000); }} className="p-0.5">
+                                {copiedAcct === (bank.accountNumber || bank.accNo) ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3 text-muted-foreground" />}
+                              </button>
+                            </div>
+                          </div>
+                          {(bank.branch) && <div className="flex justify-between"><span className="text-muted-foreground">Branch</span><span>{bank.branch}</span></div>}
+                          {(bank.routingNumber || bank.routing) && <div className="flex justify-between"><span className="text-muted-foreground">Routing</span><span className="font-mono">{bank.routingNumber || bank.routing}</span></div>}
                         </div>
-                        {bank.branch && <div className="flex justify-between"><span className="text-muted-foreground">Branch</span><span>{bank.branch}</span></div>}
-                        {bank.routingNumber && <div className="flex justify-between"><span className="text-muted-foreground">Routing</span><span className="font-mono">{bank.routingNumber}</span></div>}
-                      </div>
-                    ))}
+                      );
+                    })()}
                   </div>
                 )}
                 {bankAccounts.length === 0 && (
