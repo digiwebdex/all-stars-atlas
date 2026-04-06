@@ -85,6 +85,8 @@ function mapBooking(b: any) {
   const airlinePnrVal = details.airlinePnr || null;
   const gdsPnrVal = b.pnr || details.gdsPnr || null;
 
+  const ticketNo = b.ticketNo || details.ticketNumber || details.ticket_number || null;
+
   return {
     id: b.bookingRef || b.id, rawId: b.id, type: b.bookingType || "flight", status: b.status || "pending", title,
     amount: `৳${(b.totalAmount || 0).toLocaleString()}`, rawAmount: b.totalAmount || 0,
@@ -92,6 +94,7 @@ function mapBooking(b: any) {
     pnr: b.pnr || details.gdsPnr || "—",
     airlinePnr: airlinePnrVal,
     gdsBookingId: gdsPnrVal,
+    ticketNo,
     pax: paxCount,
     paymentDeadline: b.paymentDeadline || null,
     airline, airlineCode, flightNumber, cabinClass, departureTime, origin, destination, source,
@@ -245,6 +248,9 @@ const DashboardBookings = () => {
                           )}
                           {booking.gdsBookingId && (
                             <span className="text-[9px] text-muted-foreground font-mono block">Booking ID: {booking.gdsBookingId}</span>
+                          )}
+                          {booking.ticketNo && (
+                            <span className="text-[10px] text-green-600 font-bold font-mono block">🎫 {booking.ticketNo}</span>
                           )}
                         </div>
                       </TableCell>
