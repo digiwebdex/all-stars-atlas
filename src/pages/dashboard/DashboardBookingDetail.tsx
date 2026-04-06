@@ -141,6 +141,19 @@ const DashboardBookingDetail = () => {
   const booking = rawBookings.length > 0 ? mapBooking(rawBookings[0]) : null;
   const countdown = useCountdown(booking?.paymentDeadline || null);
 
+  // Fetch ticket issue request for this booking to get admin-entered ticket number
+  const { data: issueRequestData } = useQuery({
+    queryKey: ["dashboard", "ticket-issue-request", booking?.rawId],
+    queryFn: () => api.get<any>("/dashboard/ticket-issue-requests"),
+    enabled: !!booking,
+  });
+  const issueRequest = ((issueRequestData as any)?.data || []).find(
+    (r: any) => r.booking_id === booking?.rawId || r.bookingId === booking?.rawId
+  );
+  const issuedTicketNo = issueRequest?.ticket_number || issueRequest?.ticketNumber || null;
+  const effectiveTicketNo = booking?.ticketNo !== '—' ? booking?.ticketNo : issuedTicketNo;
+  const isTicketed = booking?.status === 'ticketed' || issueRequest?.status === 'issued';
+
   useEffect(() => {
     setHasIssuedWithBalance(
       String(booking?.paymentStatus || '').toLowerCase() === 'paid' ||
@@ -154,20 +167,6 @@ const DashboardBookingDetail = () => {
     queryFn: () => api.get<any>("/dashboard/wallet"),
     enabled: payDialogOpen || hasIssuedWithBalance,
   });
-  const walletBalance = Number((walletData as any)?.balance ?? 0);
-
-  // Fetch ticket issue request for this booking to get admin-entered ticket number
-  const { data: issueRequestData } = useQuery({
-    queryKey: ["dashboard", "ticket-issue-request", booking?.rawId],
-    queryFn: () => api.get<any>("/dashboard/ticket-issue-requests"),
-    enabled: !!booking,
-  });
-  const issueRequest = ((issueRequestData as any)?.data || []).find(
-    (r: any) => r.booking_id === booking?.rawId || r.bookingId === booking?.rawId
-  );
-  const issuedTicketNo = issueRequest?.ticket_number || issueRequest?.ticketNumber || null;
-  const effectiveTicketNo = booking?.ticketNo !== '—' ? booking?.ticketNo : issuedTicketNo;
-  const isTicketed = booking?.status === 'ticketed' || issueRequest?.status === 'issued';
 
   // SSR history for this booking
   const { data: ssrData, isLoading: ssrLoading } = useQuery({
