@@ -371,8 +371,8 @@ const DashboardBookingDetail = () => {
             </Button>
           )}
 
-          {/* ━━ Booking Info Bar (7 cols) ━━ */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-2">
+          {/* ━━ Booking Info Bar ━━ */}
+          <div className={`grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-${booking.ticketNo !== '—' ? '8' : '7'} gap-2`}>
             {[
               { label: "Booking Id", value: booking.gdsBookingId || booking.id, copy: true, highlight: true },
               { label: "Booking Created", value: fmtDateTime(booking.bookedAt) },
@@ -381,6 +381,7 @@ const DashboardBookingDetail = () => {
               { label: "Airline PNR", value: booking.airlinePnr || "—", copy: !!booking.airlinePnr },
               { label: "Refundable", value: booking.refundable ? "Yes" : "No", color: booking.refundable ? "text-emerald-600" : "text-destructive" },
               { label: "Total Amount", value: `${booking.rawAmount.toLocaleString('en-BD', { minimumFractionDigits: 2 })} BDT`, accent: true },
+              ...(booking.ticketNo !== '—' ? [{ label: "Ticket Number", value: booking.ticketNo, copy: true, color: "text-green-600 font-bold" }] : []),
             ].map((item, i) => (
               <div key={i} className={`p-3 rounded-lg border ${item.accent ? "border-primary/30 bg-primary/5" : "border-border bg-card"}`}>
                 <p className="text-[10px] uppercase text-muted-foreground font-medium">{item.label}</p>
