@@ -333,14 +333,18 @@ const DashboardBookingDetail = () => {
           {/* ━━ Action Buttons ━━ */}
           <div className="flex flex-wrap items-center gap-3">
             {/* Issue With Balance — hide when ticketed or already paid */}
-            {!isTicketed && ['on_hold', 'pending', 'confirmed'].includes(booking.status) && (
+            {!isTicketed && ['on_hold', 'pending'].includes(booking.status) && !hasIssuedWithBalance && String(booking.paymentStatus || '').toLowerCase() !== 'paid' && (
               <Button
                 onClick={() => setPayDialogOpen(true)}
-                disabled={hasIssuedWithBalance || String(booking.paymentStatus || '').toLowerCase() === 'paid'}
-                className="bg-emerald-500 hover:bg-emerald-600 text-white font-bold shadow-sm disabled:bg-muted disabled:text-muted-foreground disabled:hover:bg-muted"
+                className="bg-emerald-500 hover:bg-emerald-600 text-white font-bold shadow-sm"
               >
-                <Wallet className="w-4 h-4 mr-1.5" /> {hasIssuedWithBalance || String(booking.paymentStatus || '').toLowerCase() === 'paid' ? 'Issue Request Sent' : 'Issue With Balance'}
+                <Wallet className="w-4 h-4 mr-1.5" /> Issue With Balance
               </Button>
+            )}
+            {(hasIssuedWithBalance || booking.status === 'processing') && !isTicketed && (
+              <Badge className="bg-blue-500 text-white text-sm px-4 py-2 font-bold gap-1.5">
+                <Clock className="w-4 h-4" /> Issue Request Sent — Awaiting Admin
+              </Badge>
             )}
             {(isTicketed || effectiveTicketNo) && (
               <Badge className="bg-green-600 text-white text-sm px-4 py-2 font-bold gap-1.5">
@@ -367,9 +371,10 @@ const DashboardBookingDetail = () => {
               booking.status === "on_hold" ? "bg-amber-500" :
               booking.status === "ticketed" ? "bg-green-600" :
               booking.status === "confirmed" ? "bg-emerald-500" :
+              booking.status === "processing" ? "bg-blue-500" :
               booking.status === "cancelled" ? "bg-red-500" : "bg-muted"
             } text-white text-sm px-3 py-1 font-bold`}>
-              {booking.status === "on_hold" ? "Hold" : booking.status?.charAt(0).toUpperCase() + booking.status?.slice(1)}
+              {booking.status === "on_hold" ? "Reserved" : booking.status === "processing" ? "In Progress" : booking.status?.charAt(0).toUpperCase() + booking.status?.slice(1)}
             </Badge>
             {booking.paymentDeadline && booking.status === "on_hold" && countdown && (
               <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-warning/10 border border-warning/30 text-sm">
