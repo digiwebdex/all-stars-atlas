@@ -167,6 +167,7 @@ const DashboardBookingDetail = () => {
     queryFn: () => api.get<any>("/dashboard/wallet"),
     enabled: payDialogOpen || hasIssuedWithBalance,
   });
+  const walletBalance = Number((walletData as any)?.balance ?? 0);
 
   // SSR history for this booking
   const { data: ssrData, isLoading: ssrLoading } = useQuery({
