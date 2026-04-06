@@ -2,6 +2,56 @@
 
 All notable changes to this project are documented in this file.
 
+## [4.2.0] — 2026-04-06 — Wallet-Centric Finance System & Ticket Issue Requests
+
+### Added — Wallet-Centric Payment Architecture
+- **Wallet as single payment source**: Users deposit funds (bank transfer with receipt upload, SSLCommerz, bKash, Nagad), then pay bookings from wallet balance
+- **Issue With Balance**: One-click wallet payment on any Reserved/Pending/Confirmed booking → deducts wallet balance + auto-creates Ticket Issue Request for admin
+- **Atomic wallet transactions**: `/dashboard/wallet/pay` uses MySQL transaction with `FOR UPDATE` row locking — debit, booking update, and ticket request creation all succeed or all rollback
+- **Bank transfer deposit**: User selects admin-configured bank account from searchable dropdown (synced from Admin Settings), sees account details (A/C Name, Number, Branch, Routing) with copy-to-clipboard, uploads payment receipt
+- **Ticket Issue Request flow**: `POST /dashboard/ticket-issue-request` auto-created inside wallet/pay transaction; admin sees requests in `/admin/ticket-issue-requests` with Approve & Issue Ticket button
+- **Admin ticket issuance popup**: Shows PNR, ticket number (auto-filled or editable), triggers GDS ticketing (Sabre/BDFare/FlyHub/TTI) on confirm
+- **Admin booking detail 9-tab interface**: Itinerary, Passengers, Fare Breakdown, Invoice, Activity, Debug, Supplier, Terminal (GDS command window using `SabreCommandLLSRQ`), Actions
+- **Approve & Issue Ticket visibility guard**: Button only appears when booking `payment_status = 'paid'` (i.e., user paid via wallet)
+- **DashboardIssueWithBalance page**: Dedicated page listing all payable bookings with wallet balance, one-click pay
+
+### Added — New Database Tables
+- `wallet` — Per-user balance table (authoritative source of truth)
+- `wallet_transactions` — Wallet credit/debit audit log
+- `ticket_issue_requests` — Tracks ticket issue lifecycle (pending → processing → issued/rejected)
+
+### Added — New API Endpoints
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| `POST` | `/dashboard/wallet/pay` | User | Atomic: deduct wallet + update booking + create ticket issue request |
+| `POST` | `/dashboard/wallet/deposit` | User | Request deposit (bank transfer with receipt, pending admin approval) |
+| `POST` | `/dashboard/wallet/transfer` | User | Transfer balance to another user |
+| `POST` | `/dashboard/ticket-issue-request` | User | Manual ticket issue request (also auto-created by wallet/pay) |
+| `GET` | `/dashboard/ticket-issue-requests` | User | List user's own ticket issue requests |
+| `GET` | `/admin/ticket-issue-requests` | Admin | List all pending/processing ticket requests |
+| `PUT` | `/admin/ticket-issue-requests/:id` | Admin | Process request (issue via GDS or reject) |
+
+### Fixed — Wallet Balance
+- **Derived balance fallback**: If `wallet` table is missing or empty, balance derived from approved transaction history (`totalCredited - totalDebited`)
+- **`syncWalletFromDerivedBalance()`**: Auto-syncs derived balance into wallet table when wallet row is stale
+- **`getEffectiveWalletState()`**: Returns `effectiveBalance` = max(walletBalance, derivedBalance) for robust display
+- **Payment approval wallet credit**: Admin approving a deposit now correctly credits user's wallet via `UPDATE wallet SET balance = balance + ?` with INSERT fallback
+- **Transaction running balance**: Account Ledger computes running balance from newest→oldest with signed amounts
+
+### Fixed — Issue With Balance Transaction Atomicity
+- **🔴 Bug**: `/dashboard/wallet/pay` was failing with "Payment failed" because the wallet deduction, booking update, and ticket request creation were separate non-transactional calls
+- **Fix**: Wrapped entire flow in MySQL transaction with `conn.beginTransaction()` / `conn.commit()` / `conn.rollback()` and `FOR UPDATE` row lock on booking
+- **Fix**: Ticket issue request now created inside the same transaction (not as a separate frontend call)
+- **Fix**: Duplicate payment guard — rejects if `payment_status` already `'paid'` or if an open ticket request exists
+
+### Changed — Dashboard
+- **Removed**: "Send Payment Request" concept — replaced by wallet deposit + Issue With Balance
+- **Wallet page**: Bank account selection changed from static list to searchable dropdown with details shown on selection
+- **Booking Detail**: "Issue With Balance" button with popup showing wallet balance, booking details, after-payment balance
+- **Sabre Terminal**: Upgraded `SabreCommandLLSRQ` from deprecated v1.8.1 to v2.0.0+
+
+---
+
 ## [4.1.6] — 2026-03-17 — Dashboard Hardening & E-Ticket PDF Fix
 
 ### Fixed — E-Ticket PDF Garbled Characters
