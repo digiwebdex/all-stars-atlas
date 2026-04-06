@@ -59,13 +59,17 @@ function mapBooking(b: any) {
   const src = o.source || d.source || "db";
   const dom = d.isDomestic ?? (BD_AIRPORTS.includes(origin.toUpperCase()) && BD_AIRPORTS.includes(dest.toUpperCase()));
   const rawAmt = pickAmt(b.totalAmount, d.totalAmount, d.total, o.totalAmount, o.price) || 0;
-  const rawBase = pickAmt(d.baseFare, d.base_fare, d.fare?.baseFare, o.baseFare, b.baseFare);
-  const rawTax = pickAmt(d.taxes, d.tax, d.taxesAndFees, d.fare?.taxes, o.taxes, b.taxes);
-  const svc = pickAmt(d.serviceCharge, d.service_charge, d.serviceFee, o.serviceCharge, b.serviceCharge) || 0;
+  // Deep fare extraction — try multiple GDS response shapes
+  const fareObj = d.fare || d.fareBreakdown || d.pricing || o.fare || {};
+  const paxFares = d.paxFares || d.passengerFares || fareObj.passengerFares || [];
+  const firstPaxFare = Array.isArray(paxFares) && paxFares.length > 0 ? paxFares[0] : {};
+  const rawBase = pickAmt(d.baseFare, d.base_fare, fareObj.baseFare, firstPaxFare.baseFare, o.baseFare, b.baseFare, d.fareDetails?.baseFare);
+  const rawTax = pickAmt(d.taxes, d.tax, d.taxesAndFees, fareObj.taxes, firstPaxFare.tax, firstPaxFare.taxes, o.taxes, b.taxes, d.fareDetails?.taxes);
+  const svc = pickAmt(d.serviceCharge, d.service_charge, d.serviceFee, o.serviceCharge, b.serviceCharge, fareObj.serviceFee) || 0;
   let base = rawBase || 0; const tax = rawTax || 0;
   if (base <= 0 && rawAmt > 0) { const k = tax + svc; base = k > 0 ? Math.max(0, rawAmt - k) : rawAmt; }
-  const discount = pickAmt(d.discount, o.discount) || 0;
-  const ait = pickAmt(d.ait, d.aitVat) || 0;
+  const discount = pickAmt(d.discount, o.discount, fareObj.discount) || 0;
+  const ait = pickAmt(d.ait, d.aitVat, fareObj.aitVat) || 0;
   return {
     id: b.bookingRef || b.id, rawId: b.id, type: b.bookingType || "flight", status: b.status || "pending",
     amount: `৳${rawAmt.toLocaleString()}`, rawAmount: rawAmt,
@@ -74,7 +78,7 @@ function mapBooking(b: any) {
     pnr: b.pnr || d.gdsPnr || "—", gdsPnr: d.gdsPnr || b.pnr || null,
     airlinePnr: d.airlinePnr || null, gdsBookingId: b.pnr || d.gdsPnr || null,
     pax: pax.length || 1, paxNames: pax.map((p: any) => `${p.firstName||""} ${p.lastName||""}`.trim()).filter(Boolean),
-    ticketNo: b.ticketNo || "—", paymentMethod: b.paymentMethod || "—", paymentStatus: b.paymentStatus || "—",
+    ticketNo: b.ticketNo || b.ticket_number || d.ticketNumber || d.ticket_number || "—", paymentMethod: b.paymentMethod || "—", paymentStatus: b.paymentStatus || "—",
     paymentDeadline: b.paymentDeadline || null,
     airline, airlineCode: ac, flightNumber: fn, cabinClass: cabin, aircraft, departureTime: depTime, arrivalTime: arrTime,
     duration: dur, stops, baggage: bag, refundable, legs, returnFlight: ret, isRoundTrip: rt, source: src,
@@ -314,7 +318,8 @@ const DashboardBookingDetail = () => {
 
           {/* ━━ Action Buttons ━━ */}
           <div className="flex flex-wrap items-center gap-3">
-            {['on_hold', 'pending', 'confirmed'].includes(booking.status) && (
+            {/* Issue With Balance — hide when ticketed */}
+            {['on_hold', 'pending', 'confirmed'].includes(booking.status) && booking.status !== 'ticketed' && (
               <Button
                 onClick={() => setPayDialogOpen(true)}
                 disabled={hasIssuedWithBalance || String(booking.paymentStatus || '').toLowerCase() === 'paid'}
@@ -323,10 +328,20 @@ const DashboardBookingDetail = () => {
                 <Wallet className="w-4 h-4 mr-1.5" /> {hasIssuedWithBalance || String(booking.paymentStatus || '').toLowerCase() === 'paid' ? 'Issue Request Sent' : 'Issue With Balance'}
               </Button>
             )}
+            {booking.status === 'ticketed' && booking.ticketNo !== '—' && (
+              <Badge className="bg-green-600 text-white text-sm px-4 py-2 font-bold gap-1.5">
+                <Ticket className="w-4 h-4" /> Ticket: {booking.ticketNo}
+              </Badge>
+            )}
             <div className="ml-auto flex flex-wrap gap-2">
-              <Button variant="outline" className="font-semibold border-2 border-foreground/80" onClick={() => setTimelineOpen(true)}><Clock className="w-4 h-4 mr-1.5" /> Timeline</Button>
-              <Button variant="outline" className="font-semibold border-2 border-foreground/80" onClick={() => setSsrOpen(true)}><Eye className="w-4 h-4 mr-1.5" /> View SSR</Button>
-              <Button variant="outline" className="font-semibold border-2 border-destructive text-destructive hover:bg-destructive/10" onClick={() => setCancelOpen(true)}><Ban className="w-4 h-4 mr-1.5" /> Cancel Booking</Button>
+              {/* Timeline, View SSR, Cancel — hide when ticketed */}
+              {booking.status !== 'ticketed' && (
+                <>
+                  <Button variant="outline" className="font-semibold border-2 border-foreground/80" onClick={() => setTimelineOpen(true)}><Clock className="w-4 h-4 mr-1.5" /> Timeline</Button>
+                  <Button variant="outline" className="font-semibold border-2 border-foreground/80" onClick={() => setSsrOpen(true)}><Eye className="w-4 h-4 mr-1.5" /> View SSR</Button>
+                  <Button variant="outline" className="font-semibold border-2 border-destructive text-destructive hover:bg-destructive/10" onClick={() => setCancelOpen(true)}><Ban className="w-4 h-4 mr-1.5" /> Cancel Booking</Button>
+                </>
+              )}
               <Button className="bg-amber-500 hover:bg-amber-600 text-white font-bold shadow-sm" onClick={handleDownload}><Download className="w-4 h-4 mr-1.5" /> Voucher Download</Button>
             </div>
           </div>
