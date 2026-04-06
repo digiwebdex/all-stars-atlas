@@ -1417,6 +1417,9 @@ router.get('/ticket-issue-requests', async (req, res) => {
     );
     res.json({ data: rows });
   } catch (err) {
+    if (isMissingTableError(err, 'ticket_issue_requests')) {
+      return res.json({ data: [] });
+    }
     console.error('[Dashboard] Ticket issue requests list error:', err);
     res.status(500).json({ message: 'Failed to fetch requests' });
   }
