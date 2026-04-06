@@ -26,6 +26,31 @@ const paymentSlipUpload = multer({
 
 const APPROVED_TRANSACTION_STATUSES = new Set(['completed', 'approved']);
 
+function isMissingTableError(err, tableName) {
+  const message = String(err?.message || '');
+  return err?.code === 'ER_NO_SUCH_TABLE' || new RegExp(`\\b${tableName}\\b.*doesn't exist`, 'i').test(message);
+}
+
+async function readWalletAggregate(userId) {
+  try {
+    const [rows] = await db.query(
+      'SELECT COALESCE(SUM(balance), 0) AS balance, COUNT(*) AS rowCount FROM wallet WHERE user_id = ?',
+      [userId]
+    );
+
+    return {
+      tableExists: true,
+      balance: Number(rows[0]?.balance || 0),
+      rowCount: Number(rows[0]?.rowCount || 0),
+    };
+  } catch (err) {
+    if (isMissingTableError(err, 'wallet')) {
+      return { tableExists: false, balance: 0, rowCount: 0 };
+    }
+    throw err;
+  }
+}
+
 function parseTransactionMeta(meta) {
   if (!meta) return {};
   if (typeof meta === 'object') return meta;
@@ -95,8 +120,8 @@ function computeWalletTotalsFromTransactions(rows = []) {
 }
 
 async function getEffectiveWalletState(userId) {
-  const [walletRows] = await db.query('SELECT balance FROM wallet WHERE user_id = ?', [userId]);
-  const walletBalance = Number(walletRows[0]?.balance || 0);
+  const walletInfo = await readWalletAggregate(userId);
+  const walletBalance = walletInfo.balance;
 
   const [approvedTransactions] = await db.query(
     `SELECT id, booking_id, type, amount, description, status, payment_method, reference, meta, created_at
@@ -110,7 +135,8 @@ async function getEffectiveWalletState(userId) {
   const derivedBalance = Math.max(0, totalCredited - totalDebited);
 
   return {
-    hasWalletRow: walletRows.length > 0,
+    hasWalletTable: walletInfo.tableExists,
+    hasWalletRow: walletInfo.rowCount > 0,
     walletBalance,
     totalCredited,
     totalDebited,
@@ -120,15 +146,23 @@ async function getEffectiveWalletState(userId) {
 }
 
 async function syncWalletFromDerivedBalance(userId, walletState) {
-  if ((walletState.hasWalletRow && walletState.walletBalance > 0) || walletState.derivedBalance <= 0) {
+  if (!walletState.hasWalletTable || (walletState.hasWalletRow && walletState.walletBalance > 0) || walletState.derivedBalance <= 0) {
     return;
   }
 
-  await db.query(
-    `INSERT INTO wallet (user_id, balance) VALUES (?, ?)
-     ON DUPLICATE KEY UPDATE balance = VALUES(balance)`,
-    [userId, walletState.derivedBalance]
-  );
+  try {
+    const [result] = await db.query('UPDATE wallet SET balance = ? WHERE user_id = ?', [userId, walletState.derivedBalance]);
+
+    if (!result?.affectedRows) {
+      await db.query('INSERT INTO wallet (user_id, balance) VALUES (?, ?)', [userId, walletState.derivedBalance]);
+    }
+  } catch (err) {
+    if (isMissingTableError(err, 'wallet')) {
+      return;
+    }
+
+    console.warn('Wallet sync skipped:', err?.message || err);
+  }
 }
 
 // All routes require auth
