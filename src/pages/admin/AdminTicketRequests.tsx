@@ -142,7 +142,12 @@ const AdminTicketRequests = () => {
                 {requests.length === 0 ? (
                   <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-12">No ticket issue requests found</TableCell></TableRow>
                 ) : requests.map((r: any) => (
-                  <TableRow key={r.id} className="cursor-pointer hover:bg-muted/50" onClick={() => { setViewRequest(r); setAdminNotes(r.admin_notes || ""); }}>
+                   <TableRow key={r.id} className="cursor-pointer hover:bg-muted/50" onClick={() => {
+                     setViewRequest(r);
+                     setAdminNotes(r.admin_notes || "");
+                     setTicketNumberInput(r.ticket_number || "");
+                     setPnrInput(r.pnr || "");
+                   }}>
                     <TableCell className="font-mono text-xs font-bold">{r.booking_ref || "—"}</TableCell>
                     <TableCell>
                       <div>
@@ -156,9 +161,15 @@ const AdminTicketRequests = () => {
                     <TableCell><Badge variant="outline" className={`capitalize ${statusColors[r.status] || ""}`}>{r.status}</Badge></TableCell>
                     <TableCell className="text-xs text-muted-foreground">{fmtDate(r.created_at)}</TableCell>
                     <TableCell>
-                      <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setViewRequest(r); setAdminNotes(r.admin_notes || ""); }}>
-                        <Eye className="w-4 h-4" />
-                      </Button>
+                     <Button variant="ghost" size="sm" onClick={(e) => {
+                       e.stopPropagation();
+                       setViewRequest(r);
+                       setAdminNotes(r.admin_notes || "");
+                       setTicketNumberInput(r.ticket_number || "");
+                       setPnrInput(r.pnr || "");
+                     }}>
+                       <Eye className="w-4 h-4" />
+                     </Button>
                     </TableCell>
                   </TableRow>
                 ))}
