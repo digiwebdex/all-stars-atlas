@@ -1,7 +1,7 @@
 # Seven Trip — GDS Integration History & Troubleshooting
 
 > Complete timeline of all GDS provider integrations, issues encountered, and solutions applied.
-> Last updated: 2026-03-17 (v4.1.6 — Dashboard Hardening, API Resilience)
+> Last updated: 2026-04-06 (v4.2.0 — Wallet-Centric Finance, Ticket Issue Requests)
 
 ---
 
@@ -240,6 +240,20 @@ FF Update: POST /flights/update-frequent-flyer → Sabre UpdatePNR FQTV SSR (v4.
 ```
 
 > **Note**: Sabre REST GetSeats v1 (`/v1/offers/getseats`) requires a PNR or offerId — it cannot do raw flight+date lookups like SOAP EnhancedSeatMapRQ. SOAP remains the primary seat map provider for pre-booking.
+
+### Ticket Issuance Flow (v4.2.0)
+```
+User pays from wallet → POST /dashboard/wallet/pay (atomic transaction)
+  → Deducts wallet balance
+  → Updates booking payment_status='paid'
+  → Creates ticket_issue_request (status='pending')
+
+Admin processes → PUT /admin/ticket-issue-requests/:id { action: 'issue' }
+  → Detects GDS source from booking.details (sabre/tti/bdfare/flyhub)
+  → Calls provider's issueTicket() function with PNR
+  → On success: booking status='ticketed', ticket row created, request status='issued'
+  → On failure: request status reverts to 'pending' with GDS error note
+```
 
 ### Production Airline Support Matrix (Verified 2026-03-17)
 ```

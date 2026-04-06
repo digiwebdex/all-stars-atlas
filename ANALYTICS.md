@@ -1,7 +1,7 @@
 # Seven Trip — Complete Development Analytics & Project History
 
-> Comprehensive analytical overview of the Seven Trip platform — from first commit to production v4.1.6.
-> Last updated: 2026-03-17 (v4.1.6)
+> Comprehensive analytical overview of the Seven Trip platform — from first commit to production v4.2.0.
+> Last updated: 2026-04-06 (v4.2.0)
 
 ---
 
@@ -22,8 +22,9 @@
 | **Documentation & Fixes** | v4.1.3 | Mar 15, 2026 | 1 day | Flight sorting/filter/responsiveness fixes, TTI payload docs, 20+ .md version bump |
 | **Cabin Class Accuracy** | v4.1.5 | Mar 17, 2026 | 1 day | Branded fare naming, cabin class derived from booking code, fare option ordering by searched cabin |
 | **Dashboard Hardening** | v4.1.6 | Mar 17, 2026 | 1 day | E-ticket PDF ASCII fix, Flight Status/Fare Rules resilience, SSR History popup, all 15+ dashboard modules verified |
+| **Wallet-Centric Finance** | v4.2.0 | Mar 18–Apr 6, 2026 | 20 days | Wallet deposit/deduction, Issue With Balance atomic flow, ticket issue requests, admin 9-tab booking detail, admin ticket management, bank transfer dropdown, account ledger, payment approval wallet credit |
 
-**Total Development Time:** ~22 days (Mar 1–17, 2026)
+**Total Development Time:** ~37 days (Mar 1–Apr 6, 2026)
 
 ---
 
@@ -33,19 +34,19 @@
 |--------|-------|
 | **Total Pages** | 70+ |
 | **Public Pages** | 27 |
-| **Dashboard Pages** | 15+ |
-| **Admin Modules** | 17 |
+| **Dashboard Pages** | 20+ |
+| **Admin Modules** | 18 |
 | **CMS Modules** | 10 |
 | **Auth Pages** | 5 |
 | **API Endpoints** | 100+ |
-| **Database Tables** | 24 (20 core + 4 rewards) |
+| **Database Tables** | 27+ (20 core + 4 rewards + 3 finance) |
 | **GDS Integrations** | 6 (TTI, BDFare, FlyHub, Sabre REST, Sabre SOAP, Galileo) |
 | **Payment Gateways** | 3 (SSLCommerz, bKash, Nagad) |
 | **Airlines Supported** | 60+ (logos via Kiwi CDN) |
 | **Airports Database** | 740+ |
 | **Frontend Components** | 100+ |
 | **Backend Route Files** | 25 |
-| **Changelog Versions** | 55+ releases |
+| **Changelog Versions** | 60+ releases |
 | **Documentation Files** | 20+ (.md files) |
 
 ---
@@ -115,6 +116,15 @@
 - Flight status (FLIFO), stateless ancillaries REST, EMD issuance
 - Post-booking frequent flyer update via UpdatePNR
 - 10 new API endpoints, total 100+
+
+### Phase 6: Wallet-Centric Finance (v4.2.0)
+- Wallet as single payment source — deposit first, then pay bookings
+- Issue With Balance: atomic MySQL transaction (wallet debit + booking update + ticket request)
+- Admin ticket issue requests: approve & issue via GDS with popup dialog
+- Admin 9-tab booking detail (Itinerary, Passengers, Fare, Invoice, Activity, Debug, Supplier, Terminal, Actions)
+- Bank transfer deposit with admin-configured bank dropdown
+- Account ledger with running balance and CSV export
+- Payment approval flow credits wallet table directly
 
 ---
 
@@ -239,9 +249,9 @@
 | File | Description | Lines |
 |------|-------------|-------|
 | `README.md` | Project overview, features, setup | ~320 |
-| `CHANGELOG.md` | Version history (v1.0–v4.1.6, 55+ releases) | ~1030 |
-| `ANALYTICS.md` | This file — development analytics & history | ~260 |
-| `BUG_TRACKER.md` | 44+ bugs with root cause analysis | ~160 |
+| `CHANGELOG.md` | Version history (v1.0–v4.2.0, 60+ releases) | ~1100 |
+| `ANALYTICS.md` | This file — development analytics & history | ~280 |
+| `BUG_TRACKER.md` | 50+ bugs with root cause analysis | ~180 |
 | `GDS_INTEGRATION_HISTORY.md` | GDS provider integration timeline | ~220 |
 | `DEPLOYMENT_HISTORY.md` | All deployment records with commands | — |
 | `DEPLOYMENT_COMMANDS.md` | Copy-paste deployment commands | ~150 |

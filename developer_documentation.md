@@ -1,11 +1,12 @@
 # Seven Trip — Developer Documentation
 
-> This document explains **how the codebase works**, how to add features, and how every part connects. Written for developers who may be new to React or this project. Last updated: v4.1.6 (2026-03-17 — Dashboard Hardening, E-Ticket PDF Fix, API Resilience).
+> This document explains **how the codebase works**, how to add features, and how every part connects. Written for developers who may be new to React or this project. Last updated: v4.2.0 (2026-04-06 — Wallet-Centric Finance, Ticket Issue Requests, Admin 9-Tab Booking Management).
 
 ---
 
 ## 🔧 Latest Notes (v4.1.6)
 
+- **v4.2.0** (2026-04-06): Wallet-centric finance — wallet as single payment source; atomic `POST /dashboard/wallet/pay` with MySQL transactions; ticket issue request auto-created inside wallet payment; admin 9-tab booking detail (Itinerary, Passengers, Fare, Invoice, Activity, Debug, Supplier, Terminal, Actions); admin ticket issue management; bank transfer deposit with dropdown; Sabre Terminal upgraded to `SabreCommandLLSRQ` v2.0.0+.
 - **v4.1.6** (2026-03-17): Dashboard hardening — E-ticket PDF ASCII-safe rendering (replaced Unicode emojis with text indicators); Flight Status Badge graceful error handling; Fare Rules Modal airline code dedup fix; `sabreRequest()` resilience for empty responses; all 15+ dashboard modules verified functional.
 - **v4.1.5** (2026-03-17): Cabin class accuracy — card labels derived from booking class letter (J→Business, V→Economy); branded fare naming (Economy Convenience, Business Saver, etc.); fare options sorted by searched cabin; cabin class guide banner on results page.
 - **v4.1.4**: Quick-Sort Filters — Cheapest/Fastest/Best top chips now re-sort flight results correctly using `sortRoundTripPairs()` for round-trips and `sortFlights()` for one-way, with deterministic tie-breakers and payable-fare-based pricing.

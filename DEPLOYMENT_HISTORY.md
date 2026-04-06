@@ -1,7 +1,7 @@
 # Seven Trip — Complete Deployment History
 
 > Every deployment to production with exact commands, what changed, and verification steps.
-> Last updated: 2026-03-25 (v4.1.7 — Nginx Gzip Fix, Domain Migration seven-trip.com)
+> Last updated: 2026-04-06 (v4.2.0 — Wallet-Centric Finance, Ticket Issue Requests)
 
 ---
 
@@ -308,12 +308,47 @@ sudo nginx -t && sudo systemctl reload nginx
 
 ---
 
+### Deploy #10 — 2026-04-06 — Wallet-Centric Finance System (v4.2.0)
+
+**Version:** v4.2.0
+**Type:** Full Stack + Database Migration
+**Duration:** ~5 minutes
+
+**What was deployed:**
+- Wallet-centric payment architecture (deposit → wallet → Issue With Balance)
+- Atomic `POST /dashboard/wallet/pay` with MySQL transactions (`FOR UPDATE` row locking)
+- Ticket issue request system (user auto-creates via wallet pay, admin processes via GDS)
+- Admin 9-tab booking detail (Itinerary, Passengers, Fare, Invoice, Activity, Debug, Supplier, Terminal, Actions)
+- Bank transfer deposit with admin-configured bank dropdown
+- Wallet balance sync fixes (derived balance fallback, payment approval crediting)
+- Account ledger with running balance and CSV export
+- `SabreCommandLLSRQ` terminal upgraded to v2.0.0+
+
+**Commands:**
+```bash
+# Full deployment
+cd ~/projects/all-stars-atlas && git pull origin main && npm install && npm run build && sudo cp -r dist/* /var/www/seventrip/ && cd backend && npm install && pm2 restart seventrip-api
+
+# Database migration (ticket issue requests table)
+mysql -u root -p seventrip < backend/database/ticket-issue-requests-migration.sql
+```
+
+**Verification:**
+- [ ] Wallet deposit via bank transfer works (receipt upload)
+- [ ] Admin can approve deposit → wallet balance increases
+- [ ] Issue With Balance deducts wallet and creates admin request
+- [ ] Admin can see and process ticket issue requests
+- [ ] Admin 9-tab booking detail renders correctly
+- [ ] GDS Terminal commands execute via SabreCommandLLSRQ v2.0.0
+
+---
+
 ## 📊 Deployment Statistics
 
 | Metric | Value |
 |--------|-------|
-| **Total Deployments** | 11 |
-| **Full Stack** | 6 |
+| **Total Deployments** | 12 |
+| **Full Stack** | 7 |
 | **Backend Only** | 3 |
 | **Nginx Only** | 2 |
 | **Database Only** | 1 |

@@ -1,7 +1,7 @@
 # Seven Trip — Security Documentation
 
 > All security measures, authentication flow, and best practices implemented in the platform.
-> Last updated: 2026-03-25 (v4.1.7)
+> Last updated: 2026-04-06 (v4.2.0)
 
 ---
 
@@ -222,3 +222,8 @@ sudo ufw enable
 - [x] Error messages don't leak sensitive data
 - [x] Admin panel on hidden route (`/admin/login`)
 - [x] Archived bookings excluded from all queries
+- [x] Wallet payment amount verified server-side (0.1% tolerance, uses DB amount not client)
+- [x] Wallet deduction uses MySQL transactions with FOR UPDATE row locking
+- [x] Duplicate payment guard — rejects if booking already paid or ticket request already pending
+- [x] Ticket issue requests gated by booking ownership (user_id check)
+- [x] Payment receipt uploads stored server-side with multer (5MB limit, sanitized filenames)

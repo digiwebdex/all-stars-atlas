@@ -1,7 +1,7 @@
 # Seven Trip — System Architecture
 
 > Complete technical architecture documentation for the Seven Trip travel platform.
-> Last updated: 2026-03-25 (v4.1.7 — Domain Migration, Nginx Fix)
+> Last updated: 2026-04-06 (v4.2.0 — Wallet-Centric Finance, Ticket Issue Requests, Admin 9-Tab Booking)
 
 ---
 
@@ -70,7 +70,7 @@
                                  │
               ┌──────────────────▼───────────────────────┐
               │           MySQL / MariaDB                 │
-              │           24 tables                       │
+│           27+ tables                      │
               │           system_settings (API keys)      │
               └──────────────────────────────────────────┘
 ```
@@ -294,8 +294,8 @@ backend/
 │   │   ├── bkash.js           # bKash tokenized checkout
 │   │   ├── nagad.js           # Nagad payment gateway
 │   │   ├── visa.js            # Visa applications
-│   │   ├── dashboard.js       # User dashboard APIs
-│   │   ├── admin.js           # Admin panel APIs
+│   │   ├── dashboard.js       # User dashboard APIs (wallet/pay, wallet/deposit, ticket-issue-request)
+│   │   ├── admin.js           # Admin panel APIs (ticket-issue-requests, payment-approvals)
 │   │   ├── cms.js             # CMS CRUD
 │   │   ├── rewards.js         # Reward points system
 │   │   └── passport-ocr.js    # OCR + MRZ validation
@@ -305,6 +305,7 @@ backend/
 │
 ├── database/
 │   ├── migration.sql          # Full schema (20 tables)
+│   ├── ticket-issue-requests-migration.sql
 │   ├── social-auth-migration.sql
 │   ├── pay-later-migration.sql
 │   ├── pnr-column-migration.sql
@@ -315,17 +316,18 @@ backend/
 └── uploads/                   # Local file storage
 ```
 
-### Database Schema (24 Tables)
+### Database Schema (27+ Tables)
 
 | Category | Tables |
 |----------|--------|
 | **Auth** | `users`, `refresh_tokens` |
-| **Booking** | `bookings`, `transactions`, `tickets`, `travellers`, `wishlist` |
+| **Booking** | `bookings`, `transactions`, `tickets`, `travellers`, `wishlist`, `ticket_issue_requests` |
 | **Services** | `flights`, `hotels`, `holiday_packages`, `medical_hospitals`, `cars`, `esim_plans`, `recharge_operators`, `bill_categories` |
 | **Visa** | `visa_applications` |
 | **CMS** | `cms_pages`, `cms_blog_posts`, `cms_promotions`, `cms_destinations`, `cms_media`, `cms_email_templates` |
 | **System** | `system_settings`, `contact_submissions` |
 | **Rewards** | `user_points`, `point_transactions`, `reward_coupons`, `points_rules` |
+| **Finance** | `wallet`, `wallet_transactions` |
 
 ### API Key Management
 
@@ -371,15 +373,23 @@ Step 4: Review → POST /flights/book → CreatePNR (Sabre REST) with SSR/DOCS �
      → Navigate to /booking/confirmation
 ```
 
-### Payment → Auto-Ticket
+### Wallet-Centric Payment → Ticket Issue
 ```
-User pays → SSLCommerz IPN / bKash callback / Nagad callback
-         → Backend verifies payment
-         → autoTicketAfterPayment(bookingId)
-            → Check provider (Sabre/BDFare/FlyHub/TTI)
-            → Issue ticket via GDS API
-            → Update booking status (ticketed/confirmed)
-            → Send SMS + Email notification
+User deposits funds → Bank transfer (receipt upload) / SSLCommerz / bKash / Nagad
+     → Admin approves deposit → wallet.balance += amount
+     → User clicks "Issue With Balance" on booking
+     → POST /dashboard/wallet/pay (atomic MySQL transaction):
+        1. Verify wallet balance ≥ booking amount (server-side)
+        2. INSERT debit transaction (type='payment', status='completed')
+        3. UPDATE booking SET payment_status='paid', status='confirmed'
+        4. UPDATE wallet SET balance = GREATEST(balance - amount, 0)
+        5. INSERT ticket_issue_request (status='pending')
+        6. COMMIT (all-or-nothing)
+     → Admin sees request in /admin/ticket-requests
+     → Admin clicks "Approve & Issue Ticket"
+        → GDS API call (Sabre/TTI/BDFare/FlyHub) issueTicket()
+        → Update booking status='ticketed', create tickets row
+        → Notify user via SMS + Email
 ```
 
 ---

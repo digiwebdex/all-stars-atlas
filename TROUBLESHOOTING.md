@@ -307,3 +307,25 @@ sudo certbot certificates
 # MySQL test
 mysql -u root -p -e "SELECT COUNT(*) FROM seventrip.users;"
 ```
+
+---
+
+## 💰 Wallet & Finance Issues
+
+### Issue With Balance Showing "Payment Failed"
+
+**Possible causes:**
+| Cause | Fix |
+|-------|-----|
+| `wallet` table missing | Auto-creates on first deposit approval |
+| Booking already paid | Already processed — no action needed |
+| Ticket request already pending | Wait for admin to process existing request |
+| Amount mismatch | Refresh page and retry |
+| Insufficient balance | Deposit more funds first |
+
+### Wallet Balance Showing ৳0 After Approved Deposit
+
+**Fix:** System auto-derives balance from transactions. Restart API to force sync:
+```bash
+pm2 restart seventrip-api
+```
