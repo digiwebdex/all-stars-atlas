@@ -151,7 +151,7 @@ async function syncWalletFromDerivedBalance(userId, walletState) {
   }
 
   try {
-    const [result] = await db.query('UPDATE wallet SET balance = ? WHERE user_id = ?', [userId, walletState.derivedBalance]);
+    const [result] = await db.query('UPDATE wallet SET balance = ? WHERE user_id = ?', [walletState.derivedBalance, userId]);
 
     if (!result?.affectedRows) {
       await db.query('INSERT INTO wallet (user_id, balance) VALUES (?, ?)', [userId, walletState.derivedBalance]);
@@ -163,6 +163,26 @@ async function syncWalletFromDerivedBalance(userId, walletState) {
 
     console.warn('Wallet sync skipped:', err?.message || err);
   }
+}
+
+async function ensureTicketIssueRequestsTable(executor = db) {
+  await executor.query(`CREATE TABLE IF NOT EXISTS ticket_issue_requests (
+        id CHAR(36) PRIMARY KEY,
+        booking_id CHAR(36) NOT NULL,
+        user_id CHAR(36) NOT NULL,
+        status VARCHAR(20) DEFAULT 'pending',
+        notes TEXT,
+        admin_notes TEXT,
+        ticket_number VARCHAR(100),
+        pnr VARCHAR(20),
+        processed_by CHAR(36),
+        processed_at DATETIME,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_booking (booking_id),
+        INDEX idx_user (user_id),
+        INDEX idx_status (status)
+  )`);
 }
 
 // All routes require auth
@@ -1156,6 +1176,7 @@ router.post('/payment-requests', paymentSlipUpload.single('depositSlip'), async 
 
 // ── Pay Booking With Wallet Balance ──────────────────────
 router.post('/wallet/pay', async (req, res) => {
+  let conn = null;
   try {
     const userId = req.user.sub || req.user.id;
     const { bookingId, amount } = req.body;
@@ -1205,44 +1226,108 @@ router.post('/wallet/pay', async (req, res) => {
       return res.status(400).json({ message: `Insufficient balance. Available: ৳${balance.toLocaleString()}, Required: ৳${verifiedAmount.toLocaleString()}` });
     }
 
+    conn = await db.getConnection();
+    await conn.beginTransaction();
+
+    const [lockedBookingRows] = await conn.query(
+      `SELECT id, status, booking_ref, total_amount, amount, payment_status, pnr
+       FROM bookings
+       WHERE id = ? AND user_id = ?
+       FOR UPDATE`,
+      [bookingId, userId]
+    );
+
+    if (lockedBookingRows.length === 0) {
+      await conn.rollback();
+      return res.status(404).json({ message: 'Booking not found' });
+    }
+
+    const lockedBooking = lockedBookingRows[0];
+    if (String(lockedBooking.payment_status || '').toLowerCase() === 'paid') {
+      await conn.rollback();
+      return res.status(400).json({ message: 'This booking has already been paid from wallet' });
+    }
+
+    await ensureTicketIssueRequestsTable(conn);
+
+    const [openRequests] = await conn.query(
+      `SELECT id, status FROM ticket_issue_requests
+       WHERE booking_id = ? AND status IN ('pending', 'processing', 'issued')
+       LIMIT 1`,
+      [bookingId]
+    );
+
+    if (openRequests.length > 0) {
+      await conn.rollback();
+      return res.status(400).json({
+        message: openRequests[0].status === 'issued'
+          ? 'Ticket has already been issued for this booking'
+          : 'An issue request is already pending for this booking',
+      });
+    }
+
     // Create debit transaction
     const txnId = require('uuid').v4();
-    await db.query(
+    const requestId = uuidv4();
+    await conn.query(
       `INSERT INTO transactions (id, user_id, booking_id, type, amount, description, status, created_at)
        VALUES (?, ?, ?, 'payment', ?, ?, 'completed', NOW())`,
       [txnId, userId, bookingId, -Math.abs(verifiedAmount), `Wallet payment for booking ${booking.booking_ref || bookingId}`]
     );
 
     // Update booking status
-    await db.query(
-      `UPDATE bookings SET status = 'confirmed', payment_status = 'paid', updated_at = NOW() WHERE id = ?`,
+    await conn.query(
+      `UPDATE bookings
+       SET status = CASE WHEN status = 'on_hold' THEN 'confirmed' ELSE status END,
+           payment_status = 'paid',
+           updated_at = NOW()
+       WHERE id = ?`,
       [bookingId]
     );
 
     // Deduct from wallet table
     try {
-      await db.query(
+      await conn.query(
         `UPDATE wallet SET balance = GREATEST(balance - ?, 0) WHERE user_id = ?`,
         [verifiedAmount, userId]
       );
     } catch (walletErr) {
       if (!isMissingTableError(walletErr, 'wallet')) {
-        console.error('Wallet deduct error (non-critical):', walletErr?.message);
+        throw walletErr;
       }
     }
 
-    // Try auto-ticketing
+    await conn.query(
+      `INSERT INTO ticket_issue_requests (id, booking_id, user_id, status, notes, pnr)
+       VALUES (?, ?, ?, 'pending', ?, ?)`,
+      [requestId, bookingId, userId, 'Paid from wallet balance. Please issue ticket.', lockedBooking.pnr || booking.pnr || null]
+    );
+
+    await conn.commit();
+
     try {
-      const { autoTicketAfterPayment } = require('../services/auto-ticket');
-      await autoTicketAfterPayment(bookingId);
-    } catch (ticketErr) {
-      console.error('Auto-ticket after wallet pay error:', ticketErr);
+      const { notifyBookingStatus } = require('../services/notify');
+      await notifyBookingStatus(lockedBooking.booking_ref || booking.booking_ref, 'ticket_issue_requested', null);
+    } catch (notifyErr) {
+      console.log('[Wallet Pay] Ticket issue notification skipped:', notifyErr?.message || notifyErr);
     }
 
-    res.json({ success: true, message: 'Payment successful', transactionId: txnId });
+    res.json({
+      success: true,
+      message: 'Wallet debited. Issue request sent to admin.',
+      transactionId: txnId,
+      requestId,
+    });
   } catch (err) {
+    if (conn) {
+      try {
+        await conn.rollback();
+      } catch {}
+    }
     console.error('Wallet pay error:', err);
     res.status(500).json({ message: 'Payment failed' });
+  } finally {
+    if (conn) conn.release();
   }
 });
 
@@ -1358,23 +1443,7 @@ router.post('/ticket-issue-request', async (req, res) => {
       return res.status(400).json({ message: 'Ticket has already been issued' });
     }
 
-    // Ensure table exists
-    await db.query(`CREATE TABLE IF NOT EXISTS ticket_issue_requests (
-          id CHAR(36) PRIMARY KEY,
-          booking_id CHAR(36) NOT NULL,
-          user_id CHAR(36) NOT NULL,
-          status VARCHAR(20) DEFAULT 'pending',
-          notes TEXT,
-          admin_notes TEXT,
-          ticket_number VARCHAR(100),
-          pnr VARCHAR(20),
-          processed_at DATETIME,
-          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-          INDEX idx_booking (booking_id),
-          INDEX idx_user (user_id),
-          INDEX idx_status (status)
-    )`);
+    await ensureTicketIssueRequestsTable();
 
     // Check if there's already a pending request
     const [existing] = await db.query(

@@ -240,15 +240,6 @@ const DashboardBookingDetail = () => {
     setPayLoading(true);
     try {
       await api.post("/dashboard/wallet/pay", { bookingId: booking.rawId, amount });
-      // Auto-create ticket issue request for admin
-      try {
-        await api.post("/dashboard/ticket-issue-request", {
-          bookingId: booking.rawId,
-          notes: "Paid from wallet balance. Please issue ticket.",
-        });
-      } catch (e) {
-        console.error("Auto ticket issue request failed:", e);
-      }
       toast({ title: "Payment Successful ✓", description: "Wallet debited. Ticket issue request sent to admin." });
       setPayDialogOpen(false);
       refetch();

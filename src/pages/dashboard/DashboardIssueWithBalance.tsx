@@ -48,18 +48,7 @@ const DashboardIssueWithBalance = () => {
   // Pay with balance mutation
   const payMutation = useMutation({
     mutationFn: async (data: { bookingId: string; amount: number }) => {
-      // 1. Pay from wallet
       await api.post("/dashboard/wallet/pay", data);
-      // 2. Auto-create ticket issue request for admin
-      try {
-        await api.post("/dashboard/ticket-issue-request", {
-          bookingId: data.bookingId,
-          notes: "Paid from wallet balance. Please issue ticket.",
-        });
-      } catch (e) {
-        // Ticket request is secondary — payment already succeeded
-        console.error("Auto ticket issue request failed:", e);
-      }
     },
     onSuccess: () => {
       setConfirmDialog(false);
