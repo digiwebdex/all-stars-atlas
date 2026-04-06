@@ -305,6 +305,7 @@ router.get('/bookings', async (req, res) => {
 
     // Try to fetch ticket numbers for these bookings
     let ticketMap = {};
+    let requestTicketMap = {};
     try {
       const bookingIds = rows.map(b => b.id);
       if (bookingIds.length > 0) {
@@ -315,6 +316,21 @@ router.get('/bookings', async (req, res) => {
         for (const t of tickets) {
           if (!ticketMap[t.booking_id]) ticketMap[t.booking_id] = t.ticket_no;
         }
+
+        try {
+          const [requestRows] = await db.query(
+            `SELECT booking_id, ticket_number, status, updated_at
+             FROM ticket_issue_requests
+             WHERE booking_id IN (${bookingIds.map(() => '?').join(',')})
+               AND ticket_number IS NOT NULL
+               AND ticket_number <> ''
+             ORDER BY updated_at DESC, created_at DESC`,
+            bookingIds
+          );
+          for (const r of requestRows) {
+            if (!requestTicketMap[r.booking_id]) requestTicketMap[r.booking_id] = r.ticket_number;
+          }
+        } catch (_) { /* ticket_issue_requests table may not exist */ }
       }
     } catch (_) { /* tickets table may not exist */ }
 
@@ -327,7 +343,7 @@ router.get('/bookings', async (req, res) => {
         details, passengerInfo: safeJsonParse(b.passenger_info, []),
         contactInfo: safeJsonParse(b.contact_info, {}), notes: b.notes,
         pnr: b.pnr || details.gdsPnr || details.outbound?.pnr || null,
-        ticketNo: b.ticket_number || ticketMap[b.id] || null,
+        ticketNo: b.ticket_number || details.ticketNumber || details.ticket_number || ticketMap[b.id] || requestTicketMap[b.id] || null,
         paymentDeadline: b.payment_deadline || null,
         bookedAt: b.booked_at, updatedAt: b.updated_at,
       };
