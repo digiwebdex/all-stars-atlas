@@ -142,8 +142,12 @@ const DashboardBookingDetail = () => {
   const countdown = useCountdown(booking?.paymentDeadline || null);
 
   useEffect(() => {
-    setHasIssuedWithBalance(String(booking?.paymentStatus || '').toLowerCase() === 'paid');
-  }, [booking?.paymentStatus]);
+    setHasIssuedWithBalance(
+      String(booking?.paymentStatus || '').toLowerCase() === 'paid' ||
+      booking?.status === 'processing' ||
+      !!issueRequest
+    );
+  }, [booking?.paymentStatus, booking?.status, issueRequest]);
 
   const { data: walletData } = useQuery({
     queryKey: ["dashboard", "wallet", "detail"],
