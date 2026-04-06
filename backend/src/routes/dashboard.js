@@ -1315,7 +1315,7 @@ router.post('/wallet/pay', async (req, res) => {
     // Update booking status
     await conn.query(
       `UPDATE bookings
-       SET status = CASE WHEN status = 'on_hold' THEN 'confirmed' ELSE status END,
+       SET status = 'processing',
            payment_status = 'paid',
            updated_at = NOW()
        WHERE id = ?`,
