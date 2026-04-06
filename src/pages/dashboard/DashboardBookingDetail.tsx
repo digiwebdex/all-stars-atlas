@@ -497,44 +497,84 @@ const DashboardBookingDetail = () => {
             )}
           </Section>
 
-          {/* ━━ Customer Fare Summary ━━ */}
-          <Section title="Customer Fare Summary">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead><tr className="border-b border-border bg-muted/30">
-                  <th className="px-5 py-2.5 text-left text-xs font-bold text-muted-foreground">Pax Type</th>
-                  <th className="px-5 py-2.5 text-left text-xs font-bold text-muted-foreground">Base Fare</th>
-                  <th className="px-5 py-2.5 text-left text-xs font-bold text-muted-foreground">Tax</th>
-                  <th className="px-5 py-2.5 text-left text-xs font-bold text-muted-foreground">Service Fee</th>
-                  <th className="px-5 py-2.5 text-left text-xs font-bold text-muted-foreground">Discount</th>
-                  <th className="px-5 py-2.5 text-left text-xs font-bold text-muted-foreground">Pax Count</th>
-                  <th className="px-5 py-2.5 text-right text-xs font-bold text-muted-foreground">Amount</th>
-                </tr></thead>
-                <tbody>
-                  <tr className="border-b border-border/50">
-                    <td className="px-5 py-3 font-medium">Adult</td>
-                    <td className="px-5 py-3">{booking.baseFare.toLocaleString('en-BD', { minimumFractionDigits: 2 })}</td>
-                    <td className="px-5 py-3">{booking.taxes.toLocaleString('en-BD', { minimumFractionDigits: 2 })}</td>
-                    <td className="px-5 py-3">{booking.serviceCharge.toLocaleString('en-BD', { minimumFractionDigits: 2 })}</td>
-                    <td className="px-5 py-3">{booking.discount > 0 ? `- ${booking.discount.toLocaleString('en-BD', { minimumFractionDigits: 2 })}` : "0.00"}</td>
-                    <td className="px-5 py-3">{booking.pax}</td>
-                    <td className="px-5 py-3 text-right font-bold">{booking.rawAmount.toLocaleString('en-BD', { minimumFractionDigits: 2 })}</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
+          {/* ━━ Customer Price Summary ━━ */}
+          <Section title="Customer Price Summary">
+            <div className="px-5 pt-4 pb-2">
+              {/* Reward Points */}
+              {booking.details?.rewardPoints > 0 && (
+                <div className="flex justify-between items-center text-sm mb-4 text-emerald-600 dark:text-emerald-400">
+                  <span className="font-medium">Total Earned Reward Points</span>
+                  <span className="font-bold">+ {Math.round(booking.details.rewardPoints).toLocaleString()}</span>
+                </div>
+              )}
 
-            {/* Summary totals */}
-            <div className="px-5 py-4 space-y-1.5">
-              <div className="flex justify-between text-sm"><span className="text-muted-foreground">Traveler</span><span className="font-medium">{booking.pax} Pax</span></div>
-              {booking.discount > 0 && <div className="flex justify-between text-sm"><span className="text-muted-foreground">Total Discount</span><span className="font-medium">- {booking.discount.toLocaleString('en-BD', { minimumFractionDigits: 2 })}</span></div>}
-              {booking.ait > 0 && <div className="flex justify-between text-sm"><span className="text-muted-foreground">Total AIT & VAT</span><span className="font-medium">{booking.ait.toLocaleString('en-BD', { minimumFractionDigits: 2 })}</span></div>}
-              <div className="flex justify-between text-sm"><span className="text-muted-foreground">Extra Baggage/ Meal/ Seat</span><span className="font-medium">{(booking.addOns?.total || 0).toLocaleString()}</span></div>
-              <div className="flex justify-between text-sm"><span className="text-muted-foreground">Bundle Cost</span><span className="font-medium">0</span></div>
-              <Separator className="my-2" />
-              <div className="flex justify-between text-base font-bold">
-                <span className="text-primary">Total Customer Payable</span>
-                <span className="text-primary">BDT {booking.rawAmount.toLocaleString('en-BD', { minimumFractionDigits: 2 })}</span>
+              {/* Pax icons header */}
+              <div className="flex items-center justify-between mb-4">
+                <h4 className="text-base font-bold">Customer Price Summary</h4>
+                <div className="flex items-center gap-4 text-sm">
+                  <span className="flex items-center gap-1"><Users className="w-4 h-4 text-primary" /> {booking.pax}</span>
+                  <span className="flex items-center gap-1"><Baby className="w-4 h-4 text-primary" /> {booking.details?.childCount || 0}</span>
+                  <span className="flex items-center gap-1"><Accessibility className="w-4 h-4 text-primary" /> {booking.details?.infantCount || 0}</span>
+                </div>
+              </div>
+
+              {/* Per-traveller expandable */}
+              <div className="border border-border rounded-lg overflow-hidden mb-4">
+                <div className="px-4 py-3 bg-muted/30 flex items-center justify-between cursor-pointer">
+                  <span className="text-sm font-semibold">Traveller {booking.pax > 0 ? 1 : 0} (Adult)</span>
+                </div>
+                <div className="px-4 py-2 space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Base Price</span>
+                    <span className="font-medium">{booking.baseFare.toLocaleString('en-BD', { minimumFractionDigits: 2 })} BDT</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Tax fee</span>
+                    <span className="font-medium">{booking.taxes.toLocaleString('en-BD', { minimumFractionDigits: 2 })} BDT</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Line items */}
+              <div className="space-y-2.5 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Discount</span>
+                  <span className="font-medium">{booking.discount > 0 ? `-${booking.discount.toLocaleString('en-BD', { minimumFractionDigits: 2 })}` : "0.00"} BDT</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Special Commission</span>
+                  <span className="font-medium">{(booking.details?.specialCommission || 0).toLocaleString('en-BD', { minimumFractionDigits: 0 })} BDT</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Service fee</span>
+                  <span className="font-medium">{booking.serviceCharge.toLocaleString('en-BD', { minimumFractionDigits: 2 })} BDT</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">AIT & VAT</span>
+                  <span className="font-medium">{booking.ait.toLocaleString('en-BD', { minimumFractionDigits: 2 })} BDT</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Extra Baggage Cost</span>
+                  <span className="font-medium">{(booking.addOns?.baggage || 0).toLocaleString()} BDT</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Seat Cost</span>
+                  <span className="font-medium">{(booking.addOns?.seat || 0).toLocaleString()} BDT</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Meal Cost</span>
+                  <span className="font-medium">{(booking.addOns?.meal || 0).toLocaleString()} BDT</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Total Addons</span>
+                  <span className="font-medium">{(booking.addOns?.total || 0).toLocaleString()} BDT</span>
+                </div>
+              </div>
+
+              <Separator className="my-4" />
+              <div className="flex justify-between items-center text-base font-bold pb-2">
+                <span className="text-primary">Total Payable (incl. All charges)</span>
+                <span className="text-primary">{booking.rawAmount.toLocaleString('en-BD', { minimumFractionDigits: 2 })} BDT</span>
               </div>
             </div>
           </Section>
