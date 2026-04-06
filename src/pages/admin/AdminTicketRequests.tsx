@@ -226,6 +226,26 @@ const AdminTicketRequests = () => {
 
               {viewRequest.status === "pending" || viewRequest.status === "processing" ? (
                 <>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-semibold">Ticket Number <span className="text-destructive">*</span></Label>
+                      <Input
+                        placeholder="e.g. 065-1234567890"
+                        value={ticketNumberInput}
+                        onChange={e => setTicketNumberInput(e.target.value)}
+                        className="font-mono"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-semibold">PNR (override)</Label>
+                      <Input
+                        placeholder="Auto from booking"
+                        value={pnrInput}
+                        onChange={e => setPnrInput(e.target.value)}
+                        className="font-mono"
+                      />
+                    </div>
+                  </div>
                   <Textarea
                     placeholder="Admin notes (optional)"
                     value={adminNotes}
