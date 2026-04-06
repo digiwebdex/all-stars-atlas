@@ -151,18 +151,28 @@ const DashboardBookingDetail = () => {
   const bookingRequests = ((issueRequestData as any)?.data || []).filter(
     (r: any) => r.booking_id === booking?.rawId || r.bookingId === booking?.rawId
   );
-  const issueRequest = bookingRequests.find((r: any) => r.ticket_number || r.ticketNumber || r.status === 'issued') || bookingRequests[0];
-  const issuedTicketNo = issueRequest?.ticket_number || issueRequest?.ticketNumber || null;
-  const effectiveTicketNo = booking?.ticketNo !== '—' ? booking?.ticketNo : issuedTicketNo;
-  const isTicketed = booking?.status === 'ticketed' || issueRequest?.status === 'issued';
+  const sortedBookingRequests = [...bookingRequests].sort((a: any, b: any) => {
+    const aTime = new Date(a?.updated_at || a?.processed_at || a?.created_at || 0).getTime();
+    const bTime = new Date(b?.updated_at || b?.processed_at || b?.created_at || 0).getTime();
+    return bTime - aTime;
+  });
+  const latestIssuedRequest = sortedBookingRequests.find((r: any) => {
+    const status = String(r?.status || '').toLowerCase();
+    return status === 'issued' || !!(r?.ticket_number || r?.ticketNumber);
+  });
+  const latestActiveIssueRequest = sortedBookingRequests.find((r: any) => ['pending', 'processing'].includes(String(r?.status || '').toLowerCase()));
+  const issuedTicketNo = latestIssuedRequest?.ticket_number || latestIssuedRequest?.ticketNumber || null;
+  const effectiveTicketNo = [booking?.ticketNo, issuedTicketNo].find((value) => value && value !== '—') || null;
+  const hasFinalTicket = !!effectiveTicketNo;
+  const isTicketed = booking?.status === 'ticketed' || String(latestIssuedRequest?.status || '').toLowerCase() === 'issued';
+  const hasActiveIssueRequest = !hasFinalTicket && (
+    booking?.status === 'processing' ||
+    ['pending', 'processing'].includes(String(latestActiveIssueRequest?.status || '').toLowerCase())
+  );
 
   useEffect(() => {
-    setHasIssuedWithBalance(
-      String(booking?.paymentStatus || '').toLowerCase() === 'paid' ||
-      booking?.status === 'processing' ||
-      !!issueRequest
-    );
-  }, [booking?.paymentStatus, booking?.status, issueRequest]);
+    setHasIssuedWithBalance(hasActiveIssueRequest);
+  }, [hasActiveIssueRequest]);
 
   const { data: walletData } = useQuery({
     queryKey: ["dashboard", "wallet", "detail"],
@@ -347,12 +357,12 @@ const DashboardBookingDetail = () => {
                 <Wallet className="w-4 h-4 mr-1.5" /> Issue With Balance
               </Button>
             )}
-            {(hasIssuedWithBalance || booking.status === 'processing') && !isTicketed && (
+            {hasIssuedWithBalance && !isTicketed && !hasFinalTicket && (
               <Badge className="bg-blue-500 text-white text-sm px-4 py-2 font-bold gap-1.5">
                 <Clock className="w-4 h-4" /> Issue Request Sent — Awaiting Admin
               </Badge>
             )}
-            {(isTicketed || effectiveTicketNo) && (
+            {(isTicketed || hasFinalTicket) && (
               <Badge className="bg-green-600 text-white text-sm px-4 py-2 font-bold gap-1.5">
                 <Ticket className="w-4 h-4" /> {effectiveTicketNo ? `Ticket: ${effectiveTicketNo}` : 'Ticketed'}
               </Badge>
@@ -374,11 +384,11 @@ const DashboardBookingDetail = () => {
           <div className="flex flex-wrap items-center gap-3">
             <h2 className="text-2xl font-black tracking-tight">{booking.origin}-{booking.destination}</h2>
             {(() => {
-              // Derive display status: if issue request sent but booking still shows confirmed/on_hold, override to "In Progress"
-              const hasIssueRequest = hasIssuedWithBalance || booking.status === 'processing';
-              const displayStatus = isTicketed ? 'ticketed'
-                : (hasIssueRequest && !isTicketed && ['confirmed', 'on_hold', 'pending'].includes(booking.status)) ? 'processing'
-                : booking.status;
+              const normalizedStatus = String(booking.status || '').toLowerCase();
+              const displayStatus = hasFinalTicket
+                ? (normalizedStatus === 'ticketed' ? 'ticketed' : normalizedStatus === 'completed' ? 'completed' : normalizedStatus === 'cancelled' ? 'cancelled' : 'confirmed')
+                : (hasIssuedWithBalance && ['confirmed', 'on_hold', 'pending', 'processing'].includes(normalizedStatus)) ? 'processing'
+                : normalizedStatus;
               const statusLabel = displayStatus === 'on_hold' ? 'Reserved'
                 : displayStatus === 'processing' ? 'In Progress'
                 : displayStatus === 'ticketed' ? 'Ticketed'

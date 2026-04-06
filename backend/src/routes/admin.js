@@ -400,6 +400,20 @@ router.put('/bookings/:id', async (req, res) => {
              JSON.stringify({ source: flightSource || 'manual', issuedBy: req.user.email, issuedAt: new Date().toISOString(), manual: true })]
           );
         } catch (_) { /* ignore duplicate/manual insert issues */ }
+
+        try {
+          await db.query(
+            `UPDATE ticket_issue_requests
+             SET status = 'issued',
+                 admin_notes = COALESCE(admin_notes, ?),
+                 ticket_number = COALESCE(?, ticket_number),
+                 pnr = COALESCE(?, pnr),
+                 processed_by = ?,
+                 processed_at = NOW()
+             WHERE booking_id = ? AND status IN ('pending', 'processing')`,
+            ['Issued from admin booking panel', ticketNo, pnr || gdsPnr || null, req.user.sub, bookingId]
+          );
+        } catch (_) { /* ticket_issue_requests table may not exist */ }
       }
     }
 
@@ -1154,10 +1168,21 @@ router.put('/bookings/:id/issue-ticket', async (req, res) => {
     }
 
     if (gdsResult && gdsResult.success) {
-      await db.query('UPDATE bookings SET status = ?, payment_status = ?, ticket_status = ? WHERE id = ?', ['ticketed', 'paid', 'issued', id]);
+      const ticketNumbers = gdsResult.ticketNumbers || [];
+      const primaryTicketNo = ticketNumbers[0] || null;
+      const mergedDetails = {
+        ...details,
+        ticketNumber: primaryTicketNo || details.ticketNumber || null,
+        ticket_number: primaryTicketNo || details.ticket_number || null,
+      };
 
-      if (gdsResult.ticketNumbers?.length > 0) {
-        for (const ticketNo of gdsResult.ticketNumbers) {
+      await db.query(
+        'UPDATE bookings SET status = ?, payment_status = ?, ticket_status = ?, ticket_number = ?, pnr = ?, details = ? WHERE id = ?',
+        ['ticketed', 'paid', 'issued', primaryTicketNo, gdsPnr || booking.pnr || null, JSON.stringify(mergedDetails), id]
+      );
+
+      if (ticketNumbers.length > 0) {
+        for (const ticketNo of ticketNumbers) {
           await db.query(
             'INSERT INTO tickets (id, booking_id, user_id, ticket_no, pnr, status, details) VALUES (?, ?, ?, ?, ?, ?, ?)',
             [uuidv4(), id, booking.user_id, ticketNo, gdsPnr, 'active',
@@ -1168,11 +1193,11 @@ router.put('/bookings/:id/issue-ticket', async (req, res) => {
 
       // Also mark any pending ticket issue requests as issued
       await db.query(
-        'UPDATE ticket_issue_requests SET status = ?, processed_by = ?, processed_at = NOW(), admin_notes = ? WHERE booking_id = ? AND status IN (?, ?)',
-        ['issued', req.user.sub, `Issued via GDS. Tickets: ${(gdsResult.ticketNumbers || []).join(', ')}`, id, 'pending', 'processing']
+        'UPDATE ticket_issue_requests SET status = ?, processed_by = ?, processed_at = NOW(), admin_notes = ?, ticket_number = ?, pnr = ? WHERE booking_id = ? AND status IN (?, ?)',
+        ['issued', req.user.sub, `Issued via GDS. Tickets: ${ticketNumbers.join(', ')}`, primaryTicketNo, gdsPnr || booking.pnr || null, id, 'pending', 'processing']
       );
 
-      return res.json({ success: true, ticketNumbers: gdsResult.ticketNumbers || [], gdsResult });
+      return res.json({ success: true, ticketNumbers, gdsResult });
     } else {
       const errorMsg = gdsError || gdsResult?.error || 'GDS ticketing failed';
       return res.status(422).json({ success: false, message: 'GDS ticket issuance failed', gdsError: errorMsg });
