@@ -932,6 +932,9 @@ const PassengerCard = ({ p, i, booking }: { p: any; i: number; booking: any }) =
                 {p.nationality && <><span className="text-muted-foreground">Nationality</span><span className="font-medium">{p.nationality}</span></>}
                 {p.email && <><span className="text-muted-foreground">Email</span><span className="font-medium text-xs break-all">{p.email}</span></>}
                 {p.phone && <><span className="text-muted-foreground">Phone Number</span><span className="font-medium">{p.phone}</span></>}
+                {booking.ticketNo && booking.ticketNo !== '—' && (
+                  <><span className="text-muted-foreground">Ticket Number</span><span className="font-medium font-mono text-green-600">{booking.ticketNo}</span></>
+                )}
               </div>
             </div>
 
