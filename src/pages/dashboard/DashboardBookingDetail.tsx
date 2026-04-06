@@ -152,6 +152,19 @@ const DashboardBookingDetail = () => {
   });
   const walletBalance = Number((walletData as any)?.balance ?? 0);
 
+  // Fetch ticket issue request for this booking to get admin-entered ticket number
+  const { data: issueRequestData } = useQuery({
+    queryKey: ["dashboard", "ticket-issue-request", booking?.rawId],
+    queryFn: () => api.get<any>("/dashboard/ticket-issue-requests"),
+    enabled: !!booking,
+  });
+  const issueRequest = ((issueRequestData as any)?.data || []).find(
+    (r: any) => r.booking_id === booking?.rawId || r.bookingId === booking?.rawId
+  );
+  const issuedTicketNo = issueRequest?.ticket_number || issueRequest?.ticketNumber || null;
+  const effectiveTicketNo = booking?.ticketNo !== '—' ? booking?.ticketNo : issuedTicketNo;
+  const isTicketed = booking?.status === 'ticketed' || issueRequest?.status === 'issued';
+
   // SSR history for this booking
   const { data: ssrData, isLoading: ssrLoading } = useQuery({
     queryKey: ["dashboard", "ssr-history", booking?.id],
@@ -318,8 +331,8 @@ const DashboardBookingDetail = () => {
 
           {/* ━━ Action Buttons ━━ */}
           <div className="flex flex-wrap items-center gap-3">
-            {/* Issue With Balance — hide when ticketed */}
-            {['on_hold', 'pending', 'confirmed'].includes(booking.status) && booking.status !== 'ticketed' && (
+            {/* Issue With Balance — hide when ticketed or already paid */}
+            {!isTicketed && ['on_hold', 'pending', 'confirmed'].includes(booking.status) && (
               <Button
                 onClick={() => setPayDialogOpen(true)}
                 disabled={hasIssuedWithBalance || String(booking.paymentStatus || '').toLowerCase() === 'paid'}
@@ -328,14 +341,14 @@ const DashboardBookingDetail = () => {
                 <Wallet className="w-4 h-4 mr-1.5" /> {hasIssuedWithBalance || String(booking.paymentStatus || '').toLowerCase() === 'paid' ? 'Issue Request Sent' : 'Issue With Balance'}
               </Button>
             )}
-            {booking.status === 'ticketed' && booking.ticketNo !== '—' && (
+            {(isTicketed || effectiveTicketNo) && (
               <Badge className="bg-green-600 text-white text-sm px-4 py-2 font-bold gap-1.5">
-                <Ticket className="w-4 h-4" /> Ticket: {booking.ticketNo}
+                <Ticket className="w-4 h-4" /> {effectiveTicketNo ? `Ticket: ${effectiveTicketNo}` : 'Ticketed'}
               </Badge>
             )}
             <div className="ml-auto flex flex-wrap gap-2">
-              {/* Timeline, View SSR, Cancel — hide when ticketed */}
-              {booking.status !== 'ticketed' && (
+              {/* Timeline, View SSR, Cancel — hide when ticketed or issue request sent */}
+              {!isTicketed && !hasIssuedWithBalance && (
                 <>
                   <Button variant="outline" className="font-semibold border-2 border-foreground/80" onClick={() => setTimelineOpen(true)}><Clock className="w-4 h-4 mr-1.5" /> Timeline</Button>
                   <Button variant="outline" className="font-semibold border-2 border-foreground/80" onClick={() => setSsrOpen(true)}><Eye className="w-4 h-4 mr-1.5" /> View SSR</Button>
@@ -614,7 +627,7 @@ const DashboardBookingDetail = () => {
           <Section title="Passenger Information">
             <div className="divide-y divide-border">
               {booking.passengers?.length > 0 ? booking.passengers.map((p: any, i: number) => (
-                <PassengerCard key={i} p={p} i={i} booking={booking} />
+                <PassengerCard key={i} p={p} i={i} booking={booking} effectiveTicketNo={effectiveTicketNo} />
               )) : (
                 <p className="text-sm text-muted-foreground text-center py-8">No passenger information available</p>
               )}
@@ -905,9 +918,10 @@ const DashboardBookingDetail = () => {
 };
 
 /* ── Passenger Card (collapsible) ─────────────────────── */
-const PassengerCard = ({ p, i, booking }: { p: any; i: number; booking: any }) => {
+const PassengerCard = ({ p, i, booking, effectiveTicketNo }: { p: any; i: number; booking: any; effectiveTicketNo?: string | null }) => {
   const [open, setOpen] = useState(true);
   const name = `${p.title || ""} ${p.firstName || ""} ${p.lastName || ""}`.trim().toUpperCase();
+  const ticketNo = effectiveTicketNo || (booking.ticketNo !== '—' ? booking.ticketNo : null);
   return (
     <div>
       <button className="w-full px-5 py-3 flex items-center justify-between hover:bg-muted/30 transition-colors" onClick={() => setOpen(!open)}>
@@ -932,8 +946,8 @@ const PassengerCard = ({ p, i, booking }: { p: any; i: number; booking: any }) =
                 {p.nationality && <><span className="text-muted-foreground">Nationality</span><span className="font-medium">{p.nationality}</span></>}
                 {p.email && <><span className="text-muted-foreground">Email</span><span className="font-medium text-xs break-all">{p.email}</span></>}
                 {p.phone && <><span className="text-muted-foreground">Phone Number</span><span className="font-medium">{p.phone}</span></>}
-                {booking.ticketNo && booking.ticketNo !== '—' && (
-                  <><span className="text-muted-foreground">Ticket Number</span><span className="font-medium font-mono text-green-600">{booking.ticketNo}</span></>
+                {ticketNo && (
+                  <><span className="text-muted-foreground font-semibold">Ticket Number</span><span className="font-bold font-mono text-green-600">{ticketNo}</span></>
                 )}
               </div>
             </div>
