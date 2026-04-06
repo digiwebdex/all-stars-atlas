@@ -165,6 +165,13 @@ async function syncWalletFromDerivedBalance(userId, walletState) {
   }
 }
 
+async function ensureTableColumn(executor, tableName, columnName, definition) {
+  const [columns] = await executor.query(`SHOW COLUMNS FROM ${tableName} LIKE ?`, [columnName]);
+  if (!columns || columns.length === 0) {
+    await executor.query(`ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${definition}`);
+  }
+}
+
 async function ensureTicketIssueRequestsTable(executor = db) {
   await executor.query(`CREATE TABLE IF NOT EXISTS ticket_issue_requests (
         id CHAR(36) PRIMARY KEY,
@@ -183,6 +190,20 @@ async function ensureTicketIssueRequestsTable(executor = db) {
         INDEX idx_user (user_id),
         INDEX idx_status (status)
   )`);
+
+  const requiredColumns = [
+    ['admin_notes', 'TEXT NULL'],
+    ['ticket_number', 'VARCHAR(100) NULL'],
+    ['pnr', 'VARCHAR(20) NULL'],
+    ['processed_by', 'CHAR(36) NULL'],
+    ['processed_at', 'DATETIME NULL'],
+    ['created_at', 'DATETIME DEFAULT CURRENT_TIMESTAMP'],
+    ['updated_at', 'DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'],
+  ];
+
+  for (const [columnName, definition] of requiredColumns) {
+    await ensureTableColumn(executor, 'ticket_issue_requests', columnName, definition);
+  }
 }
 
 // All routes require auth
@@ -1194,7 +1215,7 @@ router.post('/wallet/pay', async (req, res) => {
 
     // Verify booking exists and belongs to user — fetch amount for server-side verification
     const [bookingRows] = await db.query(
-      `SELECT id, status, booking_ref, total_amount, amount FROM bookings WHERE id = ? AND user_id = ?`,
+      `SELECT id, status, booking_ref, total_amount, pnr FROM bookings WHERE id = ? AND user_id = ?`,
       [bookingId, userId]
     );
     if (bookingRows.length === 0) {
@@ -1207,7 +1228,7 @@ router.post('/wallet/pay', async (req, res) => {
     }
 
     // Server-side amount verification — never trust client amount
-    const dbAmount = Number(booking.total_amount || booking.amount || 0);
+    const dbAmount = Number(booking.total_amount || 0);
     if (dbAmount <= 0) {
       return res.status(400).json({ message: 'Booking amount is invalid in the system' });
     }
@@ -1230,7 +1251,7 @@ router.post('/wallet/pay', async (req, res) => {
     await conn.beginTransaction();
 
     const [lockedBookingRows] = await conn.query(
-      `SELECT id, status, booking_ref, total_amount, amount, payment_status, pnr
+      `SELECT id, status, booking_ref, total_amount, payment_status, pnr
        FROM bookings
        WHERE id = ? AND user_id = ?
        FOR UPDATE`,
