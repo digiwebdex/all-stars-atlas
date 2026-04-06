@@ -118,6 +118,7 @@ const DashboardBookingDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [cancelOpen, setCancelOpen] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
   const [cancelLoading, setCancelLoading] = useState(false);
@@ -128,6 +129,7 @@ const DashboardBookingDetail = () => {
   const [ssrOpen, setSsrOpen] = useState(false);
   const [payDialogOpen, setPayDialogOpen] = useState(false);
   const [payLoading, setPayLoading] = useState(false);
+  const [hasIssuedWithBalance, setHasIssuedWithBalance] = useState(false);
 
   const { data, isLoading, error, refetch } = useDashboardBookings({ search: id, limit: 1 });
   const resolved = (data as any) || {};
@@ -135,11 +137,14 @@ const DashboardBookingDetail = () => {
   const booking = rawBookings.length > 0 ? mapBooking(rawBookings[0]) : null;
   const countdown = useCountdown(booking?.paymentDeadline || null);
 
-  // Wallet balance for inline pay dialog
+  useEffect(() => {
+    setHasIssuedWithBalance(String(booking?.paymentStatus || '').toLowerCase() === 'paid');
+  }, [booking?.paymentStatus]);
+
   const { data: walletData } = useQuery({
-    queryKey: ["dashboard", "wallet-balance-detail"],
+    queryKey: ["dashboard", "wallet", "detail"],
     queryFn: () => api.get<any>("/dashboard/wallet"),
-    enabled: payDialogOpen,
+    enabled: payDialogOpen || hasIssuedWithBalance,
   });
   const walletBalance = Number((walletData as any)?.balance ?? 0);
 
@@ -231,7 +236,7 @@ const DashboardBookingDetail = () => {
   };
 
   const handlePayWithBalance = async () => {
-    if (!booking) return;
+    if (!booking || hasIssuedWithBalance) return;
     const amount = booking.rawAmount;
     if (walletBalance < amount) {
       toast({ title: "Insufficient Balance", description: `You need ৳${amount.toLocaleString()} but only have ৳${walletBalance.toLocaleString()}`, variant: "destructive" });
@@ -240,9 +245,15 @@ const DashboardBookingDetail = () => {
     setPayLoading(true);
     try {
       await api.post("/dashboard/wallet/pay", { bookingId: booking.rawId, amount });
+      setHasIssuedWithBalance(true);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["dashboard", "wallet"] }),
+        queryClient.invalidateQueries({ queryKey: ["dashboard", "wallet", "detail"] }),
+        queryClient.invalidateQueries({ queryKey: ["dashboard"] }),
+      ]);
+      await refetch();
       toast({ title: "Payment Successful ✓", description: "Wallet debited. Ticket issue request sent to admin." });
       setPayDialogOpen(false);
-      refetch();
     } catch (e: any) {
       toast({ title: "Payment Failed", description: e.message || "Could not process payment", variant: "destructive" });
     } finally {
@@ -304,8 +315,12 @@ const DashboardBookingDetail = () => {
           {/* ━━ Action Buttons ━━ */}
           <div className="flex flex-wrap items-center gap-3">
             {['on_hold', 'pending', 'confirmed'].includes(booking.status) && (
-              <Button className="bg-emerald-500 hover:bg-emerald-600 text-white font-bold shadow-sm" onClick={() => setPayDialogOpen(true)}>
-                <Wallet className="w-4 h-4 mr-1.5" /> Issue With Balance
+              <Button
+                onClick={() => setPayDialogOpen(true)}
+                disabled={hasIssuedWithBalance || String(booking.paymentStatus || '').toLowerCase() === 'paid'}
+                className="bg-emerald-500 hover:bg-emerald-600 text-white font-bold shadow-sm disabled:bg-muted disabled:text-muted-foreground disabled:hover:bg-muted"
+              >
+                <Wallet className="w-4 h-4 mr-1.5" /> {hasIssuedWithBalance || String(booking.paymentStatus || '').toLowerCase() === 'paid' ? 'Issue Request Sent' : 'Issue With Balance'}
               </Button>
             )}
             <div className="ml-auto flex flex-wrap gap-2">
@@ -852,11 +867,11 @@ const DashboardBookingDetail = () => {
                 <Button variant="outline" onClick={() => setPayDialogOpen(false)}>Cancel</Button>
                 <Button
                   onClick={handlePayWithBalance}
-                  disabled={payLoading || walletBalance < (booking?.rawAmount || 0)}
-                  className="gap-1.5 bg-emerald-500 hover:bg-emerald-600 text-white"
+                  disabled={payLoading || hasIssuedWithBalance || walletBalance < (booking?.rawAmount || 0)}
+                  className="gap-1.5 bg-emerald-500 hover:bg-emerald-600 text-white disabled:bg-muted disabled:text-muted-foreground disabled:hover:bg-muted"
                 >
                   <CheckCircle className="w-4 h-4" />
-                  {payLoading ? 'Processing...' : 'Confirm Payment'}
+                  {payLoading ? 'Processing...' : hasIssuedWithBalance ? 'Already Requested' : 'Confirm Payment'}
                 </Button>
               </DialogFooter>
             </DialogContent>
