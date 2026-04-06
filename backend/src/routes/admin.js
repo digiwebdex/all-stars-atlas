@@ -169,6 +169,7 @@ router.get('/bookings', async (req, res) => {
         paymentStatus: b.payment_status, paymentDeadline: b.payment_deadline,
         details,
         pnr: b.pnr || details.gdsPnr || details.outbound?.pnr || null,
+        ticketNo: b.ticket_number || details.ticketNumber || details.ticket_number || null,
         passengerInfo: safeJsonParse(b.passenger_info, []),
         contactInfo: safeJsonParse(b.contact_info, {}),
         user: { name: `${b.first_name} ${b.last_name}`, email: b.user_email },
@@ -183,7 +184,7 @@ router.get('/bookings', async (req, res) => {
 // PUT /admin/bookings/:id — with real GDS API calls for flight bookings
 router.put('/bookings/:id', async (req, res) => {
   try {
-    const { status, notes, paymentStatus, paymentMethod, totalAmount, passengerInfo, contactInfo, details, gdsAction } = req.body;
+    const { status, notes, paymentStatus, paymentMethod, totalAmount, passengerInfo, contactInfo, details, gdsAction, ticketNo, pnr } = req.body;
     const bookingId = req.params.id;
 
     // Fetch current booking first
@@ -358,12 +359,21 @@ router.put('/bookings/:id', async (req, res) => {
     if (paymentStatus) { sets.push('payment_status = ?'); params.push(paymentStatus); }
     if (paymentMethod) { sets.push('payment_method = ?'); params.push(paymentMethod); }
     if (totalAmount !== undefined) { sets.push('total_amount = ?'); params.push(totalAmount); }
+    if (pnr !== undefined) { sets.push('pnr = ?'); params.push(pnr); }
+    if (ticketNo !== undefined) { sets.push('ticket_number = ?'); params.push(ticketNo || null); }
     if (passengerInfo !== undefined) { sets.push('passenger_info = ?'); params.push(JSON.stringify(passengerInfo)); }
     if (contactInfo !== undefined) { sets.push('contact_info = ?'); params.push(JSON.stringify(contactInfo)); }
 
     // Merge GDS result into details
     if (details !== undefined || gdsResult) {
       const mergedDetails = { ...bookingDetails, ...(details || {}) };
+      if (pnr !== undefined) {
+        mergedDetails.gdsPnr = pnr || mergedDetails.gdsPnr || null;
+      }
+      if (ticketNo !== undefined) {
+        mergedDetails.ticketNumber = ticketNo || null;
+        mergedDetails.ticket_number = ticketNo || null;
+      }
       if (gdsResult) {
         mergedDetails.lastGdsAction = {
           action: status,
@@ -381,6 +391,16 @@ router.put('/bookings/:id', async (req, res) => {
     if (sets.length > 0) {
       params.push(bookingId);
       await db.query(`UPDATE bookings SET ${sets.join(', ')} WHERE id = ?`, params);
+      if (ticketNo !== undefined && ticketNo) {
+        try {
+          await db.query(
+            `INSERT INTO tickets (id, booking_id, user_id, ticket_no, pnr, status, details)
+             VALUES (?, ?, ?, ?, ?, 'active', ?)` ,
+            [uuidv4(), bookingId, booking.user_id, ticketNo, pnr || gdsPnr || booking.booking_ref?.slice(-6) || null,
+             JSON.stringify({ source: flightSource || 'manual', issuedBy: req.user.email, issuedAt: new Date().toISOString(), manual: true })]
+          );
+        } catch (_) { /* ignore duplicate/manual insert issues */ }
+      }
     }
 
     const [rows] = await db.query('SELECT * FROM bookings WHERE id = ?', [bookingId]);
