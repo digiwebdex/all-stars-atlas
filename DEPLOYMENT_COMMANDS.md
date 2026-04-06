@@ -1,7 +1,7 @@
 # Seven Trip — Working Deployment Commands
 
 > **Auto-updated** with every change. Copy-paste ready commands for your VPS.
-> Last updated: 2026-03-25 (v4.1.7 — Nginx Gzip Fix, Domain Migration to seven-trip.com)
+> Last updated: 2026-04-06 (v4.2.0 — Wallet-Centric Finance, Ticket Issue Requests)
 
 ---
 
@@ -168,6 +168,7 @@ pm2 logs seventrip-api --lines 30
 
 | Date | Change | Deploy Command |
 |------|--------|----------------|
+| 2026-04-06 | **v4.2.0** Wallet-centric finance: atomic wallet/pay with MySQL transactions, ticket issue requests, admin 9-tab booking detail, bank transfer dropdown, wallet balance sync fixes, payment approval wallet credit | Standard Deployment |
 | 2026-03-25 | **v4.1.7** Nginx gzip crash fix: removed duplicate gzip directive from site config (3.5h outage), fixed API proxy port 5000→3001, domain migration seven-trip.com.bd→seven-trip.com across all docs | Nginx Config Update |
 | 2026-03-17 | **v4.1.6** Dashboard hardening: E-ticket PDF ASCII fix (garbled Unicode→text), Flight Status graceful error handling, Fare Rules airline code dedup, Sabre `sabreRequest()` empty response resilience. All 15+ dashboard modules verified. | Standard Deployment |
 | 2026-03-14 | **v4.1.3** Sabre search recovery hotfix: restored missing `getResponseStats` + `normalizeParams` and removed undefined decoder dependency in BFM fallback flow. | Backend Only |

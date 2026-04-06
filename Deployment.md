@@ -1,7 +1,7 @@
 # Seven Trip — Deployment Guide (Ubuntu VPS)
 
 > Step-by-step guide to deploy the Seven Trip frontend on an Ubuntu VPS using Nginx. Written for beginners — every command is explained.
-> Last updated: 2026-03-25 (v4.1.7)
+> Last updated: 2026-04-06 (v4.2.0)
 
 ---
 

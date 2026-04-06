@@ -1,7 +1,7 @@
-# Seven Trip — Bangladesh's #1 Travel Platform (v4.1.6)
+# Seven Trip — Bangladesh's #1 Travel Platform (v4.2.0)
 
 > Full-stack B2C travel agency web application. Book flights, hotels, visa, holiday packages, medical tourism, car rentals, eSIM, mobile recharge & utility bill payments.
-> Last updated: 2026-03-17 (v4.1.6 — Dashboard Hardening, E-Ticket PDF Fix, Flight Status & Fare Rules Resilience)
+> Last updated: 2026-04-06 (v4.2.0 — Wallet-Centric Finance System, Ticket Issue Requests, Admin 9-Tab Booking Management)
 
 **Live URL:** [https://seven-trip.com](https://seven-trip.com)
 **GitHub:** [https://github.com/digiwebdex/all-stars-atlas-d07a1d89](https://github.com/digiwebdex/all-stars-atlas-d07a1d89)
@@ -55,11 +55,12 @@
 │   │       └── cms.js         # CMS CRUD (public + admin)
 │   ├── database/
 │   │   ├── migration.sql            # Full schema (20 tables)
+│   │   ├── ticket-issue-requests-migration.sql # Ticket issue request tracking
 │   │   ├── social-auth-migration.sql # Social login columns
 │   │   └── pay-later-migration.sql  # Pay-later due tracking
 │   └── uploads/              # Local file storage
 ├── src/                      # React frontend
-│   ├── App.tsx               # Root router (70+ routes)
+│   ├── App.tsx               # Root router (75+ routes)
 │   ├── components/           # Shared UI components
 │   │   ├── layout/           # Header, Footer, PublicLayout
 │   │   ├── search/           # SearchWidget (10 tabs)
@@ -101,8 +102,8 @@
 │       ├── paybill/           # PayBillPage
 │       ├── booking/           # BookingConfirmation
 │       ├── static/            # About, Contact, Blog, FAQ, Terms, Privacy, etc.
-│       ├── dashboard/         # 15+ user dashboard pages
-│       └── admin/             # 17 admin panel modules
+│       ├── dashboard/         # 20+ user dashboard pages (incl. Wallet, Issue With Balance, Account Ledger)
+│       └── admin/             # 18 admin panel modules (incl. Ticket Issue Requests)
 ├── public/                   # Static assets
 │   ├── images/               # Logo, hero images
 │   ├── videos/               # Hero video
@@ -117,7 +118,7 @@
 
 ---
 
-## 🎯 Features (100% Complete — All Dashboard Modules Verified 2026-03-17 v4.1.6)
+## 🎯 Features (100% Complete — All Dashboard Modules Verified 2026-04-06 v4.2.0)
 
 ### Public Site (10 Services)
 - **Homepage** — 11 CMS-driven sections with parallax hero video, animated counters, and section reordering
@@ -148,7 +149,7 @@
 - **Role-based routing** — Admin ↔ Customer strict separation
 - **AuthGateModal** — Inline auth popup during booking flow (no page redirect)
 
-### User Dashboard (15+ pages)
+### User Dashboard (20+ pages)
 | Page | Features |
 |------|----------|
 | Overview | Stats cards, recent bookings, quick actions, embedded SearchWidget |
@@ -162,6 +163,8 @@
 | Pay Later | Due management & reminders |
 | Travellers | Saved passenger profiles for faster booking |
 | Wallet | Add funds (SSLCommerz/bKash/Nagad/bank), transfer, transaction history |
+| Issue With Balance | Browse payable bookings, one-click wallet deduction + auto-create admin ticket request |
+| Account Ledger | Full debit/credit running balance with signed transaction history, CSV export |
 | Wishlist | Saved hotels |
 | Search History | Past flight/hotel searches |
 | SSR History | Special service requests across bookings with popup detail view |
@@ -169,7 +172,7 @@
 | Rewards | Points balance, earn/redeem history, coupons |
 | Settings | Profile, password, notifications, 2FA toggle, delete account |
 
-### Admin Panel (17 modules)
+### Admin Panel (18 modules)
 | Module | Features |
 |--------|----------|
 | Dashboard | Revenue charts (Recharts), booking stats, recent activity |
@@ -177,6 +180,7 @@
 | Users | User list, role assignment, ID verification status |
 | Payments | Payment tracking & history |
 | Payment Approvals | Receipt image viewer, approve/reject workflow |
+| Ticket Issue Requests | View pending wallet-paid ticket requests, approve & issue via GDS (Sabre/TTI/BDFare/FlyHub), reject with notes |
 | Discounts & Pricing | Coupon codes, seasonal pricing rules, price rule management (DB-backed via `system_settings`) |
 | Markup & Revenue | Per-service markup config (base fare, tax, SSR, min/max markup, ticket issue charge) |
 | Currency Management | Multi-currency exchange rates with markup, auto-update toggle, converter |
@@ -292,13 +296,14 @@ Express, mysql2, bcryptjs, jsonwebtoken, multer, uuid, cors, helmet, morgan, exp
 |----------|-------------|
 | [README.md](./README.md) | This file — project overview |
 | [CHANGELOG.md](./CHANGELOG.md) | Complete version history (v1.0–v4.1.6, 55+ releases) |
+| [CREDITS.md](./CREDITS.md) | Developer credits |
 | [ANALYTICS.md](./ANALYTICS.md) | Development analytics, timeline, codebase statistics |
 | [BUG_TRACKER.md](./BUG_TRACKER.md) | 44+ bugs with root cause analysis and recurring patterns |
 | [GDS_INTEGRATION_HISTORY.md](./GDS_INTEGRATION_HISTORY.md) | GDS provider integration timeline, issues, resolutions |
 | [ARCHITECTURE.md](./ARCHITECTURE.md) | System architecture (frontend, backend, GDS, design system) |
 | [SECURITY.md](./SECURITY.md) | Security measures, JWT flow, API keys, SSL, firewalls |
 | [API_CHANGELOG.md](./API_CHANGELOG.md) | Backend API changes per version (endpoints, schema) |
-| [DEPLOYMENT_HISTORY.md](./DEPLOYMENT_HISTORY.md) | All 8+ deployments with exact commands and verification |
+| [DEPLOYMENT_HISTORY.md](./DEPLOYMENT_HISTORY.md) | All 11+ deployments with exact commands and verification |
 | [DEPLOYMENT_COMMANDS.md](./DEPLOYMENT_COMMANDS.md) | Copy-paste VPS deployment commands |
 | [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) | Solutions for all known issues |
 | [VPS_SESSION_LOG.md](./VPS_SESSION_LOG.md) | Complete VPS terminal session history with outputs |

@@ -2,7 +2,7 @@
 
 > Complete timeline of all development conversations, decisions made, bugs discovered, and features implemented.
 > This serves as the institutional memory of the project — every significant interaction is recorded.
-> Last updated: 2026-03-17 (v4.1.6 — Dashboard Hardening, E-Ticket PDF Fix, API Resilience)
+> Last updated: 2026-04-06 (v4.2.0 — Wallet-Centric Finance, Ticket Issue Requests)
 
 ---
 
@@ -10,12 +10,12 @@
 
 | Metric | Count |
 |--------|-------|
-| **Development Days** | 22 (Mar 1–17, 2026) |
-| **Total Versions Released** | 55+ |
-| **Bugs Discovered & Fixed** | 48 |
+| **Development Days** | 37 (Mar 1–Apr 6, 2026) |
+| **Total Versions Released** | 60+ |
+| **Bugs Discovered & Fixed** | 51 |
 | **GDS Providers Integrated** | 5 (TTI, BDFare, FlyHub, Sabre REST, Sabre SOAP) |
 | **Sabre Features** | 26/26 (100% coverage) |
-| **VPS Deployments** | 10 |
+| **VPS Deployments** | 12 |
 | **Documentation Files** | 20+ |
 
 ---
@@ -421,3 +421,31 @@ Placeholder data persisting in production code. Lesson: zero-mock audit + automa
 - **Fix**: `cleanFlightNum()` strips airline prefix before display; handles empty response objects
 - **Verified**: SSR History popup correctly fetches and displays data from `/dashboard/ssr-history`
 - **Verified**: All 15+ dashboard modules (Bookings, Wallet, E-Tickets, Transactions, Travellers, Payments, SSR History, Search History, Settings, Wishlist, Rewards, Invoices, Reports, Support Tickets, Pay Later) — all API-connected and functional
+
+---
+
+## Phase 10: Wallet-Centric Finance System (Mar 18–Apr 6, 2026)
+
+### v4.2.0 — Apr 6 — Wallet-Centric Finance & Ticket Issue Requests
+- **Architecture Decision**: Wallet as single payment source — users must deposit first, then pay bookings from wallet balance
+- **Created**: `DashboardIssueWithBalance.tsx` — dedicated page listing all payable bookings with wallet balance and one-click pay
+- **Created**: `DashboardWallet.tsx` (enhanced) — bank transfer deposit with admin-configured bank dropdown (searchable Select component), receipt upload, add funds dialog
+- **Created**: `DashboardAccountLedger.tsx` — full debit/credit running balance with signed transaction history
+- **Created**: `AdminTicketRequests.tsx` — admin page for viewing/processing ticket issue requests (approve → GDS ticketing, reject with notes)
+- **Created**: Admin 9-tab booking detail — Itinerary, Passengers, Fare Breakdown, Invoice, Activity, Debug, Supplier, Terminal (GDS command window), Actions
+- **Implemented**: Atomic `POST /dashboard/wallet/pay` — MySQL transaction with `FOR UPDATE` row locking:
+  1. Verify wallet balance ≥ booking amount (server-side, 0.1% tolerance)
+  2. INSERT debit transaction
+  3. UPDATE booking payment_status='paid'
+  4. UPDATE wallet balance
+  5. INSERT ticket_issue_request
+  6. COMMIT (all-or-nothing)
+- **Implemented**: `PUT /admin/ticket-issue-requests/:id` — admin processes request: issue (triggers GDS ticketing) or reject
+- **Implemented**: Payment approval wallet credit — admin approving deposit now credits `wallet` table with INSERT/UPDATE fallback
+- **🔴 Bug C19**: Issue With Balance "Payment failed" — wallet deduction was 3 separate non-transactional calls; fixed with MySQL transaction
+- **🔴 Bug C20**: Wallet balance ৳0 — `syncWalletFromDerivedBalance()` had swapped UPDATE parameters; payment approval wasn't crediting wallet table
+- **🔴 Bug C21**: Transactions page 500 — missing `wallet` table caused uncaught SQL error; added `isMissingTableError()` guard
+- **🔴 Bug C22**: Payment approval not crediting wallet — `ON DUPLICATE KEY UPDATE` failed without unique constraint; replaced with SELECT→UPDATE/INSERT
+- **Removed**: "Send Payment Request" concept — replaced by wallet deposit + Issue With Balance
+- **Upgraded**: Sabre Terminal `SabreCommandLLSRQ` from deprecated v1.8.1 to v2.0.0+
+- **Result**: Complete wallet-centric financial architecture with atomic transactions, admin ticket management, and 9-tab booking detail

@@ -1,7 +1,40 @@
 # Seven Trip — API Changelog
 
 > All backend API changes, new endpoints, breaking changes, and schema updates per version.
-> Last updated: 2026-03-17 (v4.1.6)
+> Last updated: 2026-04-06 (v4.2.0)
+
+---
+
+## v4.2.0 — 2026-04-06
+
+### Added — 7 New Endpoints (Wallet-Centric Finance & Ticket Issue Requests)
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| `POST` | `/dashboard/wallet/pay` | User | Atomic wallet deduction + booking update + ticket issue request (MySQL transaction) |
+| `POST` | `/dashboard/wallet/deposit` | User | Deposit request with optional receipt upload (pending admin approval) |
+| `POST` | `/dashboard/wallet/transfer` | User | Transfer wallet balance to another user by email/phone |
+| `POST` | `/dashboard/ticket-issue-request` | User | Create ticket issue request (also auto-created by wallet/pay) |
+| `GET` | `/dashboard/ticket-issue-requests` | User | List user's own ticket issue requests with booking details |
+| `GET` | `/admin/ticket-issue-requests` | Admin | List all ticket issue requests with user/booking details, filterable by status |
+| `PUT` | `/admin/ticket-issue-requests/:id` | Admin | Process request: action='issue' (triggers GDS ticketing) or action='reject' |
+
+### New Database Tables
+- `wallet` — `user_id CHAR(36)`, `balance DECIMAL(12,2)` — authoritative balance source
+- `wallet_transactions` — `user_id`, `type`, `amount`, `balance_after`, `description` — audit log
+- `ticket_issue_requests` — `id`, `booking_id`, `user_id`, `status` (pending/processing/issued/rejected), `notes`, `admin_notes`, `ticket_number`, `pnr`, `processed_by`, `processed_at`
+
+### Changed — Backend Logic
+- **`POST /dashboard/wallet/pay`**: Uses `db.getConnection()` + `beginTransaction()` for atomic debit. Server-side amount verification with 0.1% tolerance. `FOR UPDATE` lock on booking row. Duplicate payment guard (rejects if already paid or ticket request open). Auto-creates `ticket_issue_requests` row inside same transaction.
+- **`PUT /admin/payment-approvals/:id`**: When status='Approved', now credits user's `wallet` table (`balance += amount`) with INSERT fallback if no wallet row exists. Logs to `wallet_transactions`.
+- **`GET /dashboard/wallet`**: Returns `effectiveBalance` = max(wallet table balance, derived balance from approved transactions). Auto-syncs wallet row via `syncWalletFromDerivedBalance()`.
+- **`GET /dashboard/transactions`**: Computes `runningBalance` per row from newest→oldest using signed amounts. Returns `summary.balance`, `summary.totalInflow`, `summary.totalOutflow`.
+- **Wallet table auto-creation**: `ensureTicketIssueRequestsTable()` runs `CREATE TABLE IF NOT EXISTS` before first insert.
+
+### Migration
+```bash
+mysql seventrip < backend/database/ticket-issue-requests-migration.sql
+```
 
 ---
 

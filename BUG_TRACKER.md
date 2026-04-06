@@ -1,7 +1,7 @@
 # Seven Trip — Bug Tracker & Root Cause Analysis
 
 > Complete record of all bugs discovered and fixed during development.
-> Last updated: 2026-03-17 (v4.1.6)
+> Last updated: 2026-04-06 (v4.2.0)
 
 ---
 
@@ -35,6 +35,10 @@
 | C16 | v4.1.6 | E-ticket PDF shows garbled text (`Ø<ßâ`, `Ø>Ýó`) | jsPDF default Helvetica font cannot render Unicode emojis/symbols | Replaced all non-Latin-1 chars with ASCII alternatives (emojis→numbered, ৳→BDT, →→-) | E-ticket unreadable |
 | C17 | v4.1.6 | Flight Status crashes with "Unexpected end of JSON input" | Sabre FLIFO returns empty body for some routes | `sabreRequest()` handles empty/non-JSON responses gracefully | Flight status modal crashes |
 | C18 | v4.1.6 | Fare Rules title shows duplicated airline code (`WYWY318`) | `cleanFlightNum()` not stripping airline prefix from flight number | Added `cleanFlightNum()` utility to strip prefix before display | Fare rules modal displays wrong title |
+| C19 | v4.2.0 | Issue With Balance showing "Payment Failed" | Wallet deduction, booking update, and ticket request were 3 separate non-transactional calls; any failure left partial state | Wrapped entire flow in MySQL `beginTransaction()` with `FOR UPDATE` lock on booking row; ticket request created inside same txn; removed duplicate frontend `/ticket-issue-request` call | Users couldn't pay from wallet |
+| C20 | v4.2.0 | Wallet balance showing ৳0 despite admin-approved deposits | `wallet` table row missing or not credited by payment approval flow; `syncWalletFromDerivedBalance()` had swapped parameter order | Fixed `UPDATE wallet SET balance = ? WHERE user_id = ?` parameter order; admin approval now INSERT/UPDATEs wallet table directly | Balance always showed zero |
+| C21 | v4.2.0 | Transactions page 500 error | `wallet` or `wallet_transactions` table missing caused uncaught SQL error | `isMissingTableError()` guard with fallback to derived balance from `transactions` table | Dashboard transactions broken |
+| C22 | v4.2.0 | Payment approval not crediting wallet | Admin approval used `ON DUPLICATE KEY UPDATE` which failed without unique constraint | Replaced with SELECT→UPDATE/INSERT pattern with `isMissingTableError` guard | Approved deposits never reflected in wallet |
 
 ---
 
@@ -83,15 +87,17 @@
 | Severity | Count | % |
 |----------|-------|---|
 | 🔴 Critical | 21 | 43% |
-| 🟡 Major | 10 | 20% |
-| 🟢 Minor | 12 | 24% |
-| **Total** | **43** | 100% |
+| 🟡 Major | 14 | 26% |
+| 🟢 Minor | 12 | 22% |
+| **Total** | **51** | 100% |
 
 ### By Category
 | Category | Count |
 |----------|-------|
 | API/Schema validation | 8 |
 | Data format mismatch | 7 |
+| Transaction atomicity | 4 |
+| Missing table handling | 3 |
 | Missing imports/exports | 4 |
 | Hardcoded data | 6 |
 | UI rendering | 7 |
@@ -109,12 +115,14 @@
 | Frontend - Dashboard | 5 |
 | Backend - Admin | 3 |
 | Backend - General | 5 |
+| Backend - Wallet/Finance | 4 |
 
 ### Resolution Time
 | Speed | Count | Description |
 |-------|-------|------------|
-| Same-day | 36 | Fixed within the day discovered |
+| Same-day | 40 | Fixed within the day discovered |
 | Next-day | 2 | Required investigation/probe testing |
+| Multi-day | 4 | Wallet balance sync required iterative debugging |
 
 ---
 
@@ -140,6 +148,16 @@
 - **Lesson**: Zero-mock policy — search entire codebase for hardcoded values
 - **Occurrences**: M06, M07, M09, U08, U12
 
+### Pattern 5: Missing Table Resilience
+- Backend operations crash when optional tables (`wallet`, `wallet_transactions`, `ticket_issue_requests`) don't exist yet
+- **Lesson**: Always use `isMissingTableError()` guard and `CREATE TABLE IF NOT EXISTS` for auxiliary tables
+- **Occurrences**: C20, C21, C22
+
+### Pattern 6: Non-Atomic Multi-Step Operations
+- Multi-step financial operations (debit wallet + update booking + create request) fail partway through, leaving inconsistent state
+- **Lesson**: Use MySQL transactions (`beginTransaction/commit/rollback`) for any operation touching multiple tables with financial implications
+- **Occurrences**: C19
+
 ---
 
 ## 🛡 Prevention Measures Adopted
@@ -159,3 +177,7 @@
 | Dedup key comprehensive | v3.7.8 — all legs included |
 | `safeJsonParse()` utility | v2.1 — prevents JSON.parse crashes |
 | Centralized validators | v3.5.1 — `isScopeInvalidRoute()` |
+| MySQL transactions for finance | v4.2.0 — `wallet/pay` uses `beginTransaction()` |
+| Missing table guards | v4.2.0 — `isMissingTableError()` for wallet/ticket tables |
+| Server-side amount verification | v4.2.0 — 0.1% tolerance, never trust client amount |
+| Duplicate payment guard | v4.2.0 — rejects if booking already paid or request open |
