@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Ticket, CheckCircle2, XCircle, Clock, Loader2, Eye, AlertTriangle } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -32,6 +34,8 @@ const AdminTicketRequests = () => {
   const [viewRequest, setViewRequest] = useState<any>(null);
   const [adminNotes, setAdminNotes] = useState("");
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [ticketNumberInput, setTicketNumberInput] = useState("");
+  const [pnrInput, setPnrInput] = useState("");
 
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ["admin", "ticket-issue-requests", statusFilter],
@@ -43,7 +47,12 @@ const AdminTicketRequests = () => {
   const handleAction = async (requestId: string, action: "issue" | "reject") => {
     setActionLoading(requestId);
     try {
-      const result: any = await api.put(`/admin/ticket-issue-requests/${requestId}`, { action, adminNotes: adminNotes || undefined });
+      const result: any = await api.put(`/admin/ticket-issue-requests/${requestId}`, {
+        action,
+        adminNotes: adminNotes || undefined,
+        ticketNumber: ticketNumberInput || undefined,
+        pnr: pnrInput || undefined,
+      });
       if (result.success) {
         toast({
           title: action === "issue" ? "✅ Ticket Issued" : "Request Rejected",
@@ -53,6 +62,8 @@ const AdminTicketRequests = () => {
         });
         setViewRequest(null);
         setAdminNotes("");
+        setTicketNumberInput("");
+        setPnrInput("");
         qc.invalidateQueries({ queryKey: ["admin", "ticket-issue-requests"] });
         qc.invalidateQueries({ queryKey: ["admin", "bookings"] });
         refetch();
@@ -131,7 +142,12 @@ const AdminTicketRequests = () => {
                 {requests.length === 0 ? (
                   <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-12">No ticket issue requests found</TableCell></TableRow>
                 ) : requests.map((r: any) => (
-                  <TableRow key={r.id} className="cursor-pointer hover:bg-muted/50" onClick={() => { setViewRequest(r); setAdminNotes(r.admin_notes || ""); }}>
+                   <TableRow key={r.id} className="cursor-pointer hover:bg-muted/50" onClick={() => {
+                     setViewRequest(r);
+                     setAdminNotes(r.admin_notes || "");
+                     setTicketNumberInput(r.ticket_number || "");
+                     setPnrInput(r.pnr || "");
+                   }}>
                     <TableCell className="font-mono text-xs font-bold">{r.booking_ref || "—"}</TableCell>
                     <TableCell>
                       <div>
@@ -145,9 +161,15 @@ const AdminTicketRequests = () => {
                     <TableCell><Badge variant="outline" className={`capitalize ${statusColors[r.status] || ""}`}>{r.status}</Badge></TableCell>
                     <TableCell className="text-xs text-muted-foreground">{fmtDate(r.created_at)}</TableCell>
                     <TableCell>
-                      <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setViewRequest(r); setAdminNotes(r.admin_notes || ""); }}>
-                        <Eye className="w-4 h-4" />
-                      </Button>
+                     <Button variant="ghost" size="sm" onClick={(e) => {
+                       e.stopPropagation();
+                       setViewRequest(r);
+                       setAdminNotes(r.admin_notes || "");
+                       setTicketNumberInput(r.ticket_number || "");
+                       setPnrInput(r.pnr || "");
+                     }}>
+                       <Eye className="w-4 h-4" />
+                     </Button>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -204,6 +226,26 @@ const AdminTicketRequests = () => {
 
               {viewRequest.status === "pending" || viewRequest.status === "processing" ? (
                 <>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-semibold">Ticket Number <span className="text-destructive">*</span></Label>
+                      <Input
+                        placeholder="e.g. 065-1234567890"
+                        value={ticketNumberInput}
+                        onChange={e => setTicketNumberInput(e.target.value)}
+                        className="font-mono"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-semibold">PNR (override)</Label>
+                      <Input
+                        placeholder="Auto from booking"
+                        value={pnrInput}
+                        onChange={e => setPnrInput(e.target.value)}
+                        className="font-mono"
+                      />
+                    </div>
+                  </div>
                   <Textarea
                     placeholder="Admin notes (optional)"
                     value={adminNotes}
