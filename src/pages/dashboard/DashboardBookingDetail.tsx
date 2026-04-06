@@ -331,8 +331,8 @@ const DashboardBookingDetail = () => {
 
           {/* ━━ Action Buttons ━━ */}
           <div className="flex flex-wrap items-center gap-3">
-            {/* Issue With Balance — hide when ticketed */}
-            {['on_hold', 'pending', 'confirmed'].includes(booking.status) && booking.status !== 'ticketed' && (
+            {/* Issue With Balance — hide when ticketed or already paid */}
+            {!isTicketed && ['on_hold', 'pending', 'confirmed'].includes(booking.status) && (
               <Button
                 onClick={() => setPayDialogOpen(true)}
                 disabled={hasIssuedWithBalance || String(booking.paymentStatus || '').toLowerCase() === 'paid'}
@@ -341,14 +341,14 @@ const DashboardBookingDetail = () => {
                 <Wallet className="w-4 h-4 mr-1.5" /> {hasIssuedWithBalance || String(booking.paymentStatus || '').toLowerCase() === 'paid' ? 'Issue Request Sent' : 'Issue With Balance'}
               </Button>
             )}
-            {booking.status === 'ticketed' && booking.ticketNo !== '—' && (
+            {(isTicketed || effectiveTicketNo) && (
               <Badge className="bg-green-600 text-white text-sm px-4 py-2 font-bold gap-1.5">
-                <Ticket className="w-4 h-4" /> Ticket: {booking.ticketNo}
+                <Ticket className="w-4 h-4" /> {effectiveTicketNo ? `Ticket: ${effectiveTicketNo}` : 'Ticketed'}
               </Badge>
             )}
             <div className="ml-auto flex flex-wrap gap-2">
-              {/* Timeline, View SSR, Cancel — hide when ticketed */}
-              {booking.status !== 'ticketed' && (
+              {/* Timeline, View SSR, Cancel — hide when ticketed or issue request sent */}
+              {!isTicketed && !hasIssuedWithBalance && (
                 <>
                   <Button variant="outline" className="font-semibold border-2 border-foreground/80" onClick={() => setTimelineOpen(true)}><Clock className="w-4 h-4 mr-1.5" /> Timeline</Button>
                   <Button variant="outline" className="font-semibold border-2 border-foreground/80" onClick={() => setSsrOpen(true)}><Eye className="w-4 h-4 mr-1.5" /> View SSR</Button>
