@@ -303,6 +303,21 @@ router.get('/bookings', async (req, res) => {
     params.push(parseInt(limit), offset);
     const [rows] = await db.query(sql, params);
 
+    // Try to fetch ticket numbers for these bookings
+    let ticketMap = {};
+    try {
+      const bookingIds = rows.map(b => b.id);
+      if (bookingIds.length > 0) {
+        const [tickets] = await db.query(
+          `SELECT booking_id, ticket_no FROM tickets WHERE booking_id IN (${bookingIds.map(() => '?').join(',')}) AND status = 'active'`,
+          bookingIds
+        );
+        for (const t of tickets) {
+          if (!ticketMap[t.booking_id]) ticketMap[t.booking_id] = t.ticket_no;
+        }
+      }
+    } catch (_) { /* tickets table may not exist */ }
+
     const data = rows.map(b => {
       const details = safeJsonParse(b.details, {});
       return {
@@ -312,6 +327,7 @@ router.get('/bookings', async (req, res) => {
         details, passengerInfo: safeJsonParse(b.passenger_info, []),
         contactInfo: safeJsonParse(b.contact_info, {}), notes: b.notes,
         pnr: b.pnr || details.gdsPnr || details.outbound?.pnr || null,
+        ticketNo: b.ticket_number || ticketMap[b.id] || null,
         paymentDeadline: b.payment_deadline || null,
         bookedAt: b.booked_at, updatedAt: b.updated_at,
       };
