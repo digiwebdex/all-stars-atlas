@@ -34,6 +34,8 @@ const AdminTicketRequests = () => {
   const [viewRequest, setViewRequest] = useState<any>(null);
   const [adminNotes, setAdminNotes] = useState("");
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [ticketNumberInput, setTicketNumberInput] = useState("");
+  const [pnrInput, setPnrInput] = useState("");
 
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ["admin", "ticket-issue-requests", statusFilter],
@@ -45,7 +47,12 @@ const AdminTicketRequests = () => {
   const handleAction = async (requestId: string, action: "issue" | "reject") => {
     setActionLoading(requestId);
     try {
-      const result: any = await api.put(`/admin/ticket-issue-requests/${requestId}`, { action, adminNotes: adminNotes || undefined });
+      const result: any = await api.put(`/admin/ticket-issue-requests/${requestId}`, {
+        action,
+        adminNotes: adminNotes || undefined,
+        ticketNumber: ticketNumberInput || undefined,
+        pnr: pnrInput || undefined,
+      });
       if (result.success) {
         toast({
           title: action === "issue" ? "✅ Ticket Issued" : "Request Rejected",
@@ -55,6 +62,8 @@ const AdminTicketRequests = () => {
         });
         setViewRequest(null);
         setAdminNotes("");
+        setTicketNumberInput("");
+        setPnrInput("");
         qc.invalidateQueries({ queryKey: ["admin", "ticket-issue-requests"] });
         qc.invalidateQueries({ queryKey: ["admin", "bookings"] });
         refetch();
