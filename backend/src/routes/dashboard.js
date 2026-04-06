@@ -336,14 +336,26 @@ router.get('/bookings', async (req, res) => {
 
     const data = rows.map(b => {
       const details = safeJsonParse(b.details, {});
+      const passengerInfo = safeJsonParse(b.passenger_info, []);
+      const nestedTicketNo =
+        details.ticketNumber ||
+        details.ticket_number ||
+        details.ticketNo ||
+        details.gdsBookingResult?.ticketNumbers?.[0] ||
+        details.gdsResult?.ticketNumbers?.[0] ||
+        details.outbound?.ticketNumber ||
+        details.outbound?.ticket_number ||
+        details.return?.ticketNumber ||
+        details.return?.ticket_number ||
+        (Array.isArray(passengerInfo) ? passengerInfo.find((p) => p?.ticketNumber || p?.ticketNo)?.ticketNumber || passengerInfo.find((p) => p?.ticketNumber || p?.ticketNo)?.ticketNo : null);
       return {
         id: b.id, bookingRef: b.booking_ref, bookingType: b.booking_type,
         status: b.status, totalAmount: parseFloat(b.total_amount), currency: b.currency,
         paymentMethod: b.payment_method, paymentStatus: b.payment_status,
-        details, passengerInfo: safeJsonParse(b.passenger_info, []),
+        details, passengerInfo,
         contactInfo: safeJsonParse(b.contact_info, {}), notes: b.notes,
         pnr: b.pnr || details.gdsPnr || details.outbound?.pnr || null,
-        ticketNo: b.ticket_number || details.ticketNumber || details.ticket_number || ticketMap[b.id] || requestTicketMap[b.id] || null,
+        ticketNo: b.ticket_number || nestedTicketNo || ticketMap[b.id] || requestTicketMap[b.id] || null,
         paymentDeadline: b.payment_deadline || null,
         bookedAt: b.booked_at, updatedAt: b.updated_at,
       };

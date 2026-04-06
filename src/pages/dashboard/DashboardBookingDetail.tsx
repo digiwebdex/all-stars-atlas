@@ -59,7 +59,6 @@ function mapBooking(b: any) {
   const src = o.source || d.source || "db";
   const dom = d.isDomestic ?? (BD_AIRPORTS.includes(origin.toUpperCase()) && BD_AIRPORTS.includes(dest.toUpperCase()));
   const rawAmt = pickAmt(b.totalAmount, d.totalAmount, d.total, o.totalAmount, o.price) || 0;
-  // Deep fare extraction — try multiple GDS response shapes
   const fareObj = d.fare || d.fareBreakdown || d.pricing || o.fare || {};
   const paxFares = d.paxFares || d.passengerFares || fareObj.passengerFares || [];
   const firstPaxFare = Array.isArray(paxFares) && paxFares.length > 0 ? paxFares[0] : {};
@@ -70,6 +69,8 @@ function mapBooking(b: any) {
   if (base <= 0 && rawAmt > 0) { const k = tax + svc; base = k > 0 ? Math.max(0, rawAmt - k) : rawAmt; }
   const discount = pickAmt(d.discount, o.discount, fareObj.discount) || 0;
   const ait = pickAmt(d.ait, d.aitVat, fareObj.aitVat) || 0;
+  const passengerTicketNo = Array.isArray(pax) ? (pax.find((p: any) => p?.ticketNumber || p?.ticketNo)?.ticketNumber || pax.find((p: any) => p?.ticketNumber || p?.ticketNo)?.ticketNo) : null;
+  const resolvedTicketNo = b.ticketNo || b.ticket_number || d.ticketNumber || d.ticket_number || d.ticketNo || d.gdsBookingResult?.ticketNumbers?.[0] || d.gdsResult?.ticketNumbers?.[0] || o.ticketNumber || o.ticket_number || ret?.ticketNumber || ret?.ticket_number || passengerTicketNo || "—";
   return {
     id: b.bookingRef || b.id, rawId: b.id, type: b.bookingType || "flight", status: b.status || "pending",
     amount: `৳${rawAmt.toLocaleString()}`, rawAmount: rawAmt,
@@ -78,7 +79,7 @@ function mapBooking(b: any) {
     pnr: b.pnr || d.gdsPnr || "—", gdsPnr: d.gdsPnr || b.pnr || null,
     airlinePnr: d.airlinePnr || null, gdsBookingId: b.pnr || d.gdsPnr || null,
     pax: pax.length || 1, paxNames: pax.map((p: any) => `${p.firstName||""} ${p.lastName||""}`.trim()).filter(Boolean),
-    ticketNo: b.ticketNo || b.ticket_number || d.ticketNumber || d.ticket_number || "—", paymentMethod: b.paymentMethod || "—", paymentStatus: b.paymentStatus || "—",
+    ticketNo: resolvedTicketNo, paymentMethod: b.paymentMethod || "—", paymentStatus: b.paymentStatus || "—",
     paymentDeadline: b.paymentDeadline || null,
     airline, airlineCode: ac, flightNumber: fn, cabinClass: cabin, aircraft, departureTime: depTime, arrivalTime: arrTime,
     duration: dur, stops, baggage: bag, refundable, legs, returnFlight: ret, isRoundTrip: rt, source: src,
