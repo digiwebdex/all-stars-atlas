@@ -2326,74 +2326,69 @@ async function createBooking({ flightData, passengers, contactInfo, specialServi
     const airBook = rs?.AirBook || {};
     const itinRef = rs?.ItineraryRef || {};
 
-    // Sabre returns ticketing deadline in multiple possible locations
-    const candidates = [
-      itinRef?.TicketingDeadline,
-      itinRef?.Source?.ReceivedFrom,
-      airBook?.OriginDestinationOption?.[0]?.FlightSegment?.[0]?.TicketingInfo?.TicketTimeLimit,
-      rs?.TravelItineraryRead?.TravelItinerary?.ItineraryInfo?.Ticketing?.[0]?.TicketTimeLimit,
-      rs?.TravelItineraryRead?.TravelItinerary?.ItineraryInfo?.Ticketing?.[0]?.eTicketNumber,
-    ];
+    // PRIORITY 1: SSR ADTK — most accurate airline-imposed deadline
+    // SSR ADTK contains: "TTL FOR AUTO CANX FIXED FOR 07APR26 AT 22:37 GMT"
+    try {
+      const responseStr = JSON.stringify(finalResponse);
+      const adtkMatch = responseStr.match(/FIXED\s+FOR\s+(\d{2})([A-Z]{3})(\d{2,4})\s+AT\s+(\d{2}):?(\d{2})\s*GMT/i);
+      if (adtkMatch) {
+        const months = { JAN: 0, FEB: 1, MAR: 2, APR: 3, MAY: 4, JUN: 5, JUL: 6, AUG: 7, SEP: 8, OCT: 9, NOV: 10, DEC: 11 };
+        const day = parseInt(adtkMatch[1]);
+        const mon = months[adtkMatch[2].toUpperCase()] ?? 0;
+        let yr = parseInt(adtkMatch[3]);
+        if (yr < 100) yr += 2000;
+        const hr = parseInt(adtkMatch[4]);
+        const mn = parseInt(adtkMatch[5]);
+        const adtkDate = new Date(Date.UTC(yr, mon, day, hr, mn, 0));
+        if (!isNaN(adtkDate.getTime()) && adtkDate > new Date()) {
+          ticketTimeLimit = adtkDate.toISOString();
+          console.log(`[Sabre] Ticket time limit from SSR ADTK (priority 1): ${ticketTimeLimit}`);
+        }
+      }
+    } catch (adtkErr) {
+      console.warn('[Sabre] ADTK parse error (non-fatal):', adtkErr.message);
+    }
 
-    // Also check AirBook segments for LastTicketingDate
-    const segments = airBook?.OriginDestinationOption || airBook?.FlightSegment || [];
-    const segArr = Array.isArray(segments) ? segments : [segments];
-    segArr.forEach(seg => {
-      const fs = seg?.FlightSegment || seg;
-      const fsArr = Array.isArray(fs) ? fs : [fs];
-      fsArr.forEach(f => {
-        if (f?.TicketingInfo?.TicketTimeLimit) candidates.push(f.TicketingInfo.TicketTimeLimit);
-        if (f?.LastTicketingDate) candidates.push(f.LastTicketingDate);
+    // PRIORITY 2: Explicit ticketing fields from response
+    if (!ticketTimeLimit) {
+      const candidates = [
+        rs?.TravelItineraryRead?.TravelItinerary?.ItineraryInfo?.Ticketing?.[0]?.TicketTimeLimit,
+        itinRef?.TicketingDeadline,
+        airBook?.OriginDestinationOption?.[0]?.FlightSegment?.[0]?.TicketingInfo?.TicketTimeLimit,
+      ];
+
+      const segments = airBook?.OriginDestinationOption || airBook?.FlightSegment || [];
+      const segArr = Array.isArray(segments) ? segments : [segments];
+      segArr.forEach(seg => {
+        const fs = seg?.FlightSegment || seg;
+        const fsArr = Array.isArray(fs) ? fs : [fs];
+        fsArr.forEach(f => {
+          if (f?.TicketingInfo?.TicketTimeLimit) candidates.push(f.TicketingInfo.TicketTimeLimit);
+          if (f?.LastTicketingDate) candidates.push(f.LastTicketingDate);
+        });
       });
-    });
 
-    // 7TAW means "7 days after booking" — calculate from now
+      for (const c of candidates) {
+        if (!c || typeof c !== 'string') continue;
+        const d = new Date(c);
+        if (!isNaN(d.getTime()) && d > new Date()) {
+          ticketTimeLimit = d.toISOString();
+          console.log(`[Sabre] Ticket time limit from response field (priority 2): ${ticketTimeLimit}`);
+          break;
+        }
+      }
+    }
+
+    // PRIORITY 3 (last resort): derive from 7TAW (N days after creation)
     const ticketType = rs?.TravelItineraryAddInfo?.AgencyInfo?.Ticketing?.TicketType || '7TAW';
     const tawMatch = ticketType.match(/^(\d+)TAW$/);
-
-    for (const c of candidates) {
-      if (!c || typeof c !== 'string') continue;
-      const d = new Date(c);
-      if (!isNaN(d.getTime()) && d > new Date()) {
-        ticketTimeLimit = d.toISOString();
-        break;
-      }
-    }
-
-    // Try to extract deadline from SSR ADTK in the response (most accurate source)
-    // SSR ADTK contains: "TTL FOR AUTO CANX FIXED FOR 07APR26 AT 22:37 GMT"
-    if (!ticketTimeLimit) {
-      try {
-        const responseStr = JSON.stringify(finalResponse);
-        // Match SSR ADTK pattern: "FIXED FOR DDMMMYY AT HH:MM GMT"
-        const adtkMatch = responseStr.match(/FIXED\s+FOR\s+(\d{2})([A-Z]{3})(\d{2,4})\s+AT\s+(\d{2}):?(\d{2})\s*GMT/i);
-        if (adtkMatch) {
-          const months = { JAN: 0, FEB: 1, MAR: 2, APR: 3, MAY: 4, JUN: 5, JUL: 6, AUG: 7, SEP: 8, OCT: 9, NOV: 10, DEC: 11 };
-          const day = parseInt(adtkMatch[1]);
-          const mon = months[adtkMatch[2].toUpperCase()] ?? 0;
-          let yr = parseInt(adtkMatch[3]);
-          if (yr < 100) yr += 2000;
-          const hr = parseInt(adtkMatch[4]);
-          const mn = parseInt(adtkMatch[5]);
-          const adtkDate = new Date(Date.UTC(yr, mon, day, hr, mn, 0));
-          if (!isNaN(adtkDate.getTime()) && adtkDate > new Date()) {
-            ticketTimeLimit = adtkDate.toISOString();
-            console.log(`[Sabre] Ticket time limit from SSR ADTK: ${ticketTimeLimit}`);
-          }
-        }
-      } catch (adtkErr) {
-        console.warn('[Sabre] ADTK parse error (non-fatal):', adtkErr.message);
-      }
-    }
-
-    // Fallback: derive from 7TAW (N days after creation)
     if (!ticketTimeLimit && tawMatch) {
       const days = parseInt(tawMatch[1]) || 7;
       const deadline = new Date();
       deadline.setDate(deadline.getDate() + days);
       deadline.setHours(23, 59, 59, 0);
       ticketTimeLimit = deadline.toISOString();
-      console.log(`[Sabre] Ticket time limit derived from ${ticketType}: ${ticketTimeLimit}`);
+      console.log(`[Sabre] Ticket time limit from ${ticketType} fallback (priority 3): ${ticketTimeLimit}`);
     }
 
     if (ticketTimeLimit) {
