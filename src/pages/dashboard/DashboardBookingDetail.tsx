@@ -389,7 +389,6 @@ const DashboardBookingDetail = () => {
                 : displayStatus === 'cancelled' ? 'bg-red-500' : 'bg-muted';
               return <Badge className={`${statusColor} text-white text-sm px-3 py-1 font-bold`}>{statusLabel}</Badge>;
             })()}
-            </Badge>
             {booking.paymentDeadline && booking.status === "on_hold" && countdown && (
               <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-warning/10 border border-warning/30 text-sm">
                 <AlertTriangle className="w-4 h-4 text-warning flex-shrink-0" />
