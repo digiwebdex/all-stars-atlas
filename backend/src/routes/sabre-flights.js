@@ -2360,6 +2360,32 @@ async function createBooking({ flightData, passengers, contactInfo, specialServi
       }
     }
 
+    // Try to extract deadline from SSR ADTK in the response (most accurate source)
+    // SSR ADTK contains: "TTL FOR AUTO CANX FIXED FOR 07APR26 AT 22:37 GMT"
+    if (!ticketTimeLimit) {
+      try {
+        const responseStr = JSON.stringify(finalResponse);
+        // Match SSR ADTK pattern: "FIXED FOR DDMMMYY AT HH:MM GMT"
+        const adtkMatch = responseStr.match(/FIXED\s+FOR\s+(\d{2})([A-Z]{3})(\d{2,4})\s+AT\s+(\d{2}):?(\d{2})\s*GMT/i);
+        if (adtkMatch) {
+          const months = { JAN: 0, FEB: 1, MAR: 2, APR: 3, MAY: 4, JUN: 5, JUL: 6, AUG: 7, SEP: 8, OCT: 9, NOV: 10, DEC: 11 };
+          const day = parseInt(adtkMatch[1]);
+          const mon = months[adtkMatch[2].toUpperCase()] ?? 0;
+          let yr = parseInt(adtkMatch[3]);
+          if (yr < 100) yr += 2000;
+          const hr = parseInt(adtkMatch[4]);
+          const mn = parseInt(adtkMatch[5]);
+          const adtkDate = new Date(Date.UTC(yr, mon, day, hr, mn, 0));
+          if (!isNaN(adtkDate.getTime()) && adtkDate > new Date()) {
+            ticketTimeLimit = adtkDate.toISOString();
+            console.log(`[Sabre] Ticket time limit from SSR ADTK: ${ticketTimeLimit}`);
+          }
+        }
+      } catch (adtkErr) {
+        console.warn('[Sabre] ADTK parse error (non-fatal):', adtkErr.message);
+      }
+    }
+
     // Fallback: derive from 7TAW (N days after creation)
     if (!ticketTimeLimit && tawMatch) {
       const days = parseInt(tawMatch[1]) || 7;
