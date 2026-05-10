@@ -164,7 +164,7 @@ const DashboardBookingDetail = () => {
   const issuedTicketNo = latestIssuedRequest?.ticket_number || latestIssuedRequest?.ticketNumber || null;
   const effectiveTicketNo = [booking?.ticketNo, issuedTicketNo].find((value) => value && value !== '—') || null;
   const hasFinalTicket = !!effectiveTicketNo;
-  const isTicketed = booking?.status === 'ticketed' || String(latestIssuedRequest?.status || '').toLowerCase() === 'issued';
+  const isTicketed = booking?.status === 'ticketed' || !!effectiveTicketNo || String(latestIssuedRequest?.status || '').toLowerCase() === 'issued';
   const hasActiveIssueRequest = !hasFinalTicket && (
     booking?.status === 'processing' ||
     ['pending', 'processing'].includes(String(latestActiveIssueRequest?.status || '').toLowerCase())
@@ -386,7 +386,7 @@ const DashboardBookingDetail = () => {
             {(() => {
               const normalizedStatus = String(booking.status || '').toLowerCase();
               const displayStatus = hasFinalTicket
-                ? (normalizedStatus === 'ticketed' ? 'ticketed' : normalizedStatus === 'completed' ? 'completed' : normalizedStatus === 'cancelled' ? 'cancelled' : 'confirmed')
+                ? (normalizedStatus === 'completed' ? 'completed' : normalizedStatus === 'cancelled' ? 'cancelled' : 'ticketed')
                 : (hasIssuedWithBalance && ['confirmed', 'on_hold', 'pending', 'processing'].includes(normalizedStatus)) ? 'processing'
                 : normalizedStatus;
               const statusLabel = displayStatus === 'on_hold' ? 'Reserved'

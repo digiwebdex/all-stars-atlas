@@ -1311,7 +1311,15 @@ router.put('/ticket-issue-requests/:id', async (req, res) => {
           } catch (_) { /* ignore */ }
         }
 
-        await db.query('UPDATE bookings SET status = ? WHERE id = ?', ['ticketed', request.bid]);
+        const mergedDetails = {
+          ...details,
+          ticketNumber: finalTicketNo || details.ticketNumber || null,
+          ticket_number: finalTicketNo || details.ticket_number || null,
+        };
+        await db.query(
+          'UPDATE bookings SET status = ?, payment_status = ?, ticket_status = ?, ticket_number = ?, pnr = ?, details = ?, updated_at = NOW() WHERE id = ?',
+          ['ticketed', 'paid', 'issued', finalTicketNo, finalPnr, JSON.stringify(mergedDetails), request.bid]
+        );
 
         // Create ticket records
         const ticketNos = gdsResult?.ticketNumbers?.length > 0 ? gdsResult.ticketNumbers : (finalTicketNo ? [finalTicketNo] : []);

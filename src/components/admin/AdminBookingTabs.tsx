@@ -729,7 +729,7 @@ const AdminBookingTabs = ({
             </Button>
           )}
           {viewBooking.status === "confirmed" && (
-            <Button variant="outline" className="border-purple-500 text-purple-600" onClick={() => { updateBooking(viewBooking, { status: "ticketed" }); setViewBooking(null); }}>
+            <Button variant="outline" className="border-purple-500 text-purple-600" onClick={() => setIssueTicketOpen(true)}>
               <Ticket className="w-4 h-4 mr-1" /> Mark Ticketed
             </Button>
           )}
