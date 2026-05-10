@@ -1304,107 +1304,68 @@ router.put('/ticket-issue-requests/:id', async (req, res) => {
     }
 
     if (action === 'issue') {
-      // Mark as processing
-      await db.query('UPDATE ticket_issue_requests SET status = ?, processed_by = ? WHERE id = ?', ['processing', req.user.sub, id]);
+      // MANUAL ticket issuance only — admin types the ticket number, no GDS call.
+      if (!ticketNumber || !String(ticketNumber).trim()) {
+        return res.status(400).json({ message: 'Ticket number is required for manual issuance.' });
+      }
 
-      // Try to issue ticket via GDS
       const details = safeJsonParse(request.details) || {};
       const outbound = details.outbound || details;
       const source = outbound.source || details.source || '';
-      const gdsPnr = manualPnr || request.pnr || details.gdsPnr || outbound.gdsPnr;
-      const gdsBookingId = details.gdsBookingId || outbound.gdsBookingId;
-      let gdsResult = null;
-      let gdsError = null;
+      const finalTicketNo = String(ticketNumber).trim();
+      const finalPnr = (manualPnr && String(manualPnr).trim()) || request.pnr || details.gdsPnr || outbound.gdsPnr || null;
 
-      if (gdsPnr || gdsBookingId) {
-        try {
-          if (source === 'sabre') {
-            gdsResult = await sabreFlights.issueTicket({ pnr: gdsPnr });
-          } else if (source === 'bdfare') {
-            gdsResult = await bdfFlights.issueTicket({ orderId: details.bdfOrderId, pnr: gdsPnr });
-          } else if (source === 'flyhub') {
-            gdsResult = await flyhubFlights.issueTicket({ bookingId: gdsBookingId || gdsPnr, pnr: gdsPnr });
-          } else if (source === 'tti') {
-            gdsResult = await ttiFlights.issueTicket({ pnr: gdsPnr, bookingId: gdsBookingId });
-          }
-        } catch (err) {
-          gdsError = err.message;
+      // Self-heal bookings.status enum to include 'ticketed' (handles "Data truncated" error on legacy schemas)
+      try {
+        const [colInfo] = await db.query("SHOW COLUMNS FROM bookings LIKE 'status'");
+        const typeStr = colInfo?.[0]?.Type || '';
+        if (/^enum\(/i.test(typeStr) && !/'ticketed'/i.test(typeStr)) {
+          await db.query("ALTER TABLE bookings MODIFY COLUMN status ENUM('pending','confirmed','processing','ticketed','cancelled','expired','refunded','void','failed','rejected','on_hold','reserved') DEFAULT 'pending'");
         }
+      } catch (e) { console.warn('[Admin] bookings.status enum heal skipped:', e.message); }
+
+      // Ensure ticket_number column exists
+      try {
+        const [tcol] = await db.query("SHOW COLUMNS FROM bookings LIKE 'ticket_number'");
+        if (!tcol.length) await db.query('ALTER TABLE bookings ADD COLUMN ticket_number VARCHAR(100) NULL');
+      } catch (_) {}
+
+      const mergedDetails = {
+        ...details,
+        ticketNumber: finalTicketNo,
+        ticket_number: finalTicketNo,
+        manualIssue: true,
+        issuedBy: req.user.email || req.user.sub,
+        issuedAt: new Date().toISOString(),
+      };
+
+      await db.query(
+        'UPDATE bookings SET status = ?, payment_status = ?, ticket_status = ?, ticket_number = ?, pnr = ?, details = ?, updated_at = NOW() WHERE id = ?',
+        ['ticketed', 'paid', 'issued', finalTicketNo, finalPnr, JSON.stringify(mergedDetails), request.bid]
+      );
+
+      // Create ticket record
+      try {
+        await db.query(
+          'INSERT INTO tickets (id, booking_id, user_id, ticket_no, pnr, status, details) VALUES (?, ?, ?, ?, ?, ?, ?)',
+          [uuidv4(), request.bid, request.booking_user_id, finalTicketNo, finalPnr,
+           'active', JSON.stringify({ source, manual: true, issuedBy: req.user.email, issuedAt: new Date().toISOString(), viaRequest: id })]
+        );
+      } catch (ticketErr) {
+        console.log('[Admin] Ticket record insert skipped:', ticketErr.message);
       }
 
-      // Determine final ticket number — from GDS result, manual input, or admin notes
-      const finalTicketNo = ticketNumber || (gdsResult?.ticketNumbers?.[0]) || null;
-      const finalPnr = manualPnr || gdsPnr || request.pnr || null;
+      await db.query(
+        'UPDATE ticket_issue_requests SET status = ?, admin_notes = ?, ticket_number = ?, pnr = ?, processed_by = ?, processed_at = NOW() WHERE id = ?',
+        ['issued', adminNotes || `Manually issued. Ticket: ${finalTicketNo}`, finalTicketNo, finalPnr, req.user.sub, id]
+      );
 
-      if ((gdsResult && gdsResult.success) || ticketNumber) {
-        // Update booking status + ticket_number on bookings table
-        const updateFields = ['status = ?', 'updated_at = NOW()'];
-        const updateParams = ['ticketed'];
-
-        // Try to set ticket_number column (may not exist on older schemas)
-        try {
-          if (finalTicketNo) {
-            await db.query('UPDATE bookings SET ticket_number = ? WHERE id = ?', [finalTicketNo, request.bid]);
-          }
-        } catch (colErr) {
-          // Column might not exist — try adding it
-          try {
-            await db.query('ALTER TABLE bookings ADD COLUMN ticket_number VARCHAR(100) NULL');
-            if (finalTicketNo) {
-              await db.query('UPDATE bookings SET ticket_number = ? WHERE id = ?', [finalTicketNo, request.bid]);
-            }
-          } catch (_) { /* ignore */ }
-        }
-
-        const mergedDetails = {
-          ...details,
-          ticketNumber: finalTicketNo || details.ticketNumber || null,
-          ticket_number: finalTicketNo || details.ticket_number || null,
-        };
-        await db.query(
-          'UPDATE bookings SET status = ?, payment_status = ?, ticket_status = ?, ticket_number = ?, pnr = ?, details = ?, updated_at = NOW() WHERE id = ?',
-          ['ticketed', 'paid', 'issued', finalTicketNo, finalPnr, JSON.stringify(mergedDetails), request.bid]
-        );
-
-        // Create ticket records
-        const ticketNos = gdsResult?.ticketNumbers?.length > 0 ? gdsResult.ticketNumbers : (finalTicketNo ? [finalTicketNo] : []);
-        for (const ticketNo of ticketNos) {
-          try {
-            await db.query(
-              'INSERT INTO tickets (id, booking_id, user_id, ticket_no, pnr, status, details) VALUES (?, ?, ?, ?, ?, ?, ?)',
-              [uuidv4(), request.bid, request.booking_user_id, ticketNo, finalPnr,
-               'active', JSON.stringify({ source, issuedBy: req.user.email, issuedAt: new Date().toISOString(), viaRequest: id })]
-            );
-          } catch (ticketErr) {
-            console.log('[Admin] Ticket record insert skipped:', ticketErr.message);
-          }
-        }
-
-        // Mark request as issued with ticket number
-        await db.query(
-          'UPDATE ticket_issue_requests SET status = ?, admin_notes = ?, ticket_number = ?, pnr = ?, processed_at = NOW() WHERE id = ?',
-          ['issued', adminNotes || `Issued. Tickets: ${ticketNos.join(', ')}`, finalTicketNo, finalPnr, id]
-        );
-
-        return res.json({
-          success: true,
-          message: 'Ticket issued successfully',
-          ticketNumbers: ticketNos,
-          gdsResult,
-        });
-      } else {
-        // GDS failed — mark request back to pending with error note
-        const errorMsg = gdsError || gdsResult?.error || 'GDS ticketing failed';
-        await db.query(
-          'UPDATE ticket_issue_requests SET status = ?, admin_notes = ? WHERE id = ?',
-          ['pending', `GDS Error: ${errorMsg}. ${adminNotes || ''}`.trim(), id]
-        );
-        return res.status(422).json({
-          success: false,
-          message: 'GDS ticket issuance failed',
-          gdsError: errorMsg,
-        });
-      }
+      return res.json({
+        success: true,
+        message: 'Ticket issued successfully (manual)',
+        ticketNumber: finalTicketNo,
+        pnr: finalPnr,
+      });
     }
 
     res.status(400).json({ message: 'Invalid action. Use "issue" or "reject".' });
