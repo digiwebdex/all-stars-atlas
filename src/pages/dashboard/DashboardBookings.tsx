@@ -36,6 +36,7 @@ const statusColors: Record<string, string> = {
   "Ticketed": "bg-accent/10 text-accent border-accent/20", "ticketed": "bg-accent/10 text-accent border-accent/20",
   "Pending": "bg-warning/10 text-warning border-warning/20", "pending": "bg-warning/10 text-warning border-warning/20",
   "In Progress": "bg-primary/10 text-primary border-primary/20", "in_progress": "bg-primary/10 text-primary border-primary/20",
+  "processing": "bg-primary/10 text-primary border-primary/20", "Processing": "bg-primary/10 text-primary border-primary/20",
   "Completed": "bg-muted text-muted-foreground border-border", "completed": "bg-muted text-muted-foreground border-border",
   "Cancelled": "bg-destructive/10 text-destructive border-destructive/20", "cancelled": "bg-destructive/10 text-destructive border-destructive/20",
   "Void": "bg-destructive/10 text-destructive border-destructive/20", "void": "bg-destructive/10 text-destructive border-destructive/20",
