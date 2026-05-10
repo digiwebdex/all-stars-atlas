@@ -67,8 +67,19 @@ function mapBooking(b: any) {
   const svc = pickAmt(d.serviceCharge, d.service_charge, d.serviceFee, o.serviceCharge, b.serviceCharge, fareObj.serviceFee) || 0;
   let base = rawBase || 0; const tax = rawTax || 0;
   if (base <= 0 && rawAmt > 0) { const k = tax + svc; base = k > 0 ? Math.max(0, rawAmt - k) : rawAmt; }
-  const discount = pickAmt(d.discount, o.discount, fareObj.discount) || 0;
-  const ait = pickAmt(d.ait, d.aitVat, fareObj.aitVat) || 0;
+  // Discount: prefer absolute amount; otherwise compute from fareRules.discount (%) × baseFare
+  const fareRules = o.fareRules || d.fareRules || fareObj.fareRules || {};
+  const discountPct = pickAmt(fareRules.discount, fareObj.discountPct, d.discountPct);
+  let discount = pickAmt(d.discount, o.discount, fareObj.discount) || 0;
+  if (discount <= 0 && discountPct && discountPct > 0 && base > 0) {
+    discount = Math.round(((base * discountPct) / 100) * 100) / 100;
+  }
+  // AIT: prefer absolute; else fareRules.aitVat (%) × original base
+  const aitPct = pickAmt(fareRules.aitVat, fareObj.aitVatPct, d.aitVatPct);
+  let ait = pickAmt(d.ait, d.aitVat, fareObj.aitVat) || 0;
+  if (ait <= 0 && aitPct && aitPct > 0 && base > 0) {
+    ait = Math.round(((base * aitPct) / 100) * 100) / 100;
+  }
   const passengerTicketNo = Array.isArray(pax) ? (pax.find((p: any) => p?.ticketNumber || p?.ticketNo)?.ticketNumber || pax.find((p: any) => p?.ticketNumber || p?.ticketNo)?.ticketNo) : null;
   const resolvedTicketNo = b.ticketNo || b.ticket_number || d.ticketNumber || d.ticket_number || d.ticketNo || d.gdsBookingResult?.ticketNumbers?.[0] || d.gdsResult?.ticketNumbers?.[0] || o.ticketNumber || o.ticket_number || ret?.ticketNumber || ret?.ticket_number || passengerTicketNo || "—";
   return {
