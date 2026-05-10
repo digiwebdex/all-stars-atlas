@@ -324,6 +324,7 @@ router.get('/bookings', async (req, res) => {
              WHERE booking_id IN (${bookingIds.map(() => '?').join(',')})
                AND ticket_number IS NOT NULL
                AND ticket_number <> ''
+               AND status = 'issued'
              ORDER BY updated_at DESC, created_at DESC`,
             bookingIds
           );
@@ -355,7 +356,7 @@ router.get('/bookings', async (req, res) => {
         details, passengerInfo,
         contactInfo: safeJsonParse(b.contact_info, {}), notes: b.notes,
         pnr: b.pnr || details.gdsPnr || details.outbound?.pnr || null,
-        ticketNo: b.ticket_number || nestedTicketNo || ticketMap[b.id] || requestTicketMap[b.id] || null,
+        ticketNo: b.ticket_number || requestTicketMap[b.id] || nestedTicketNo || ticketMap[b.id] || null,
         paymentDeadline: b.payment_deadline || null,
         bookedAt: b.booked_at, updatedAt: b.updated_at,
       };
