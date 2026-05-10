@@ -1646,6 +1646,9 @@ router.post('/book', authenticate, async (req, res) => {
       baseFare,
       taxes,
       serviceCharge,
+      discount,
+      aitVat,
+      fareRules,
       addOns,
       contactInfo,
       travelDocuments,
@@ -1733,6 +1736,9 @@ router.post('/book', authenticate, async (req, res) => {
       addOns: addOns || {},
       specialServices: specialServices || {},
       baseFare, taxes, serviceCharge,
+      discount,
+      aitVat,
+      fareRules: fareRules || flightData?.fareRules || { discount: 6.30, aitVat: 0.3 },
       travelDocuments: travelDocuments || [],
     };
 
