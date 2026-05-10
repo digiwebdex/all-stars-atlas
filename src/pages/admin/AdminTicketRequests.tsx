@@ -268,7 +268,7 @@ const AdminTicketRequests = () => {
                       onClick={() => handleAction(viewRequest.id, "issue")}
                     >
                       {actionLoading === viewRequest.id ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Ticket className="w-4 h-4 mr-1" />}
-                      Issue Ticket via GDS
+                      Issue Ticket Manually
                     </Button>
                   </DialogFooter>
                 </>
