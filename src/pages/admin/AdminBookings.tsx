@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -84,6 +84,10 @@ const AdminBookings = () => {
     ...(search ? { search } : {}),
     ...(statusFilter !== "all" ? { status: statusFilter } : {}),
   });
+
+  useEffect(() => {
+    if (issueTicketOpen) setIssueTicketNo(viewBooking?.ticketNo || "");
+  }, [issueTicketOpen, viewBooking?.ticketNo]);
 
   // Parse passengerInfo safely — it may arrive as a double-stringified JSON string
   const safeParsePax = (pi: any): any[] => {
