@@ -968,6 +968,9 @@ const FlightBooking = () => {
         passengers, isRoundTrip, isMultiCity, isDomestic: domestic, payLater,
         paymentMethod: payLater ? "pay_later" : (selectedPaymentMethod || "card"),
         totalAmount: finalTotal, baseFare: finalBaseFare, taxes: finalTaxes, serviceCharge,
+        discount: overrideFare ? Math.round((finalBaseFare * DISCOUNT_PCT) / 100) : totalDiscount,
+        aitVat: overrideFare ? Math.round((finalBaseFare * AIT_VAT_PCT) / 100) : totalAitVat,
+        fareRules: { discount: DISCOUNT_PCT, aitVat: AIT_VAT_PCT },
         couponCode: appliedCoupon?.code || undefined, couponDiscount: couponDiscount || undefined,
         priceRevalidated: !!overrideFare,
         addOns: {

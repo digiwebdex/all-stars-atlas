@@ -67,17 +67,17 @@ function mapBooking(b: any) {
   const svc = pickAmt(d.serviceCharge, d.service_charge, d.serviceFee, o.serviceCharge, b.serviceCharge, fareObj.serviceFee) || 0;
   let base = rawBase || 0; const tax = rawTax || 0;
   if (base <= 0 && rawAmt > 0) { const k = tax + svc; base = k > 0 ? Math.max(0, rawAmt - k) : rawAmt; }
-  // Discount: prefer absolute amount; otherwise compute from fareRules.discount (%) × baseFare
+  // Discount/AIT: prefer stored amounts; otherwise compute from saved rules or platform defaults.
+  // Older bookings only stored base/tax/total, so fareRules can be missing even though the payable fare used 6.30% discount + 0.30% AIT.
   const fareRules = o.fareRules || d.fareRules || fareObj.fareRules || {};
-  const discountPct = pickAmt(fareRules.discount, fareObj.discountPct, d.discountPct);
-  let discount = pickAmt(d.discount, o.discount, fareObj.discount) || 0;
-  if (discount <= 0 && discountPct && discountPct > 0 && base > 0) {
+  const discountPct = pickAmt(fareRules.discount, d.fareRules?.discount, fareObj.discountPct, d.discountPct, d.discountPercentage, o.discountPct) ?? 6.30;
+  let discount = pickAmt(d.discount, d.totalDiscount, d.discountAmount, o.discount, fareObj.discount) || 0;
+  if (discount <= 0 && discountPct > 0 && base > 0) {
     discount = Math.round(((base * discountPct) / 100) * 100) / 100;
   }
-  // AIT: prefer absolute; else fareRules.aitVat (%) × original base
-  const aitPct = pickAmt(fareRules.aitVat, fareObj.aitVatPct, d.aitVatPct);
-  let ait = pickAmt(d.ait, d.aitVat, fareObj.aitVat) || 0;
-  if (ait <= 0 && aitPct && aitPct > 0 && base > 0) {
+  const aitPct = pickAmt(fareRules.aitVat, d.fareRules?.aitVat, fareObj.aitVatPct, d.aitVatPct, d.aitVatPercentage, o.aitVatPct) ?? 0.3;
+  let ait = pickAmt(d.ait, d.aitVat, d.totalAitVat, d.aitVatAmount, fareObj.aitVat) || 0;
+  if (ait <= 0 && aitPct > 0 && base > 0) {
     ait = Math.round(((base * aitPct) / 100) * 100) / 100;
   }
   const passengerTicketNo = Array.isArray(pax) ? (pax.find((p: any) => p?.ticketNumber || p?.ticketNo)?.ticketNumber || pax.find((p: any) => p?.ticketNumber || p?.ticketNo)?.ticketNo) : null;
