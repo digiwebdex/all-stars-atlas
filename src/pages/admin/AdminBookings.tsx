@@ -64,6 +64,7 @@ const AdminBookings = () => {
   const [cancelFlightOpen, setCancelFlightOpen] = useState(false);
   const [sendPayLinkOpen, setSendPayLinkOpen] = useState(false);
   const [issueNotes, setIssueNotes] = useState("");
+  const [issueTicketNo, setIssueTicketNo] = useState("");
   const [cancelReason, setCancelReason] = useState("");
   const [payLinkEmail, setPayLinkEmail] = useState("");
   const [payLinkName, setPayLinkName] = useState("");
@@ -122,6 +123,7 @@ const AdminBookings = () => {
       status: b.status, amount: `৳${(b.totalAmount || 0).toLocaleString()}`,
       rawAmount: b.totalAmount || 0, paymentMethod: b.paymentMethod || "—",
       paymentStatus: b.paymentStatus || "—",
+      ticketNo: b.ticketNo || b.ticket_number || b.details?.ticketNumber || b.details?.ticket_number || "",
       paymentDeadline: b.paymentDeadline,
       details: b.details || {},
       passengerInfo: paxList,
