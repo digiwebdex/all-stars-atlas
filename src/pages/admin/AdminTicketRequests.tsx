@@ -209,7 +209,7 @@ const AdminTicketRequests = () => {
                 </div>
               )}
 
-              {/* GDS Source */}
+              {/* Booking Source (info only — issuance is manual) */}
               {(() => {
                 const details = typeof viewRequest.details === 'string' ? JSON.parse(viewRequest.details || '{}') : (viewRequest.details || {});
                 const outbound = details.outbound || details;
@@ -217,9 +217,9 @@ const AdminTicketRequests = () => {
                 const route = `${outbound.origin || ''} → ${outbound.destination || ''}`;
                 return source ? (
                   <div className="p-3 bg-primary/5 border border-primary/20 rounded-lg text-sm">
-                    <p className="font-semibold">GDS Source: <span className="uppercase text-primary">{source}</span></p>
+                    <p className="font-semibold">Booking Source: <span className="uppercase text-primary">{source}</span></p>
                     <p className="text-muted-foreground text-xs">Route: {route}</p>
-                    <p className="text-xs text-muted-foreground mt-1">⚠️ Issuing will call the {source.toUpperCase()} GDS API to issue a real airline ticket.</p>
+                    <p className="text-xs text-muted-foreground mt-1">ℹ️ Manual issuance — enter the ticket number issued by the airline. No GDS API call will be made.</p>
                   </div>
                 ) : null;
               })()}
