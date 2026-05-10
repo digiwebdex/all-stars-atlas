@@ -24,6 +24,7 @@ const statusTabs = ["All", "Reserved", "Pending", "In Progress", "Confirmed", "C
 const statusLabelMap: Record<string, string> = {
   on_hold: "Reserved", "On Hold": "Reserved",
   confirmed: "Confirmed", pending: "Pending", in_progress: "In Progress",
+  processing: "In Progress", Processing: "In Progress",
   completed: "Completed", cancelled: "Cancelled", void: "Void",
   refund: "Refund", exchange: "Exchange", expired: "Expired",
   un_confirmed: "Un-Confirmed", ticketed: "Ticketed",
