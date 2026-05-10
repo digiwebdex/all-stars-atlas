@@ -637,12 +637,20 @@ const AdminBookings = () => {
               <p className="text-destructive text-xs mt-1">This action cannot be undone. Payment will be deducted from your GDS balance.</p>
             </div>
           ) : null}
-          <Textarea value={issueNotes} onChange={(e) => setIssueNotes(e.target.value)} placeholder="Type notes..." rows={3} />
+          <div className="space-y-3">
+            <Input value={issueTicketNo} onChange={(e) => setIssueTicketNo(e.target.value)} placeholder="Ticket number (required)" className="font-mono" />
+            <Textarea value={issueNotes} onChange={(e) => setIssueNotes(e.target.value)} placeholder="Type notes..." rows={3} />
+          </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIssueTicketOpen(false)}>Close</Button>
+            <Button variant="outline" onClick={() => { setIssueTicketOpen(false); setIssueTicketNo(""); }}>Close</Button>
             <Button className="bg-accent text-accent-foreground" disabled={!!actionLoading} onClick={() => {
-              if (viewBooking) updateBooking(viewBooking, { status: "ticketed", paymentStatus: "paid", notes: issueNotes ? `${viewBooking.notes ? viewBooking.notes + '\n' : ''}[Ticket Issued] ${issueNotes}` : viewBooking.notes });
-              setIssueTicketOpen(false); setViewBooking(null);
+              const ticketNo = issueTicketNo.trim();
+              if (!ticketNo) {
+                toast({ title: "Ticket number required", description: "Please enter the ticket number written by admin.", variant: "destructive" });
+                return;
+              }
+              if (viewBooking) updateBooking(viewBooking, { status: "ticketed", paymentStatus: "paid", ticketNo, notes: issueNotes ? `${viewBooking.notes ? viewBooking.notes + '\n' : ''}[Ticket Issued] ${issueNotes}` : viewBooking.notes });
+              setIssueTicketOpen(false); setIssueTicketNo(""); setViewBooking(null);
             }}>
               {actionLoading ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Ticket className="w-4 h-4 mr-1" />}
               {(viewBooking?.details?.outbound?.source === 'tti' || viewBooking?.details?.outbound?.airlineCode === '2A') ? 'Mark as Ticketed' : 'Issue Ticket'}
