@@ -1229,9 +1229,28 @@ async function ensureTicketIssueRequestsTable() {
     INDEX idx_tir_booking (booking_id),
     INDEX idx_tir_user (user_id)
   )`);
-  // Best-effort add columns if upgrading from an older schema
-  try { await db.query("ALTER TABLE ticket_issue_requests ADD COLUMN ticket_number VARCHAR(64) NULL"); } catch {}
-  try { await db.query("ALTER TABLE ticket_issue_requests ADD COLUMN pnr VARCHAR(32) NULL"); } catch {}
+
+  const requiredColumns = [
+    ['notes', 'TEXT NULL'],
+    ['admin_notes', 'TEXT NULL'],
+    ['ticket_number', 'VARCHAR(64) NULL'],
+    ['pnr', 'VARCHAR(32) NULL'],
+    ['processed_by', 'CHAR(36) NULL'],
+    ['processed_at', 'DATETIME NULL'],
+    ['created_at', 'DATETIME DEFAULT CURRENT_TIMESTAMP'],
+    ['updated_at', 'DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'],
+  ];
+
+  for (const [columnName, definition] of requiredColumns) {
+    try {
+      const [cols] = await db.query('SHOW COLUMNS FROM ticket_issue_requests LIKE ?', [columnName]);
+      if (!cols || cols.length === 0) {
+        await db.query(`ALTER TABLE ticket_issue_requests ADD COLUMN ${columnName} ${definition}`);
+      }
+    } catch (err) {
+      console.warn(`[Admin] ticket_issue_requests column check skipped for ${columnName}:`, err.message);
+    }
+  }
 }
 
 // GET /admin/ticket-issue-requests — list all pending ticket issue requests
@@ -1241,7 +1260,8 @@ router.get('/ticket-issue-requests', async (req, res) => {
     const status = req.query.status || 'all';
     let sql = `SELECT tir.*, b.booking_ref, b.pnr, b.status as booking_status, b.total_amount, b.payment_status,
                b.details, b.passenger_info, b.contact_info, b.booking_type,
-               u.name as user_name, u.email as user_email, u.phone as user_phone
+               TRIM(CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, ''))) as user_name,
+               u.email as user_email, u.phone as user_phone
                FROM ticket_issue_requests tir
                JOIN bookings b ON tir.booking_id = b.id
                JOIN users u ON tir.user_id = u.id`;
