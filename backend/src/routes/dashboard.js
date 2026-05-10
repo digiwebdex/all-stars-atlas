@@ -373,7 +373,7 @@ router.get('/bookings', async (req, res) => {
     } catch (_) { /* tickets table may not exist */ }
 
     const data = rows.map(b => {
-      const details = safeJsonParse(b.details, {});
+      const details = normalizeBookingFareDetails(safeJsonParse(b.details, {}), b);
       const passengerInfo = safeJsonParse(b.passenger_info, []);
       const nestedTicketNo =
         details.ticketNumber ||
