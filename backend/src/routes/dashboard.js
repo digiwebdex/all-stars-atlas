@@ -57,6 +57,43 @@ function parseTransactionMeta(meta) {
   return safeJsonParse(meta, {});
 }
 
+function parseAmount(value) {
+  if (value === null || value === undefined || value === '') return undefined;
+  if (typeof value === 'number') return Number.isFinite(value) ? value : undefined;
+  if (typeof value === 'string') {
+    const parsed = Number(value.replace(/[^0-9.-]/g, ''));
+    return Number.isFinite(parsed) ? parsed : undefined;
+  }
+  return undefined;
+}
+
+function firstAmount(...values) {
+  for (const value of values) {
+    const parsed = parseAmount(value);
+    if (parsed !== undefined) return parsed;
+  }
+  return undefined;
+}
+
+function normalizeBookingFareDetails(details, bookingRow = {}) {
+  const safeDetails = details && typeof details === 'object' ? details : {};
+  const outbound = safeDetails.outbound || {};
+  const fare = safeDetails.fare || safeDetails.fareBreakdown || safeDetails.pricing || outbound.fare || {};
+  const paxFares = safeDetails.paxFares || safeDetails.passengerFares || fare.passengerFares || [];
+  const firstPaxFare = Array.isArray(paxFares) && paxFares.length > 0 ? paxFares[0] : {};
+  const fareRules = outbound.fareRules || safeDetails.fareRules || fare.fareRules || {};
+  const baseFare = firstAmount(safeDetails.baseFare, safeDetails.base_fare, fare.baseFare, firstPaxFare.baseFare, outbound.baseFare, bookingRow.base_fare, safeDetails.fareDetails?.baseFare) || 0;
+  const parsedDiscountPct = firstAmount(fareRules.discount, safeDetails.fareRules?.discount, fare.discountPct, safeDetails.discountPct, safeDetails.discountPercentage, outbound.discountPct);
+  const discountPct = parsedDiscountPct && parsedDiscountPct > 0 ? parsedDiscountPct : 6.30;
+  const parsedAitPct = firstAmount(fareRules.aitVat, safeDetails.fareRules?.aitVat, fare.aitVatPct, safeDetails.aitVatPct, safeDetails.aitVatPercentage, outbound.aitVatPct);
+  const aitPct = parsedAitPct && parsedAitPct > 0 ? parsedAitPct : 0.3;
+  let discount = firstAmount(safeDetails.discount, safeDetails.totalDiscount, safeDetails.discountAmount, outbound.discount, fare.discount) || 0;
+  let aitVat = firstAmount(safeDetails.ait, safeDetails.aitVat, safeDetails.totalAitVat, safeDetails.aitVatAmount, fare.aitVat) || 0;
+  if (discount <= 0 && baseFare > 0) discount = Math.round(((baseFare * discountPct) / 100) * 100) / 100;
+  if (aitVat <= 0 && baseFare > 0) aitVat = Math.round(((baseFare * aitPct) / 100) * 100) / 100;
+  return { ...safeDetails, discount, totalDiscount: discount, ait: aitVat, aitVat, totalAitVat: aitVat, fareRules: { ...fareRules, discount: discountPct, aitVat: aitPct } };
+}
+
 function isLegacyWalletCredit(txn) {
   const meta = parseTransactionMeta(txn.meta);
   const description = String(txn.description || '').toLowerCase();
@@ -336,7 +373,7 @@ router.get('/bookings', async (req, res) => {
     } catch (_) { /* tickets table may not exist */ }
 
     const data = rows.map(b => {
-      const details = safeJsonParse(b.details, {});
+      const details = normalizeBookingFareDetails(safeJsonParse(b.details, {}), b);
       const passengerInfo = safeJsonParse(b.passenger_info, []);
       const nestedTicketNo =
         details.ticketNumber ||
