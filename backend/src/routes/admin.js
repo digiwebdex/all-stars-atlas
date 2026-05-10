@@ -1210,9 +1210,34 @@ router.put('/bookings/:id/issue-ticket', async (req, res) => {
 
 // ── Ticket Issue Requests (Admin) ──
 
+// Ensure ticket_issue_requests table exists (self-heal if migration not run on VPS)
+async function ensureTicketIssueRequestsTable() {
+  await db.query(`CREATE TABLE IF NOT EXISTS ticket_issue_requests (
+    id CHAR(36) PRIMARY KEY,
+    booking_id CHAR(36) NOT NULL,
+    user_id CHAR(36) NOT NULL,
+    status ENUM('pending','processing','issued','rejected') DEFAULT 'pending',
+    notes TEXT NULL,
+    admin_notes TEXT NULL,
+    ticket_number VARCHAR(64) NULL,
+    pnr VARCHAR(32) NULL,
+    processed_by CHAR(36) NULL,
+    processed_at DATETIME NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_tir_status (status),
+    INDEX idx_tir_booking (booking_id),
+    INDEX idx_tir_user (user_id)
+  )`);
+  // Best-effort add columns if upgrading from an older schema
+  try { await db.query("ALTER TABLE ticket_issue_requests ADD COLUMN ticket_number VARCHAR(64) NULL"); } catch {}
+  try { await db.query("ALTER TABLE ticket_issue_requests ADD COLUMN pnr VARCHAR(32) NULL"); } catch {}
+}
+
 // GET /admin/ticket-issue-requests — list all pending ticket issue requests
 router.get('/ticket-issue-requests', async (req, res) => {
   try {
+    await ensureTicketIssueRequestsTable();
     const status = req.query.status || 'all';
     let sql = `SELECT tir.*, b.booking_ref, b.pnr, b.status as booking_status, b.total_amount, b.payment_status,
                b.details, b.passenger_info, b.contact_info, b.booking_type,
@@ -1230,7 +1255,7 @@ router.get('/ticket-issue-requests', async (req, res) => {
     res.json({ data: rows });
   } catch (err) {
     console.error('[Admin] Ticket issue requests error:', err);
-    res.status(500).json({ message: 'Failed to fetch ticket issue requests' });
+    res.status(500).json({ message: 'Failed to fetch ticket issue requests', error: err.message, code: err.code });
   }
 });
 
