@@ -18,6 +18,7 @@ export interface AirlineMarkupEntry {
   discount: number;
   markup: number;
   fixedMarkup: number;
+  commission?: number;
 }
 
 interface AirlineMarkupConfigProps {
@@ -32,6 +33,7 @@ const defaultAirlineEntry: AirlineMarkupEntry = {
   discount: 6.30,
   markup: 0,
   fixedMarkup: 0,
+  commission: 0,
 };
 
 const AirlineMarkupConfig = ({ airlineMarkups, globalDiscount, globalAitVat, onChange }: AirlineMarkupConfigProps) => {
@@ -184,15 +186,28 @@ const AirlineMarkupConfig = ({ airlineMarkups, globalDiscount, globalAitVat, onC
                         />
                       </div>
                     </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-xs">Additional Fixed Markup (BDT)</Label>
-                      <Input
-                        type="number"
-                        step="1"
-                        value={selectedEntry.fixedMarkup}
-                        onChange={(e) => updateAirline(selectedAirline, { fixedMarkup: parseFloat(e.target.value) || 0 })}
-                        className="h-9"
-                      />
+                    <div className="grid sm:grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">Additional Fixed Markup (BDT)</Label>
+                        <Input
+                          type="number"
+                          step="1"
+                          value={selectedEntry.fixedMarkup}
+                          onChange={(e) => updateAirline(selectedAirline, { fixedMarkup: parseFloat(e.target.value) || 0 })}
+                          className="h-9"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">Agent Commission (%)</Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={selectedEntry.commission ?? 0}
+                          onChange={(e) => updateAirline(selectedAirline, { commission: parseFloat(e.target.value) || 0 })}
+                          className="h-9"
+                        />
+                        <p className="text-[10px] text-muted-foreground">Per-airline commission paid to agents.</p>
+                      </div>
                     </div>
                   </div>
                 )}
