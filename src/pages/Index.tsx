@@ -213,6 +213,7 @@ const Index = () => {
 
   const renderSection = (key: string) => {
     if (!isSectionVisible(key)) return null;
+    if (key === 'offers' || key === 'routes' || key === 'appDownload') return null;
 
     switch (key) {
       case 'hero':
