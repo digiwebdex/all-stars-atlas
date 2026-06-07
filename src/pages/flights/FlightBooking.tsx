@@ -790,6 +790,31 @@ const FlightBooking = () => {
 
   const deadlineInfo = resolveDeadlineInfo(bookingFlightData);
 
+  // ─── Partial-payment eligibility (admin-configurable rules) ───
+  const [partialRules, setPartialRules] = useState({ enabled: true, minHours: 96, upfrontPct: 30 });
+  useEffect(() => {
+    api.get<any>('/admin/settings').then(d => {
+      const s = d?.settings || {};
+      setPartialRules({
+        enabled: s.b2c_partial_enabled === undefined ? true : String(s.b2c_partial_enabled).toLowerCase() === 'true',
+        minHours: Number(s.partial_min_hours ?? 96),
+        upfrontPct: Number(s.partial_upfront_pct ?? 30),
+      });
+    }).catch(() => {});
+  }, []);
+
+  const partialEligible = useMemo(() => {
+    if (!partialRules.enabled) return false;
+    const origin = (bookingFlightData?.origin || '').toUpperCase();
+    const dest = (bookingFlightData?.destination || '').toUpperCase();
+    if (BD_AIRPORTS.includes(origin) && BD_AIRPORTS.includes(dest)) return false; // domestic
+    if (bookingFlightData?.refundable === false) return false;
+    const depRaw = bookingFlightData?.departureTime || bookingFlightData?.legs?.[0]?.departureTime;
+    if (!depRaw) return false;
+    const hoursToDep = (new Date(depRaw).getTime() - Date.now()) / 3600000;
+    return hoursToDep >= partialRules.minHours;
+  }, [partialRules, bookingFlightData]);
+
   // Always 4 steps: Flight Details → Passenger Info → Seat & Extras → Review & Pay
   const STEPS = [
     { label: "Flight Details", icon: Plane },
