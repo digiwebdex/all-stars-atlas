@@ -7,7 +7,8 @@ import {
   CheckCircle2, Quote, Heart, ArrowUpRight, Zap, Globe, Users
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Link } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import SearchWidget from "@/components/search/SearchWidget";
 import { useHomepageContent } from "@/lib/homepage-store";
