@@ -2105,7 +2105,7 @@ const FlightBooking = () => {
               {step > 1 && <Button variant="outline" onClick={() => setStep(step - 1)} className="shrink-0">Back</Button>}
               {step < totalSteps ? (
                 <Button onClick={handleContinue} className="font-bold bg-accent text-accent-foreground hover:bg-accent/90 shrink-0">Continue <ArrowRight className="w-4 h-4 ml-1" /></Button>
-              ) : isBiman ? (
+              ) : (isBiman || !partialEligible) ? (
                 <Button className="font-bold bg-accent text-accent-foreground hover:bg-accent/90 shadow-lg shrink-0 text-xs sm:text-sm" onClick={handleConfirmBooking} disabled={bookingLoading}>
                   {bookingLoading ? "Processing..." : <><Shield className="w-4 h-4 mr-1 shrink-0" /> <span className="truncate">Confirm & Pay ৳{grandTotal.toLocaleString()}</span></>}
                 </Button>
