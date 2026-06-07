@@ -116,7 +116,10 @@ const item = { hidden: { opacity: 0, y: 24 }, show: { opacity: 1, y: 0, transiti
 
 const Index = () => {
   const { isAuthenticated, isAdmin } = useAuth();
-  if (isAuthenticated) return <Navigate to={isAdmin ? "/admin" : "/dashboard"} replace />;
+  const navigate = useNavigate();
+  useEffect(() => {
+    if (isAuthenticated) navigate(isAdmin ? "/admin" : "/dashboard", { replace: true });
+  }, [isAuthenticated, isAdmin, navigate]);
   const cms = useHomepageContent();
   const videoRef = useRef<HTMLVideoElement>(null);
   const heroRef = useRef<HTMLDivElement>(null);
