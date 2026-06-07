@@ -93,28 +93,56 @@ const AdminUsers = () => {
   };
 
   const handleAddUser = async () => {
-    if (!newUser.firstName || !newUser.email) {
-      toast({ title: "Error", description: "First name and email are required", variant: "destructive" });
+    if (!newUser.firstName || !newUser.email || !newUser.password) {
+      toast({ title: "Error", description: "First name, email, and password are required", variant: "destructive" });
       return;
     }
     setActionLoading(true);
     try {
-      await api.post('/auth/register', {
-        firstName: newUser.firstName, lastName: newUser.lastName,
-        email: newUser.email, phone: newUser.phone, password: 'TempPass123!',
-      });
-      toast({ title: "User Created", description: `${newUser.firstName} ${newUser.lastName} added. Temp password: TempPass123!` });
+      const res = await api.post<any>('/admin/users', newUser);
+      toast({ title: "User Created", description: `${newUser.firstName} added. ID: ${res?.userId?.slice(0, 8)}…` });
       setShowAddUser(false);
-      setNewUser({ firstName: "", lastName: "", email: "", phone: "", role: "customer" });
+      setNewUser({ firstName: "", lastName: "", email: "", phone: "", password: "", role: "customer", canApproveDeposits: false, initialWalletBalance: "" });
       qc.invalidateQueries({ queryKey: ['admin', 'users'] });
       refetch();
     } catch (err: any) {
-      toast({ title: "Created (Local)", description: `User added to the system.` });
-      setShowAddUser(false);
-      setNewUser({ firstName: "", lastName: "", email: "", phone: "", role: "customer" });
+      toast({ title: "Error", description: err?.message || "Could not create user", variant: "destructive" });
     } finally {
       setActionLoading(false);
     }
+  };
+
+  const openCommission = async (user: any) => {
+    setShowCommission(user);
+    setCommissionForm({ discountPct: "", aitPct: "", markupPct: "", notes: "" });
+    try {
+      const res = await api.get<any>(`/admin/users/${user.id}/commission`);
+      if (res?.override) {
+        setCommissionForm({
+          discountPct: res.override.discount_pct ?? "",
+          aitPct: res.override.ait_pct ?? "",
+          markupPct: res.override.markup_pct ?? "",
+          notes: res.override.notes || "",
+        });
+      }
+    } catch {}
+  };
+
+  const handleSaveCommission = async () => {
+    if (!showCommission) return;
+    setActionLoading(true);
+    try {
+      await api.put(`/admin/users/${showCommission.id}/commission`, {
+        discountPct: commissionForm.discountPct === "" ? null : Number(commissionForm.discountPct),
+        aitPct: commissionForm.aitPct === "" ? null : Number(commissionForm.aitPct),
+        markupPct: commissionForm.markupPct === "" ? null : Number(commissionForm.markupPct),
+        notes: commissionForm.notes,
+      });
+      toast({ title: "Commission Saved", description: `Updated for ${showCommission.name}` });
+      setShowCommission(null);
+    } catch (err: any) {
+      toast({ title: "Error", description: err?.message || "Failed", variant: "destructive" });
+    } finally { setActionLoading(false); }
   };
 
   const handleExport = () => {
