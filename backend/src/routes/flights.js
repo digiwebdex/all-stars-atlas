@@ -13,8 +13,28 @@ const { searchFlights: sabreSearch, createBooking: sabreCreateBooking, revalidat
 const { searchFlights: galileoSearch } = require('./galileo-flights');
 const { searchFlights: ndcSearch } = require('./ndc-flights');
 const { searchAllLCCs } = require('./lcc-flights');
+const { loadPartialSettings, evaluatePartialEligibility, isAirlineRouteBlocked, BD_AIRPORTS: GUARDS_BD } = require('../utils/booking-guards');
 
 const router = express.Router();
+
+// Public: check whether the flight is eligible for partial payment.
+// GET /api/flights/partial-eligibility?origin=DAC&destination=JED&departureTime=2026-07-02T12:00&refundable=true&airlineCode=BS
+router.get('/partial-eligibility', async (req, res) => {
+  try {
+    const settings = await loadPartialSettings();
+    const refundable = req.query.refundable === undefined ? true : String(req.query.refundable) === 'true';
+    const eligibility = evaluatePartialEligibility({
+      origin: req.query.origin,
+      destination: req.query.destination,
+      departureTime: req.query.departureTime,
+      refundable,
+      partialOverride: false,
+    }, settings);
+    res.json({ ...eligibility, settings });
+  } catch (err) {
+    res.json({ eligible: false, reason: 'error', error: err.message });
+  }
+});
 
 // ─── Travel Document Upload (Passport/Visa copies) ───
 const UPLOAD_DIR = process.env.UPLOAD_DIR || path.join(__dirname, '../../uploads');
@@ -1695,6 +1715,39 @@ router.post('/book', authenticate, async (req, res) => {
 
     // Determine domestic/international
     const domestic = isDomestic !== undefined ? isDomestic : (BD_AIRPORTS.includes(origin.toUpperCase()) && BD_AIRPORTS.includes(destination.toUpperCase()));
+
+    // ── GUARD: Airline route restriction (Road-to-Road) ──
+    try {
+      const airlineCodeForGuard = String(flightData?.airlineCode || flightData?.airline?.code || '').toUpperCase();
+      const originCountry = String(flightData?.originCountry || (BD_AIRPORTS.includes(String(origin).toUpperCase()) ? 'BD' : '')).toUpperCase();
+      const destCountry = String(flightData?.destinationCountry || (BD_AIRPORTS.includes(String(destination).toUpperCase()) ? 'BD' : '')).toUpperCase();
+      const blocked = await isAirlineRouteBlocked({ airlineCode: airlineCodeForGuard, originCountry, destCountry });
+      if (blocked) {
+        return res.status(422).json({
+          message: `${airlineCodeForGuard} is not permitted to book ${origin} → ${destination} per admin route restrictions.`,
+          status: 422,
+          code: 'ROUTE_RESTRICTED',
+        });
+      }
+    } catch (guardErr) { console.warn('[Booking] route restriction check skipped:', guardErr.message); }
+
+    // ── GUARD: Partial payment eligibility ──
+    if (payLater) {
+      const settings = await loadPartialSettings();
+      const refundable = !!(fareRules?.refundable ?? flightData?.refundable ?? true);
+      const elig = evaluatePartialEligibility({
+        origin, destination, departureTime, refundable,
+        partialOverride: false,
+      }, settings);
+      if (!elig.eligible) {
+        return res.status(422).json({
+          message: `Partial payment not allowed: ${elig.reason.replace(/_/g, ' ')}. Please complete full payment.`,
+          status: 422,
+          code: 'PARTIAL_NOT_ALLOWED',
+          reason: elig.reason,
+        });
+      }
+    }
 
     // Resolve payment deadline: API-only, from airline GDS timeLimit
     const airlineTimeLimit = flightData?.timeLimit || null;

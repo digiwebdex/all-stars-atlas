@@ -22,7 +22,9 @@ const AdminUsers = () => {
   const [search, setSearch] = useState("");
   const [showAddUser, setShowAddUser] = useState(false);
   const [showViewUser, setShowViewUser] = useState<any>(null);
-  const [newUser, setNewUser] = useState({ firstName: "", lastName: "", email: "", phone: "", role: "customer" });
+  const [showCommission, setShowCommission] = useState<any>(null);
+  const [commissionForm, setCommissionForm] = useState({ discountPct: "", aitPct: "", markupPct: "", notes: "" });
+  const [newUser, setNewUser] = useState({ firstName: "", lastName: "", email: "", phone: "", password: "", role: "customer", canApproveDeposits: false, initialWalletBalance: "" });
   const [actionLoading, setActionLoading] = useState(false);
   const { toast } = useToast();
   const qc = useQueryClient();
@@ -91,28 +93,56 @@ const AdminUsers = () => {
   };
 
   const handleAddUser = async () => {
-    if (!newUser.firstName || !newUser.email) {
-      toast({ title: "Error", description: "First name and email are required", variant: "destructive" });
+    if (!newUser.firstName || !newUser.email || !newUser.password) {
+      toast({ title: "Error", description: "First name, email, and password are required", variant: "destructive" });
       return;
     }
     setActionLoading(true);
     try {
-      await api.post('/auth/register', {
-        firstName: newUser.firstName, lastName: newUser.lastName,
-        email: newUser.email, phone: newUser.phone, password: 'TempPass123!',
-      });
-      toast({ title: "User Created", description: `${newUser.firstName} ${newUser.lastName} added. Temp password: TempPass123!` });
+      const res = await api.post<any>('/admin/users', newUser);
+      toast({ title: "User Created", description: `${newUser.firstName} added. ID: ${res?.userId?.slice(0, 8)}…` });
       setShowAddUser(false);
-      setNewUser({ firstName: "", lastName: "", email: "", phone: "", role: "customer" });
+      setNewUser({ firstName: "", lastName: "", email: "", phone: "", password: "", role: "customer", canApproveDeposits: false, initialWalletBalance: "" });
       qc.invalidateQueries({ queryKey: ['admin', 'users'] });
       refetch();
     } catch (err: any) {
-      toast({ title: "Created (Local)", description: `User added to the system.` });
-      setShowAddUser(false);
-      setNewUser({ firstName: "", lastName: "", email: "", phone: "", role: "customer" });
+      toast({ title: "Error", description: err?.message || "Could not create user", variant: "destructive" });
     } finally {
       setActionLoading(false);
     }
+  };
+
+  const openCommission = async (user: any) => {
+    setShowCommission(user);
+    setCommissionForm({ discountPct: "", aitPct: "", markupPct: "", notes: "" });
+    try {
+      const res = await api.get<any>(`/admin/users/${user.id}/commission`);
+      if (res?.override) {
+        setCommissionForm({
+          discountPct: res.override.discount_pct ?? "",
+          aitPct: res.override.ait_pct ?? "",
+          markupPct: res.override.markup_pct ?? "",
+          notes: res.override.notes || "",
+        });
+      }
+    } catch {}
+  };
+
+  const handleSaveCommission = async () => {
+    if (!showCommission) return;
+    setActionLoading(true);
+    try {
+      await api.put(`/admin/users/${showCommission.id}/commission`, {
+        discountPct: commissionForm.discountPct === "" ? null : Number(commissionForm.discountPct),
+        aitPct: commissionForm.aitPct === "" ? null : Number(commissionForm.aitPct),
+        markupPct: commissionForm.markupPct === "" ? null : Number(commissionForm.markupPct),
+        notes: commissionForm.notes,
+      });
+      toast({ title: "Commission Saved", description: `Updated for ${showCommission.name}` });
+      setShowCommission(null);
+    } catch (err: any) {
+      toast({ title: "Error", description: err?.message || "Failed", variant: "destructive" });
+    } finally { setActionLoading(false); }
   };
 
   const handleExport = () => {
@@ -181,6 +211,7 @@ const AdminUsers = () => {
                     <DropdownMenu modal={false}><DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="w-4 h-4" /></Button></DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem onClick={() => setShowViewUser(u)}><Eye className="w-4 h-4 mr-2" /> View Profile</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => openCommission(u)}><Shield className="w-4 h-4 mr-2" /> Set Commission</DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleSuspend(u)} disabled={actionLoading}>
                           {u.status === "active" ? <><Ban className="w-4 h-4 mr-2" /> Suspend</> : <><CheckCircle2 className="w-4 h-4 mr-2" /> Activate</>}
                         </DropdownMenuItem>
@@ -264,26 +295,62 @@ const AdminUsers = () => {
       {/* Add User Dialog */}
       <Dialog open={showAddUser} onOpenChange={setShowAddUser}>
         <DialogContent>
-          <DialogHeader><DialogTitle>Add New User</DialogTitle></DialogHeader>
-          <div className="grid gap-4 py-2">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5"><Label>First Name *</Label><Input value={newUser.firstName} onChange={e => setNewUser(p => ({ ...p, firstName: e.target.value }))} placeholder="Rahim" /></div>
-              <div className="space-y-1.5"><Label>Last Name</Label><Input value={newUser.lastName} onChange={e => setNewUser(p => ({ ...p, lastName: e.target.value }))} placeholder="Ahmed" /></div>
+          <DialogHeader><DialogTitle>Create User / Agent ID</DialogTitle></DialogHeader>
+          <div className="grid gap-3 py-2">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5"><Label>First Name *</Label><Input value={newUser.firstName} onChange={e => setNewUser(p => ({ ...p, firstName: e.target.value }))} /></div>
+              <div className="space-y-1.5"><Label>Last Name</Label><Input value={newUser.lastName} onChange={e => setNewUser(p => ({ ...p, lastName: e.target.value }))} /></div>
             </div>
-            <div className="space-y-1.5"><Label>Email *</Label><Input type="email" value={newUser.email} onChange={e => setNewUser(p => ({ ...p, email: e.target.value }))} placeholder="rahim@email.com" /></div>
-            <div className="space-y-1.5"><Label>Phone</Label><Input value={newUser.phone} onChange={e => setNewUser(p => ({ ...p, phone: e.target.value }))} placeholder="+880 1XXX-XXXXXX" /></div>
-            <div className="space-y-1.5"><Label>Role</Label>
-              <Select value={newUser.role} onValueChange={v => setNewUser(p => ({ ...p, role: v }))}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent><SelectItem value="customer">Customer</SelectItem><SelectItem value="admin">Admin</SelectItem></SelectContent>
-              </Select>
+            <div className="space-y-1.5"><Label>Email *</Label><Input type="email" value={newUser.email} onChange={e => setNewUser(p => ({ ...p, email: e.target.value }))} /></div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5"><Label>Phone</Label><Input value={newUser.phone} onChange={e => setNewUser(p => ({ ...p, phone: e.target.value }))} placeholder="+880 1XXX-XXXXXX" /></div>
+              <div className="space-y-1.5"><Label>Password *</Label><Input type="text" value={newUser.password} onChange={e => setNewUser(p => ({ ...p, password: e.target.value }))} placeholder="Set initial password" /></div>
             </div>
-            <p className="text-xs text-muted-foreground">A temporary password will be auto-generated. The user should change it on first login.</p>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5"><Label>Role</Label>
+                <Select value={newUser.role} onValueChange={v => setNewUser(p => ({ ...p, role: v }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="customer">Customer</SelectItem>
+                    <SelectItem value="agent">Agent</SelectItem>
+                    <SelectItem value="admin">Admin</SelectItem>
+                    <SelectItem value="super_admin">Super Admin</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5"><Label>Initial Wallet (BDT)</Label><Input type="number" value={newUser.initialWalletBalance} onChange={e => setNewUser(p => ({ ...p, initialWalletBalance: e.target.value }))} placeholder="0" /></div>
+            </div>
+            <label className="flex items-center gap-2 text-sm pt-1">
+              <input type="checkbox" checked={newUser.canApproveDeposits} onChange={e => setNewUser(p => ({ ...p, canApproveDeposits: e.target.checked }))} />
+              Can approve client deposits (Accounts role)
+            </label>
           </div>
           <DialogFooter>
             <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
             <Button onClick={handleAddUser} disabled={actionLoading}>
-              {actionLoading ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <UserPlus className="w-4 h-4 mr-1" />} Add User
+              {actionLoading ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <UserPlus className="w-4 h-4 mr-1" />} Create
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Commission Dialog */}
+      <Dialog open={!!showCommission} onOpenChange={() => setShowCommission(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Set Commission — {showCommission?.name}</DialogTitle></DialogHeader>
+          <div className="grid gap-3 py-2">
+            <p className="text-xs text-muted-foreground">Leave blank to use global defaults. Per-user values override per-airline and global settings.</p>
+            <div className="grid grid-cols-3 gap-3">
+              <div className="space-y-1.5"><Label>Discount %</Label><Input type="number" step="0.01" value={commissionForm.discountPct} onChange={e => setCommissionForm(p => ({ ...p, discountPct: e.target.value }))} placeholder="6.30" /></div>
+              <div className="space-y-1.5"><Label>AIT VAT %</Label><Input type="number" step="0.01" value={commissionForm.aitPct} onChange={e => setCommissionForm(p => ({ ...p, aitPct: e.target.value }))} placeholder="0.30" /></div>
+              <div className="space-y-1.5"><Label>Markup %</Label><Input type="number" step="0.01" value={commissionForm.markupPct} onChange={e => setCommissionForm(p => ({ ...p, markupPct: e.target.value }))} placeholder="0" /></div>
+            </div>
+            <div className="space-y-1.5"><Label>Notes</Label><Input value={commissionForm.notes} onChange={e => setCommissionForm(p => ({ ...p, notes: e.target.value }))} placeholder="Reason / agreement" /></div>
+          </div>
+          <DialogFooter>
+            <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
+            <Button onClick={handleSaveCommission} disabled={actionLoading}>
+              {actionLoading ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : null} Save
             </Button>
           </DialogFooter>
         </DialogContent>
