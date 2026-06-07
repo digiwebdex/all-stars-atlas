@@ -7,7 +7,8 @@ import {
   CheckCircle2, Quote, Heart, ArrowUpRight, Zap, Globe, Users
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import SearchWidget from "@/components/search/SearchWidget";
 import { useHomepageContent } from "@/lib/homepage-store";
@@ -114,6 +115,11 @@ const container = { hidden: {}, show: { transition: { staggerChildren: 0.07 } } 
 const item = { hidden: { opacity: 0, y: 24 }, show: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] as const } } };
 
 const Index = () => {
+  const { isAuthenticated, isAdmin } = useAuth();
+  const navigate = useNavigate();
+  useEffect(() => {
+    if (isAuthenticated) navigate(isAdmin ? "/admin" : "/dashboard", { replace: true });
+  }, [isAuthenticated, isAdmin, navigate]);
   const cms = useHomepageContent();
   const videoRef = useRef<HTMLVideoElement>(null);
   const heroRef = useRef<HTMLDivElement>(null);
@@ -213,6 +219,7 @@ const Index = () => {
 
   const renderSection = (key: string) => {
     if (!isSectionVisible(key)) return null;
+    if (key === 'offers' || key === 'routes' || key === 'appDownload') return null;
 
     switch (key) {
       case 'hero':
