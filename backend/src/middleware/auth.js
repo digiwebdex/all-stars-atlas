@@ -19,6 +19,7 @@ function formatUser(row) {
     role: row.role,
     emailVerified: !!row.email_verified,
     phoneVerified: !!row.phone_verified,
+    canApproveDeposits: !!row.can_approve_deposits,
     createdAt: row.created_at,
   };
 }
