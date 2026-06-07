@@ -13,8 +13,28 @@ const { searchFlights: sabreSearch, createBooking: sabreCreateBooking, revalidat
 const { searchFlights: galileoSearch } = require('./galileo-flights');
 const { searchFlights: ndcSearch } = require('./ndc-flights');
 const { searchAllLCCs } = require('./lcc-flights');
+const { loadPartialSettings, evaluatePartialEligibility, isAirlineRouteBlocked, BD_AIRPORTS: GUARDS_BD } = require('../utils/booking-guards');
 
 const router = express.Router();
+
+// Public: check whether the flight is eligible for partial payment.
+// GET /api/flights/partial-eligibility?origin=DAC&destination=JED&departureTime=2026-07-02T12:00&refundable=true&airlineCode=BS
+router.get('/partial-eligibility', async (req, res) => {
+  try {
+    const settings = await loadPartialSettings();
+    const refundable = req.query.refundable === undefined ? true : String(req.query.refundable) === 'true';
+    const eligibility = evaluatePartialEligibility({
+      origin: req.query.origin,
+      destination: req.query.destination,
+      departureTime: req.query.departureTime,
+      refundable,
+      partialOverride: false,
+    }, settings);
+    res.json({ ...eligibility, settings });
+  } catch (err) {
+    res.json({ eligible: false, reason: 'error', error: err.message });
+  }
+});
 
 // ─── Travel Document Upload (Passport/Visa copies) ───
 const UPLOAD_DIR = process.env.UPLOAD_DIR || path.join(__dirname, '../../uploads');
