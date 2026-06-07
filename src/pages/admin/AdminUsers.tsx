@@ -211,6 +211,7 @@ const AdminUsers = () => {
                     <DropdownMenu modal={false}><DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="w-4 h-4" /></Button></DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem onClick={() => setShowViewUser(u)}><Eye className="w-4 h-4 mr-2" /> View Profile</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => openCommission(u)}><Shield className="w-4 h-4 mr-2" /> Set Commission</DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleSuspend(u)} disabled={actionLoading}>
                           {u.status === "active" ? <><Ban className="w-4 h-4 mr-2" /> Suspend</> : <><CheckCircle2 className="w-4 h-4 mr-2" /> Activate</>}
                         </DropdownMenuItem>
