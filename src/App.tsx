@@ -121,6 +121,7 @@ const CMSBookingForms = lazy(() => import("@/pages/admin/cms/CMSBookingForms"));
 const AdminMarkup = lazy(() => import("@/pages/admin/AdminMarkup"));
 const AdminCurrency = lazy(() => import("@/pages/admin/AdminCurrency"));
 const AdminTicketRequests = lazy(() => import("@/pages/admin/AdminTicketRequests"));
+const AdminEnterprise = lazy(() => import("@/pages/admin/AdminEnterprise"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -269,6 +270,7 @@ const App = () => (
                 <Route path="markup" element={<AdminMarkup />} />
                 <Route path="currency" element={<AdminCurrency />} />
                 <Route path="ticket-requests" element={<AdminTicketRequests />} />
+                <Route path="enterprise" element={<AdminEnterprise />} />
               </Route>
 
               <Route path="*" element={<NotFound />} />

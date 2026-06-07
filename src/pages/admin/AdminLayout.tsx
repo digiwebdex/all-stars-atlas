@@ -71,6 +71,7 @@ const sidebarItems: SidebarItem[] = [
     children: [
       { label: "Visa", href: "/admin/visa" },
       { label: "Markup & Revenue", href: "/admin/markup" },
+      { label: "Enterprise Controls", href: "/admin/enterprise" },
       { label: "Currency", href: "/admin/currency" },
       { label: "Settings", href: "/admin/settings" },
     ],

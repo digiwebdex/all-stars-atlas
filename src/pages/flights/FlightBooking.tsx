@@ -790,6 +790,31 @@ const FlightBooking = () => {
 
   const deadlineInfo = resolveDeadlineInfo(bookingFlightData);
 
+  // ─── Partial-payment eligibility (admin-configurable rules) ───
+  const [partialRules, setPartialRules] = useState({ enabled: true, minHours: 96, upfrontPct: 30 });
+  useEffect(() => {
+    api.get<any>('/admin/settings').then(d => {
+      const s = d?.settings || {};
+      setPartialRules({
+        enabled: s.b2c_partial_enabled === undefined ? true : String(s.b2c_partial_enabled).toLowerCase() === 'true',
+        minHours: Number(s.partial_min_hours ?? 96),
+        upfrontPct: Number(s.partial_upfront_pct ?? 30),
+      });
+    }).catch(() => {});
+  }, []);
+
+  const partialEligible = useMemo(() => {
+    if (!partialRules.enabled) return false;
+    const origin = (bookingFlightData?.origin || '').toUpperCase();
+    const dest = (bookingFlightData?.destination || '').toUpperCase();
+    if (BD_AIRPORTS.includes(origin) && BD_AIRPORTS.includes(dest)) return false; // domestic
+    if (bookingFlightData?.refundable === false) return false;
+    const depRaw = bookingFlightData?.departureTime || bookingFlightData?.legs?.[0]?.departureTime;
+    if (!depRaw) return false;
+    const hoursToDep = (new Date(depRaw).getTime() - Date.now()) / 3600000;
+    return hoursToDep >= partialRules.minHours;
+  }, [partialRules, bookingFlightData]);
+
   // Always 4 steps: Flight Details → Passenger Info → Seat & Extras → Review & Pay
   const STEPS = [
     { label: "Flight Details", icon: Plane },
@@ -1143,8 +1168,11 @@ const FlightBooking = () => {
 
     // Travel documents are now verified at payment time from the dashboard — not required at booking
 
-    if (isBiman) {
-      if (!selectedPaymentMethod) { toast({ title: "Payment Required", description: "Biman Bangladesh Airlines requires immediate payment.", variant: "destructive" }); return; }
+    if (isBiman || !partialEligible) {
+      if (!selectedPaymentMethod) {
+        toast({ title: "Payment Required", description: isBiman ? "Biman Bangladesh Airlines requires immediate payment." : "Pay Later is unavailable for this flight — please choose a payment method.", variant: "destructive" });
+        return;
+      }
       revalidateBeforeBooking(false);
     } else { revalidateBeforeBooking(true); }
   };
@@ -1941,10 +1969,15 @@ const FlightBooking = () => {
                   </div>
                 )}
 
-                {isBiman ? (
+                {isBiman || !partialEligible ? (
                   <Card>
                     <CardHeader><CardTitle className="text-sm sm:text-base flex items-center gap-2"><CreditCard className="w-5 h-5 text-accent" /> Payment (Required)</CardTitle></CardHeader>
                     <CardContent className="space-y-4">
+                      {!isBiman && (
+                        <div className="text-xs rounded-lg border border-warning/30 bg-warning/5 p-2 text-muted-foreground">
+                          Pay-Later is not available for this flight ({BD_AIRPORTS.includes((bookingFlightData?.origin || '').toUpperCase()) && BD_AIRPORTS.includes((bookingFlightData?.destination || '').toUpperCase()) ? 'domestic route' : bookingFlightData?.refundable === false ? 'non-refundable fare' : `within ${partialRules.minHours}h of departure`}).
+                        </div>
+                      )}
                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         {["bKash", "Nagad", "Visa/Master Card", "Bank Transfer"].map((m) => (
                           <label key={m} className={`flex items-center gap-3 p-3 sm:p-4 rounded-xl border cursor-pointer transition-colors ${
@@ -1963,13 +1996,10 @@ const FlightBooking = () => {
                       <div className="flex items-start gap-3">
                         <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center shrink-0"><Timer className="w-5 h-5 text-accent" /></div>
                         <div>
-                          <p className="font-bold text-sm">Book Now, Pay Later</p>
+                          <p className="font-bold text-sm">Book Now, Pay {partialRules.upfrontPct}% Now / {100 - partialRules.upfrontPct}% Later</p>
                           <p className="text-xs text-muted-foreground mt-1">
-                            Your booking will be placed on hold. Pay from your dashboard before the deadline.
+                            International refundable fare ≥ {partialRules.minHours}h before departure. Pay the balance from your dashboard before the deadline.
                             {deadlineInfo && <span className="text-destructive font-semibold"> {deadlineInfo.label}.</span>}
-                          </p>
-                          <p className="text-[10px] text-muted-foreground mt-2">
-                            {outboundFlight?.timeLimit ? "⏱ Deadline set by the airline's reservation system." : domestic ? "Domestic: valid for 48h. Must pay 24h before departure." : "International: valid for 7 days."}
                           </p>
                         </div>
                       </div>
@@ -2075,7 +2105,7 @@ const FlightBooking = () => {
               {step > 1 && <Button variant="outline" onClick={() => setStep(step - 1)} className="shrink-0">Back</Button>}
               {step < totalSteps ? (
                 <Button onClick={handleContinue} className="font-bold bg-accent text-accent-foreground hover:bg-accent/90 shrink-0">Continue <ArrowRight className="w-4 h-4 ml-1" /></Button>
-              ) : isBiman ? (
+              ) : (isBiman || !partialEligible) ? (
                 <Button className="font-bold bg-accent text-accent-foreground hover:bg-accent/90 shadow-lg shrink-0 text-xs sm:text-sm" onClick={handleConfirmBooking} disabled={bookingLoading}>
                   {bookingLoading ? "Processing..." : <><Shield className="w-4 h-4 mr-1 shrink-0" /> <span className="truncate">Confirm & Pay ৳{grandTotal.toLocaleString()}</span></>}
                 </Button>
