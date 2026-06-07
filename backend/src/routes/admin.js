@@ -1375,4 +1375,7 @@ router.put('/ticket-issue-requests/:id', async (req, res) => {
   }
 });
 
+// ── Enterprise extras (route restrictions, per-user commission, deadline editor, agent ID)
+router.use('/', require('./admin-enterprise'));
+
 module.exports = router;
