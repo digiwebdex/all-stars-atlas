@@ -1716,6 +1716,39 @@ router.post('/book', authenticate, async (req, res) => {
     // Determine domestic/international
     const domestic = isDomestic !== undefined ? isDomestic : (BD_AIRPORTS.includes(origin.toUpperCase()) && BD_AIRPORTS.includes(destination.toUpperCase()));
 
+    // ── GUARD: Airline route restriction (Road-to-Road) ──
+    try {
+      const airlineCodeForGuard = String(flightData?.airlineCode || flightData?.airline?.code || '').toUpperCase();
+      const originCountry = String(flightData?.originCountry || (BD_AIRPORTS.includes(String(origin).toUpperCase()) ? 'BD' : '')).toUpperCase();
+      const destCountry = String(flightData?.destinationCountry || (BD_AIRPORTS.includes(String(destination).toUpperCase()) ? 'BD' : '')).toUpperCase();
+      const blocked = await isAirlineRouteBlocked({ airlineCode: airlineCodeForGuard, originCountry, destCountry });
+      if (blocked) {
+        return res.status(422).json({
+          message: `${airlineCodeForGuard} is not permitted to book ${origin} → ${destination} per admin route restrictions.`,
+          status: 422,
+          code: 'ROUTE_RESTRICTED',
+        });
+      }
+    } catch (guardErr) { console.warn('[Booking] route restriction check skipped:', guardErr.message); }
+
+    // ── GUARD: Partial payment eligibility ──
+    if (payLater) {
+      const settings = await loadPartialSettings();
+      const refundable = !!(fareRules?.refundable ?? flightData?.refundable ?? true);
+      const elig = evaluatePartialEligibility({
+        origin, destination, departureTime, refundable,
+        partialOverride: false,
+      }, settings);
+      if (!elig.eligible) {
+        return res.status(422).json({
+          message: `Partial payment not allowed: ${elig.reason.replace(/_/g, ' ')}. Please complete full payment.`,
+          status: 422,
+          code: 'PARTIAL_NOT_ALLOWED',
+          reason: elig.reason,
+        });
+      }
+    }
+
     // Resolve payment deadline: API-only, from airline GDS timeLimit
     const airlineTimeLimit = flightData?.timeLimit || null;
     let paymentDeadline = null;
