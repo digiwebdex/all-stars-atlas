@@ -22,7 +22,9 @@ const AdminUsers = () => {
   const [search, setSearch] = useState("");
   const [showAddUser, setShowAddUser] = useState(false);
   const [showViewUser, setShowViewUser] = useState<any>(null);
-  const [newUser, setNewUser] = useState({ firstName: "", lastName: "", email: "", phone: "", role: "customer" });
+  const [showCommission, setShowCommission] = useState<any>(null);
+  const [commissionForm, setCommissionForm] = useState({ discountPct: "", aitPct: "", markupPct: "", notes: "" });
+  const [newUser, setNewUser] = useState({ firstName: "", lastName: "", email: "", phone: "", password: "", role: "customer", canApproveDeposits: false, initialWalletBalance: "" });
   const [actionLoading, setActionLoading] = useState(false);
   const { toast } = useToast();
   const qc = useQueryClient();
