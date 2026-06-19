@@ -184,10 +184,10 @@ const App = () => (
               </Route>
 
               {/* User Auth (public) */}
-              <Route path="/auth/login" element={<Login />} />
+            <Route path="/auth/login" element={<Login />} />
               <Route path="/auth/register" element={<Register />} />
-              <Route path="/auth/register-agency" element={<RegisterAgency />} />
-              <Route path="/auth/b2b" element={<RegisterAgency />} />
+              <Route path="/auth/register-agency" element={<Navigate to="/auth/register" replace />} />
+              <Route path="/auth/b2b" element={<Navigate to="/auth/register" replace />} />
               <Route path="/auth/forgot-password" element={<ForgotPassword />} />
               <Route path="/auth/verify-otp" element={<VerifyOTP />} />
 
