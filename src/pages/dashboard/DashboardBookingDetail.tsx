@@ -309,6 +309,26 @@ const DashboardBookingDetail = () => {
     }
   };
 
+  const handleRequestPartial = async () => {
+    if (!booking) return;
+    setPartialLoading(true);
+    try {
+      const r: any = await api.post(`/dashboard/bookings/${booking.rawId}/request-partial`, {});
+      toast({
+        title: "Partial Payment Approved ✓",
+        description: r?.message || `Pay ৳${r?.upfrontAmount?.toLocaleString?.() || ''} now. Admin will set deadline for the remainder.`,
+      });
+      setPartialOpen(false);
+      await refetch();
+    } catch (e: any) {
+      toast({ title: "Not Allowed", description: e?.message || "Partial payment not available for this booking.", variant: "destructive" });
+    } finally {
+      setPartialLoading(false);
+    }
+  };
+
+
+
 
   const handleDownload = async () => {
     if (!booking) return;
