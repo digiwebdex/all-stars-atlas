@@ -194,7 +194,7 @@ const AdminSettings = () => {
 
   const handleSaveGeneral = async () => {
     try {
-      await api.put('/admin/settings', { section: 'general', siteName: generalForm.siteName, supportEmail: generalForm.supportEmail, defaultCurrency: generalForm.currency });
+      await api.put('/admin/settings', { section: 'general', siteName: generalForm.siteName, supportEmail: generalForm.supportEmail, siteDomain: generalForm.siteDomain, defaultCurrency: generalForm.currency });
       toast.success("General settings saved!");
     } catch { toast.error("Failed to save general settings."); }
   };
