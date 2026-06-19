@@ -1598,4 +1598,71 @@ router.get('/ticket-issue-requests', async (req, res) => {
   }
 });
 
+// =============== PARTIAL PAYMENT REQUEST (post-booking) ===============
+// POST /dashboard/bookings/:id/request-partial
+// Customer requests 30% upfront + 70% later (admin sets deadline).
+// Eligibility: international + refundable + ≥96h to departure + unpaid + not cancelled/ticketed.
+router.post('/bookings/:id/request-partial', async (req, res) => {
+  try {
+    const userId = req.user.sub;
+    const [rows] = await db.query('SELECT * FROM bookings WHERE id = ? AND user_id = ?', [req.params.id, userId]);
+    if (!rows.length) return res.status(404).json({ message: 'Booking not found' });
+    const b = rows[0];
+
+    const paymentStatus = String(b.payment_status || '').toLowerCase();
+    if (paymentStatus === 'paid' || paymentStatus === 'partial') {
+      return res.status(400).json({ message: 'Partial payment already requested or booking is paid.' });
+    }
+    if (['cancelled', 'refunded', 'ticketed', 'completed'].includes(String(b.status || '').toLowerCase())) {
+      return res.status(400).json({ message: 'Booking is not eligible for partial payment.' });
+    }
+
+    const details = safeJsonParse(b.details, {}) || {};
+    const o = details.outbound || details;
+    const origin = o.origin || details.origin;
+    const destination = o.destination || details.destination;
+    const departureTime = o.departureTime || details.departureTime;
+    const refundable = o.refundable ?? details.refundable ?? false;
+
+    const settings = await loadPartialSettings();
+    const elig = evaluatePartialEligibility(
+      { origin, destination, departureTime, refundable, partialOverride: !!b.partial_override },
+      settings
+    );
+    if (!elig.eligible) {
+      return res.status(400).json({
+        message: `Partial payment not allowed: ${String(elig.reason || '').replace(/_/g, ' ')}.`,
+        code: 'PARTIAL_NOT_ALLOWED',
+        eligibility: elig,
+      });
+    }
+
+    const upfrontPct = Number(elig.upfrontPct || settings.upfrontPct || 30);
+    const total = Number(b.total_amount) || 0;
+    const upfrontAmount = Math.round((total * upfrontPct) / 100);
+    const remainingAmount = Math.max(0, total - upfrontAmount);
+
+    await db.query(
+      `UPDATE bookings
+         SET partial_override = 1,
+             partial_split_pct = ?,
+             payment_status = 'partial'
+       WHERE id = ?`,
+      [upfrontPct, req.params.id]
+    );
+
+    res.json({
+      success: true,
+      upfrontPct,
+      upfrontAmount,
+      remainingAmount,
+      message: `Partial payment enabled. Pay ৳${upfrontAmount.toLocaleString()} now; admin will confirm the deadline for the remaining ৳${remainingAmount.toLocaleString()}.`,
+    });
+  } catch (err) {
+    console.error('[Dashboard] request-partial error:', err);
+    res.status(500).json({ message: 'Failed to request partial payment' });
+  }
+});
+
 module.exports = router;
+
