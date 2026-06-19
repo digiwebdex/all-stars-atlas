@@ -15,7 +15,7 @@ const Careers = () => {
   const hero = content?.hero || { title: "Join Our Team", subtitle: "Help us revolutionize travel in Bangladesh." };
   const perks = content?.perks || [];
   const positions = content?.positions || [];
-  const careersEmail = content?.careersEmail || "careers@seven-trip.com";
+  const careersEmail = content?.careersEmail || "careers@seventrip.net";
 
   const handleApply = (title: string) => {
     window.location.href = `mailto:${encodeURIComponent(careersEmail)}?subject=Application for ${encodeURIComponent(title)}&body=Hi, I would like to apply for the ${encodeURIComponent(title)} position. Please find my CV attached.`;

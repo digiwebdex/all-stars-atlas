@@ -17,7 +17,7 @@ import { toast } from "sonner";
 const defaultContactInfo = {
   address: "Beena Kanon, Flat-4A, House-03, Road-17, Block-E, Banani, Dhaka-1213",
   phone: "+880 1749-373748",
-  email: "support@seven-trip.com",
+  email: "support@seventrip.net",
   whatsapp: "+880 1749-373748",
 };
 
