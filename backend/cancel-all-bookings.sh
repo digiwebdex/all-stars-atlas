@@ -6,8 +6,8 @@
 
 set -euo pipefail
 
-API_BASE="${API_BASE:-https://seven-trip.com/api}"
-ADMIN_EMAIL="${ADMIN_EMAIL:-admin@seven-trip.com}"
+API_BASE="${API_BASE:-https://seventrip.net/api}"
+ADMIN_EMAIL="${ADMIN_EMAIL:-admin@seventrip.net}"
 ADMIN_PASS="${ADMIN_PASS:-Admin@123456}"
 FILTER="${1:-reserved}"  # reserved | all_with_pnr
 
@@ -154,5 +154,5 @@ echo "$RESULT" | jq -r '.results[] | "  \(.bookingRef) | PNR: \(.pnr // "-") | \
 
 echo ""
 echo "═══════════════════════════════════════════════════════════"
-echo "Done. Check admin panel: https://seven-trip.com/admin/bookings"
+echo "Done. Check admin panel: https://seventrip.net/admin/bookings"
 echo "═══════════════════════════════════════════════════════════"

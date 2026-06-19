@@ -79,7 +79,7 @@ cd "$PROJECT_DIR"
 
 # Create frontend .env with correct API URL
 cat > .env << EOF
-VITE_API_BASE_URL=https://seven-trip.com/api
+VITE_API_BASE_URL=https://seventrip.net/api
 EOF
 
 npm install
@@ -101,7 +101,7 @@ echo "⚙️  Step 10: Configuring Nginx..."
 sudo tee /etc/nginx/sites-available/seventrip > /dev/null << 'NGINX'
 server {
     listen 80;
-    server_name seven-trip.com www.seven-trip.com;
+    server_name seventrip.net www.seventrip.net;
 
     root /var/www/seventrip;
     index index.html;
@@ -190,13 +190,13 @@ echo "============================================"
 echo "🎉 SETUP COMPLETE!"
 echo "============================================"
 echo ""
-echo "🌐 Your website: https://seven-trip.com"
-echo "🔧 API endpoint: https://seven-trip.com/api/health"
+echo "🌐 Your website: https://seventrip.net"
+echo "🔧 API endpoint: https://seventrip.net/api/health"
 echo ""
 echo "🔑 LOGIN CREDENTIALS:"
 echo "   ┌─────────────────────────────────────────────┐"
 echo "   │ Admin Login:  http://$VPS_IP/admin/login     │"
-echo "   │ Email: admin@seven-trip.com                │"
+echo "   │ Email: admin@seventrip.net                │"
 echo "   │ Pass:  Admin@123456                          │"
 echo "   ├─────────────────────────────────────────────┤"
 echo "   │ User Login:   http://$VPS_IP/auth/login      │"

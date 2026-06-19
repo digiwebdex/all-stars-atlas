@@ -17,4 +17,4 @@ Disallow: /admin/*
 Disallow: /dashboard
 Disallow: /dashboard/*
 
-Sitemap: https://seven-trip.com/sitemap.xml
+Sitemap: https://seventrip.net/sitemap.xml
