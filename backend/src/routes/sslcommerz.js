@@ -49,7 +49,7 @@ router.post('/init', authenticate, async (req, res) => {
     if (!amount || !customerEmail) return res.status(400).json({ message: 'Amount and email are required', status: 400 });
 
     const tranId = `ST-${Date.now()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const frontendUrl = process.env.FRONTEND_URL || 'https://seventrip.net';
 
     const params = new URLSearchParams({
       store_id: config.storeId,
@@ -152,7 +152,7 @@ router.post('/ipn', async (req, res) => {
 
 // POST /payments/ssl/success — Redirect after successful payment
 router.post('/success', (req, res) => {
-  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+  const frontendUrl = process.env.FRONTEND_URL || 'https://seventrip.net';
   res.redirect(`${frontendUrl}/dashboard/payments?status=success&tran_id=${req.body.tran_id || ''}`);
 });
 
@@ -160,7 +160,7 @@ router.post('/success', (req, res) => {
 router.post('/fail', async (req, res) => {
   const { tran_id } = req.body;
   if (tran_id) await db.query(`UPDATE transactions SET status = 'failed' WHERE reference = ?`, [tran_id]).catch(console.error);
-  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+  const frontendUrl = process.env.FRONTEND_URL || 'https://seventrip.net';
   res.redirect(`${frontendUrl}/dashboard/payments?status=failed&tran_id=${tran_id || ''}`);
 });
 
@@ -168,7 +168,7 @@ router.post('/fail', async (req, res) => {
 router.post('/cancel', async (req, res) => {
   const { tran_id } = req.body;
   if (tran_id) await db.query(`UPDATE transactions SET status = 'cancelled' WHERE reference = ?`, [tran_id]).catch(console.error);
-  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+  const frontendUrl = process.env.FRONTEND_URL || 'https://seventrip.net';
   res.redirect(`${frontendUrl}/dashboard/payments?status=cancelled&tran_id=${tran_id || ''}`);
 });
 
