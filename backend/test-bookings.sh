@@ -6,7 +6,7 @@
 # Usage: bash backend/test-bookings.sh
 # ═══════════════════════════════════════════════════════════════════
 
-BASE="https://seven-trip.com/api"
+BASE="https://seventrip.net/api"
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC='\033[0m'; BOLD='\033[1m'
 PASS=0; FAIL=0; TOTAL=0; SKIP=0
 ALL_PNRS=()

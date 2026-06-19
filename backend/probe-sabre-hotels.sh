@@ -41,7 +41,7 @@ echo ""
 # ── Auth (needed for booking test) ──
 log_info "Authenticating..."
 AUTH_RESP=$(curl -s -X POST "$API_BASE/auth/login" -H "Content-Type: application/json" \
-  -d '{"email":"admin@seven-trip.com","password":"admin123"}')
+  -d '{"email":"admin@seventrip.net","password":"admin123"}')
 TOKEN=$(echo "$AUTH_RESP" | jq -r '.token // .accessToken // empty' 2>/dev/null)
 if [ -z "$TOKEN" ]; then
   log_info "Auth failed (non-critical for search tests)"
