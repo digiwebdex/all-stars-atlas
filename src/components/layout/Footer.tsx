@@ -133,7 +133,7 @@ const Footer = React.forwardRef<HTMLElement>((_, ref) => {
               </li>
               <li className="flex items-center gap-2.5">
                 <Mail className="w-4 h-4 shrink-0 text-primary/60" />
-                <a href="mailto:support@seven-trip.com" className="hover:text-white transition-colors">support@seven-trip.com</a>
+                <a href="mailto:support@seventrip.net" className="hover:text-white transition-colors">support@seventrip.net</a>
               </li>
             </ul>
 
@@ -159,7 +159,7 @@ const Footer = React.forwardRef<HTMLElement>((_, ref) => {
           </div>
         </div>
         <div className="container mx-auto px-4 pb-4 text-center text-[10px] text-white/20">
-          Developed by <a href="https://digiwebdex.com" target="_blank" rel="noopener noreferrer" className="hover:text-white/40 transition-colors underline underline-offset-2">digiwebdex.com</a>
+          Developed by Seven Trip Team
         </div>
       </div>
     </footer>
