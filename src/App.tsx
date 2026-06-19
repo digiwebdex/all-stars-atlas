@@ -32,6 +32,7 @@ const Index = lazy(() => import("@/pages/Index"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
 const Login = lazy(() => import("@/pages/auth/Login"));
 const Register = lazy(() => import("@/pages/auth/Register"));
+const RegisterAgency = lazy(() => import("@/pages/auth/RegisterAgency"));
 const ForgotPassword = lazy(() => import("@/pages/auth/ForgotPassword"));
 const VerifyOTP = lazy(() => import("@/pages/auth/VerifyOTP"));
 const FlightResults = lazy(() => import("@/pages/flights/FlightResults"));
