@@ -81,7 +81,7 @@ router.post('/create', authenticate, async (req, res) => {
 
     const token = await getGrantToken();
     const invoiceNumber = `ST-BK-${Date.now()}`;
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const frontendUrl = process.env.FRONTEND_URL || 'https://seventrip.net';
 
     const response = await fetch(`${config.baseUrl}/tokenized/checkout/create`, {
       method: 'POST',
