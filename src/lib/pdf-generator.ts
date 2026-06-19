@@ -1059,7 +1059,7 @@ async function buildPremiumTicketDoc(ticket: TicketData): Promise<jsPDF> {
   doc.setFont("helvetica", "normal");
   setColor(doc, MID);
   const issuedDate = safeDateShort(ticket.issuedAt) || new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
-  doc.text(`${COMPANY.name} / ${COMPANY.parent}`, lm + cw * 0.5, y + 8);
+  doc.text(`${COMPANY.name}`, lm + cw * 0.5, y + 8);
   doc.text(issuedDate, lm + cw * 0.5, y + 12);
 
   if (airlinesPnr) {
