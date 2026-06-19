@@ -874,7 +874,7 @@ router.put('/settings', async (req, res) => {
     }
 
     // General settings
-    const updates = { site_name: siteName, support_email: supportEmail, support_phone: supportPhone, currency: defaultCurrency };
+    const updates = { site_name: siteName, support_email: supportEmail, support_phone: supportPhone, site_domain: siteDomain, currency: defaultCurrency };
     for (const [key, value] of Object.entries(updates)) {
       if (value !== undefined) {
         await db.query('INSERT INTO system_settings (setting_key, setting_value) VALUES (?, ?) ON DUPLICATE KEY UPDATE setting_value = ?', [key, value, value]);
