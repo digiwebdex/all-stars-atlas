@@ -148,6 +148,8 @@ const DashboardBookingDetail = () => {
   const [payDialogOpen, setPayDialogOpen] = useState(false);
   const [payLoading, setPayLoading] = useState(false);
   const [hasIssuedWithBalance, setHasIssuedWithBalance] = useState(false);
+  const [partialOpen, setPartialOpen] = useState(false);
+  const [partialLoading, setPartialLoading] = useState(false);
 
   const { data, isLoading, error, refetch } = useDashboardBookings({ search: id, limit: 1 });
   const resolved = (data as any) || {};
