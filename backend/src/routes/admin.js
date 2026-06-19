@@ -737,6 +737,7 @@ router.get('/settings', async (req, res) => {
       siteName: settings.site_name || 'Seven Trip',
       supportEmail: settings.support_email || '',
       supportPhone: settings.support_phone || '',
+      siteDomain: settings.site_domain || '',
       defaultCurrency: settings.currency || 'BDT',
       apiKeys,
       socialOAuth,
@@ -757,7 +758,7 @@ router.get('/settings', async (req, res) => {
 // PUT /admin/settings
 router.put('/settings', async (req, res) => {
   try {
-    const { section, siteName, supportEmail, supportPhone, defaultCurrency, provider, config, integration, keys, paymentMethods, bankAccounts, notifications } = req.body;
+    const { section, siteName, supportEmail, supportPhone, siteDomain, defaultCurrency, provider, config, integration, keys, paymentMethods, bankAccounts, notifications } = req.body;
 
     // Social OAuth config
     if (section === 'social_oauth' && provider && config) {
@@ -874,7 +875,7 @@ router.put('/settings', async (req, res) => {
     }
 
     // General settings
-    const updates = { site_name: siteName, support_email: supportEmail, support_phone: supportPhone, currency: defaultCurrency };
+    const updates = { site_name: siteName, support_email: supportEmail, support_phone: supportPhone, site_domain: siteDomain, currency: defaultCurrency };
     for (const [key, value] of Object.entries(updates)) {
       if (value !== undefined) {
         await db.query('INSERT INTO system_settings (setting_key, setting_value) VALUES (?, ?) ON DUPLICATE KEY UPDATE setting_value = ?', [key, value, value]);

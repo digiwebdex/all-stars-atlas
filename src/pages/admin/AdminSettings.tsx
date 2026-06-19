@@ -99,7 +99,7 @@ const AdminSettings = () => {
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>(DEFAULT_BANK_ACCOUNTS);
   const [newBank, setNewBank] = useState<Partial<BankAccount>>({});
   const [showAddBank, setShowAddBank] = useState(false);
-  const [generalForm, setGeneralForm] = useState({ siteName: 'Seven Trip', supportEmail: 'support@seven-trip.com', currency: 'bdt', language: 'en' });
+  const [generalForm, setGeneralForm] = useState({ siteName: 'Seven Trip', supportEmail: 'support@seven-trip.com', siteDomain: '', currency: 'bdt', language: 'en' });
   const [searchTabs, setSearchTabs] = useState<SearchTabConfig>({ ...DEFAULT_SEARCH_TABS });
 
   // Load logo + all settings from backend on mount
@@ -118,6 +118,7 @@ const AdminSettings = () => {
         if (data.notificationPrefs) setNotifications(data.notificationPrefs);
         if (data.siteName) setGeneralForm(prev => ({ ...prev, siteName: data.siteName }));
         if (data.supportEmail) setGeneralForm(prev => ({ ...prev, supportEmail: data.supportEmail }));
+        if (data.siteDomain) setGeneralForm(prev => ({ ...prev, siteDomain: data.siteDomain }));
         if (data.defaultCurrency) setGeneralForm(prev => ({ ...prev, currency: data.defaultCurrency }));
         if (data.searchTabs) setSearchTabs(prev => ({ ...prev, ...data.searchTabs }));
 
@@ -193,7 +194,7 @@ const AdminSettings = () => {
 
   const handleSaveGeneral = async () => {
     try {
-      await api.put('/admin/settings', { section: 'general', siteName: generalForm.siteName, supportEmail: generalForm.supportEmail, defaultCurrency: generalForm.currency });
+      await api.put('/admin/settings', { section: 'general', siteName: generalForm.siteName, supportEmail: generalForm.supportEmail, siteDomain: generalForm.siteDomain, defaultCurrency: generalForm.currency });
       toast.success("General settings saved!");
     } catch { toast.error("Failed to save general settings."); }
   };
@@ -361,6 +362,11 @@ const AdminSettings = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5"><Label>Site Name</Label><Input value={generalForm.siteName} onChange={e => setGeneralForm(p => ({ ...p, siteName: e.target.value }))} /></div>
             <div className="space-y-1.5"><Label>Support Email</Label><Input value={generalForm.supportEmail} onChange={e => setGeneralForm(p => ({ ...p, supportEmail: e.target.value }))} /></div>
+          </div>
+          <div className="space-y-1.5">
+            <Label>Site Domain</Label>
+            <Input placeholder="booking.digiwebdex.com" value={generalForm.siteDomain} onChange={e => setGeneralForm(p => ({ ...p, siteDomain: e.target.value.trim() }))} />
+            <p className="text-[10px] text-muted-foreground">Used for canonical URLs, email links, sitemap & OAuth redirects. DNS/Nginx still managed on the VPS.</p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5"><Label>Default Currency</Label>
