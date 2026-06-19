@@ -150,7 +150,7 @@ const DashboardSettings = () => {
             </div>
             <Separator />
             <div>
-              <Button variant="destructive" size="sm" onClick={() => toast({ title: "Account Deletion", description: "Please contact support@seven-trip.com to delete your account.", variant: "destructive" })}>Delete Account</Button>
+              <Button variant="destructive" size="sm" onClick={() => toast({ title: "Account Deletion", description: "Please contact support@seventrip.net to delete your account.", variant: "destructive" })}>Delete Account</Button>
               <p className="text-xs text-muted-foreground mt-2">This action is irreversible.</p>
             </div>
           </CardContent>
