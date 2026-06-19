@@ -118,6 +118,7 @@ const AdminSettings = () => {
         if (data.notificationPrefs) setNotifications(data.notificationPrefs);
         if (data.siteName) setGeneralForm(prev => ({ ...prev, siteName: data.siteName }));
         if (data.supportEmail) setGeneralForm(prev => ({ ...prev, supportEmail: data.supportEmail }));
+        if (data.siteDomain) setGeneralForm(prev => ({ ...prev, siteDomain: data.siteDomain }));
         if (data.defaultCurrency) setGeneralForm(prev => ({ ...prev, currency: data.defaultCurrency }));
         if (data.searchTabs) setSearchTabs(prev => ({ ...prev, ...data.searchTabs }));
 
