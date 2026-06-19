@@ -737,6 +737,7 @@ router.get('/settings', async (req, res) => {
       siteName: settings.site_name || 'Seven Trip',
       supportEmail: settings.support_email || '',
       supportPhone: settings.support_phone || '',
+      siteDomain: settings.site_domain || '',
       defaultCurrency: settings.currency || 'BDT',
       apiKeys,
       socialOAuth,
