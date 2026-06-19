@@ -993,6 +993,41 @@ const DashboardBookingDetail = () => {
             </DialogContent>
           </Dialog>
 
+          {/* ━━ Request Partial Payment Confirmation ━━ */}
+          <Dialog open={partialOpen} onOpenChange={setPartialOpen}>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2"><CreditCard className="w-5 h-5 text-sky-600" /> Request Partial Payment</DialogTitle>
+              </DialogHeader>
+              {(() => {
+                const total = booking.rawAmount || 0;
+                const upfront = Math.round(total * 0.30);
+                const remaining = Math.max(0, total - upfront);
+                return (
+                  <div className="space-y-4 text-sm">
+                    <div className="rounded-lg border p-3 bg-muted/30 space-y-2">
+                      <div className="flex justify-between"><span>Total Fare</span><span className="font-bold">৳{total.toLocaleString()}</span></div>
+                      <div className="flex justify-between text-sky-700"><span>Pay Now (30%)</span><span className="font-bold">৳{upfront.toLocaleString()}</span></div>
+                      <div className="flex justify-between text-amber-700"><span>Remaining (70%)</span><span className="font-bold">৳{remaining.toLocaleString()}</span></div>
+                    </div>
+                    <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900 leading-relaxed">
+                      Allowed only for international, refundable flights with departure ≥ 96 hours away.
+                      Pay 30% now to issue the ticket. Admin will confirm the deadline for the remaining 70%.
+                    </div>
+                  </div>
+                );
+              })()}
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setPartialOpen(false)} disabled={partialLoading}>Cancel</Button>
+                <Button onClick={handleRequestPartial} disabled={partialLoading} className="bg-sky-500 hover:bg-sky-600 text-white">
+                  {partialLoading ? 'Requesting…' : 'Confirm & Enable Partial'}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+
+
           {docVerifyOpen && booking && (
             <TravelDocVerificationModal open={docVerifyOpen} onOpenChange={o => { if (!o) setDocVerifyOpen(false); }}
               onVerified={() => { toast({ title: "Verified ✓" }); setDocVerifyOpen(false); navigate("/dashboard/payments"); }}
