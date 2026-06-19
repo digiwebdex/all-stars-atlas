@@ -34,8 +34,8 @@ export const config = {
   currencySymbol: '৳',
   defaultLanguage: 'en',
   supportPhone: '+880 1749-373748',
-  supportEmail: 'support@seven-trip.com',
+  supportEmail: 'support@seventrip.net',
   address: 'Beena Kanon, Flat-4A, House-03, Road-17, Block-E, Banani, Dhaka-1213',
   addressShort: 'Banani, Dhaka-1213',
-  website: 'www.seven-trip.com',
+  website: 'www.seventrip.net',
 } as const;
