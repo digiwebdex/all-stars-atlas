@@ -99,7 +99,7 @@ const AdminSettings = () => {
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>(DEFAULT_BANK_ACCOUNTS);
   const [newBank, setNewBank] = useState<Partial<BankAccount>>({});
   const [showAddBank, setShowAddBank] = useState(false);
-  const [generalForm, setGeneralForm] = useState({ siteName: 'Seven Trip', supportEmail: 'support@seven-trip.com', currency: 'bdt', language: 'en' });
+  const [generalForm, setGeneralForm] = useState({ siteName: 'Seven Trip', supportEmail: 'support@seven-trip.com', siteDomain: '', currency: 'bdt', language: 'en' });
   const [searchTabs, setSearchTabs] = useState<SearchTabConfig>({ ...DEFAULT_SEARCH_TABS });
 
   // Load logo + all settings from backend on mount
