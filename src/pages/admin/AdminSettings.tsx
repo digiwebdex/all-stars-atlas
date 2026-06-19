@@ -363,6 +363,11 @@ const AdminSettings = () => {
             <div className="space-y-1.5"><Label>Site Name</Label><Input value={generalForm.siteName} onChange={e => setGeneralForm(p => ({ ...p, siteName: e.target.value }))} /></div>
             <div className="space-y-1.5"><Label>Support Email</Label><Input value={generalForm.supportEmail} onChange={e => setGeneralForm(p => ({ ...p, supportEmail: e.target.value }))} /></div>
           </div>
+          <div className="space-y-1.5">
+            <Label>Site Domain</Label>
+            <Input placeholder="booking.digiwebdex.com" value={generalForm.siteDomain} onChange={e => setGeneralForm(p => ({ ...p, siteDomain: e.target.value.trim() }))} />
+            <p className="text-[10px] text-muted-foreground">Used for canonical URLs, email links, sitemap & OAuth redirects. DNS/Nginx still managed on the VPS.</p>
+          </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5"><Label>Default Currency</Label>
               <Select value={generalForm.currency} onValueChange={v => setGeneralForm(p => ({ ...p, currency: v }))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="bdt">BDT (৳)</SelectItem><SelectItem value="usd">USD ($)</SelectItem></SelectContent></Select>
