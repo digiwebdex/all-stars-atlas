@@ -64,6 +64,8 @@ export const AIRLINES_DATABASE: AirlineEntry[] = [
   { code: "GF", name: "Gulf Air", country: "Bahrain" },
   { code: "GK", name: "Jetstar Japan", country: "Japan" },
   { code: "H1", name: "Hahn Air", country: "Germany" },
+  { code: "X1", name: "Hahn Air Systems", country: "Germany" },
+  { code: "OV", name: "Salam Air", country: "Oman" },
   { code: "HA", name: "Hawaiian Airlines", country: "USA" },
   { code: "HG", name: "NIKI", country: "Austria" },
   { code: "HM", name: "Air Seychelles", country: "Seychelles" },
