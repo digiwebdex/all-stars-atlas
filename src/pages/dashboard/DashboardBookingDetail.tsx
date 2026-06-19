@@ -148,6 +148,8 @@ const DashboardBookingDetail = () => {
   const [payDialogOpen, setPayDialogOpen] = useState(false);
   const [payLoading, setPayLoading] = useState(false);
   const [hasIssuedWithBalance, setHasIssuedWithBalance] = useState(false);
+  const [partialOpen, setPartialOpen] = useState(false);
+  const [partialLoading, setPartialLoading] = useState(false);
 
   const { data, isLoading, error, refetch } = useDashboardBookings({ search: id, limit: 1 });
   const resolved = (data as any) || {};
@@ -307,6 +309,26 @@ const DashboardBookingDetail = () => {
     }
   };
 
+  const handleRequestPartial = async () => {
+    if (!booking) return;
+    setPartialLoading(true);
+    try {
+      const r: any = await api.post(`/dashboard/bookings/${booking.rawId}/request-partial`, {});
+      toast({
+        title: "Partial Payment Approved ✓",
+        description: r?.message || `Pay ৳${r?.upfrontAmount?.toLocaleString?.() || ''} now. Admin will set deadline for the remainder.`,
+      });
+      setPartialOpen(false);
+      await refetch();
+    } catch (e: any) {
+      toast({ title: "Not Allowed", description: e?.message || "Partial payment not available for this booking.", variant: "destructive" });
+    } finally {
+      setPartialLoading(false);
+    }
+  };
+
+
+
 
   const handleDownload = async () => {
     if (!booking) return;
@@ -370,6 +392,28 @@ const DashboardBookingDetail = () => {
                 <Wallet className="w-4 h-4 mr-1.5" /> Issue With Balance
               </Button>
             )}
+            {/* Request Partial Payment — international + refundable + ≥96h to departure + unpaid */}
+            {(() => {
+              const ps = String(booking.paymentStatus || '').toLowerCase();
+              const st = String(booking.status || '').toLowerCase();
+              if (isTicketed || hasIssuedWithBalance) return null;
+              if (ps === 'paid' || ps === 'partial') return null;
+              if (['cancelled', 'refunded', 'ticketed', 'completed'].includes(st)) return null;
+              if (booking.isDomestic) return null;
+              if (booking.refundable === false) return null;
+              if (!booking.departureTime) return null;
+              const hours = (new Date(booking.departureTime).getTime() - Date.now()) / 36e5;
+              if (hours < 96) return null;
+              return (
+                <Button
+                  onClick={() => setPartialOpen(true)}
+                  className="bg-sky-500 hover:bg-sky-600 text-white font-bold shadow-sm"
+                >
+                  <CreditCard className="w-4 h-4 mr-1.5" /> Request Partial Payment
+                </Button>
+              );
+            })()}
+
             {hasIssuedWithBalance && !isTicketed && !hasFinalTicket && (
               <Badge className="bg-blue-500 text-white text-sm px-4 py-2 font-bold gap-1.5">
                 <Clock className="w-4 h-4" /> Issue Request Sent — Awaiting Admin
@@ -948,6 +992,41 @@ const DashboardBookingDetail = () => {
               </DialogFooter>
             </DialogContent>
           </Dialog>
+
+          {/* ━━ Request Partial Payment Confirmation ━━ */}
+          <Dialog open={partialOpen} onOpenChange={setPartialOpen}>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2"><CreditCard className="w-5 h-5 text-sky-600" /> Request Partial Payment</DialogTitle>
+              </DialogHeader>
+              {(() => {
+                const total = booking.rawAmount || 0;
+                const upfront = Math.round(total * 0.30);
+                const remaining = Math.max(0, total - upfront);
+                return (
+                  <div className="space-y-4 text-sm">
+                    <div className="rounded-lg border p-3 bg-muted/30 space-y-2">
+                      <div className="flex justify-between"><span>Total Fare</span><span className="font-bold">৳{total.toLocaleString()}</span></div>
+                      <div className="flex justify-between text-sky-700"><span>Pay Now (30%)</span><span className="font-bold">৳{upfront.toLocaleString()}</span></div>
+                      <div className="flex justify-between text-amber-700"><span>Remaining (70%)</span><span className="font-bold">৳{remaining.toLocaleString()}</span></div>
+                    </div>
+                    <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900 leading-relaxed">
+                      Allowed only for international, refundable flights with departure ≥ 96 hours away.
+                      Pay 30% now to issue the ticket. Admin will confirm the deadline for the remaining 70%.
+                    </div>
+                  </div>
+                );
+              })()}
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setPartialOpen(false)} disabled={partialLoading}>Cancel</Button>
+                <Button onClick={handleRequestPartial} disabled={partialLoading} className="bg-sky-500 hover:bg-sky-600 text-white">
+                  {partialLoading ? 'Requesting…' : 'Confirm & Enable Partial'}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+
 
           {docVerifyOpen && booking && (
             <TravelDocVerificationModal open={docVerifyOpen} onOpenChange={o => { if (!o) setDocVerifyOpen(false); }}
