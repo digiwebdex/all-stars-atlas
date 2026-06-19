@@ -203,6 +203,10 @@ export const AIRPORTS: Airport[] = [
   { code: "AHB", city: "Abha", name: "Abha Regional Airport", country: "SA" },
   { code: "TIF", city: "Taif", name: "Taif Intl Airport", country: "SA" },
   { code: "TUU", city: "Tabuk", name: "Tabuk Regional Airport", country: "SA" },
+  { code: "ELQ", city: "Gassim", name: "Gassim Regional Airport", country: "SA" },
+  { code: "ABH", city: "Alpha", name: "Alpha Airport", country: "AU" },
+  { code: "FJR", city: "Fujairah", name: "Fujairah Intl Airport", country: "AE" },
+  { code: "LEQ", city: "Land's End", name: "Land's End Airport", country: "GB" },
 
   // ===== QATAR =====
   { code: "DOH", city: "Doha", name: "Hamad Intl Airport", country: "QA" },
