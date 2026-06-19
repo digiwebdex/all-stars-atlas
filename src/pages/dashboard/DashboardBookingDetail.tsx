@@ -392,6 +392,28 @@ const DashboardBookingDetail = () => {
                 <Wallet className="w-4 h-4 mr-1.5" /> Issue With Balance
               </Button>
             )}
+            {/* Request Partial Payment — international + refundable + ≥96h to departure + unpaid */}
+            {(() => {
+              const ps = String(booking.paymentStatus || '').toLowerCase();
+              const st = String(booking.status || '').toLowerCase();
+              if (isTicketed || hasIssuedWithBalance) return null;
+              if (ps === 'paid' || ps === 'partial') return null;
+              if (['cancelled', 'refunded', 'ticketed', 'completed'].includes(st)) return null;
+              if (booking.isDomestic) return null;
+              if (booking.refundable === false) return null;
+              if (!booking.departureTime) return null;
+              const hours = (new Date(booking.departureTime).getTime() - Date.now()) / 36e5;
+              if (hours < 96) return null;
+              return (
+                <Button
+                  onClick={() => setPartialOpen(true)}
+                  className="bg-sky-500 hover:bg-sky-600 text-white font-bold shadow-sm"
+                >
+                  <CreditCard className="w-4 h-4 mr-1.5" /> Request Partial Payment
+                </Button>
+              );
+            })()}
+
             {hasIssuedWithBalance && !isTicketed && !hasFinalTicket && (
               <Badge className="bg-blue-500 text-white text-sm px-4 py-2 font-bold gap-1.5">
                 <Clock className="w-4 h-4" /> Issue Request Sent — Awaiting Admin
