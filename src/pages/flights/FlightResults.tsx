@@ -2709,22 +2709,24 @@ const FlightCard = ({
                               <span className="opacity-70">· {legStopsLabel}</span>
                             </div>
 
-                            {/* Airline detail line: logo | AirAstra | 2A 445 | AT7 | Economy - S | 5 Seats Left */}
-                            <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-                              {legLogo && <img src={legLogo} alt="" className="w-7 h-7 sm:w-8 sm:h-8 object-contain" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />}
-                              <span className="text-sm font-semibold">{flight.airline}</span>
-                              <span className="text-sm text-muted-foreground">{leg.flightNumber || flightNo}</span>
-                              <span className="text-muted-foreground text-sm">|</span>
-                              {(leg.aircraft || aircraft) && (
-                                <>
-                                  <span className="text-sm text-muted-foreground">{leg.aircraft || aircraft}</span>
-                                  <span className="text-muted-foreground text-sm">|</span>
-                                </>
-                              )}
-                              <span className="text-sm font-medium">{cabinDisplay}</span>
-                              {availableSeats !== null && availableSeats <= 9 && (
-                                <span className="text-sm text-orange-500 font-bold">{availableSeats} Seat{availableSeats !== 1 ? "s" : ""} Left</span>
-                              )}
+                            {/* Airline detail block: name - flight no, operated by, aircraft, class */}
+                            <div className="flex items-start gap-3 flex-wrap">
+                              {legLogo && <img src={legLogo} alt="" className="w-8 h-8 object-contain mt-0.5" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />}
+                              <div className="flex flex-col gap-0.5">
+                                <span className="text-sm font-semibold">{flight.airline} - {String(leg.flightNumber || flightNo).replace(/^[A-Z0-9]{2}/, '').trim() || (leg.flightNumber || flightNo)}</span>
+                                {(leg.operatingAirline || flight.operatingAirline) && (leg.operatingAirline || flight.operatingAirline) !== (leg.airlineCode || flight.airlineCode) && (
+                                  <span className="text-xs text-muted-foreground">Operated by : {leg.operatingAirline || flight.operatingAirline}</span>
+                                )}
+                                {(leg.aircraft || aircraft) && (
+                                  <span className="text-xs text-muted-foreground">Aircraft : {leg.aircraft || aircraft}</span>
+                                )}
+                                <span className="text-xs text-muted-foreground">
+                                  Class : {(leg.bookingClass || flight.bookingClass || '—')}{cabinDisplay ? ` - (${cabinDisplay})` : ''}
+                                </span>
+                                {availableSeats !== null && availableSeats <= 9 && (
+                                  <span className="text-xs text-orange-500 font-bold">{availableSeats} Seat{availableSeats !== 1 ? "s" : ""} Left</span>
+                                )}
+                              </div>
                             </div>
 
                             {/* Timeline arc visual — matching reference exactly */}
