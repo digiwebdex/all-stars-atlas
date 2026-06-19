@@ -757,7 +757,7 @@ router.get('/settings', async (req, res) => {
 // PUT /admin/settings
 router.put('/settings', async (req, res) => {
   try {
-    const { section, siteName, supportEmail, supportPhone, defaultCurrency, provider, config, integration, keys, paymentMethods, bankAccounts, notifications } = req.body;
+    const { section, siteName, supportEmail, supportPhone, siteDomain, defaultCurrency, provider, config, integration, keys, paymentMethods, bankAccounts, notifications } = req.body;
 
     // Social OAuth config
     if (section === 'social_oauth' && provider && config) {
