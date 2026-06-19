@@ -131,6 +131,19 @@ const Register = () => {
               <Link to="/" className="flex items-center justify-center gap-2 mb-4 lg:hidden">
                 <img src={logoUrl} alt="Seven Trip" style={{ height: `${Math.round(logoSizes.auth * 0.67)}px` }} className="w-auto" />
               </Link>
+
+              {/* ── Personal / Agency toggle ── */}
+              <div className="flex items-center justify-center mb-4">
+                <div className="inline-flex rounded-xl bg-muted p-1 border border-border">
+                  <button type="button" className="px-4 py-1.5 text-sm font-semibold rounded-lg bg-background shadow-sm text-foreground transition-all">
+                    Personal
+                  </button>
+                  <Link to="/auth/register-agency" className="px-4 py-1.5 text-sm font-medium rounded-lg text-muted-foreground hover:text-foreground transition-all">
+                    Agency / B2B
+                  </Link>
+                </div>
+              </div>
+
               <CardTitle className="text-2xl">Create Account</CardTitle>
               <CardDescription>Start booking with Seven Trip today</CardDescription>
             </CardHeader>
