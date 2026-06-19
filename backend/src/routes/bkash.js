@@ -81,7 +81,7 @@ router.post('/create', authenticate, async (req, res) => {
 
     const token = await getGrantToken();
     const invoiceNumber = `ST-BK-${Date.now()}`;
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const frontendUrl = process.env.FRONTEND_URL || 'https://seventrip.net';
 
     const response = await fetch(`${config.baseUrl}/tokenized/checkout/create`, {
       method: 'POST',
@@ -124,7 +124,7 @@ router.post('/create', authenticate, async (req, res) => {
 router.get('/callback', async (req, res) => {
   try {
     const { paymentID, status: paymentStatus } = req.query;
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const frontendUrl = process.env.FRONTEND_URL || 'https://seventrip.net';
 
     if (paymentStatus === 'success' && paymentID) {
       const config = await getBkashConfig();
@@ -169,7 +169,7 @@ router.get('/callback', async (req, res) => {
     }
   } catch (err) {
     console.error('[bKash] Callback error:', err);
-    res.redirect(`${process.env.FRONTEND_URL || ''}/dashboard/payments?status=error&method=bkash`);
+    res.redirect(`${process.env.FRONTEND_URL || 'https://seventrip.net'}/dashboard/payments?status=error&method=bkash`);
   }
 });
 
