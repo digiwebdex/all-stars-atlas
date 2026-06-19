@@ -32,6 +32,7 @@ const Index = lazy(() => import("@/pages/Index"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
 const Login = lazy(() => import("@/pages/auth/Login"));
 const Register = lazy(() => import("@/pages/auth/Register"));
+const RegisterAgency = lazy(() => import("@/pages/auth/RegisterAgency"));
 const ForgotPassword = lazy(() => import("@/pages/auth/ForgotPassword"));
 const VerifyOTP = lazy(() => import("@/pages/auth/VerifyOTP"));
 const FlightResults = lazy(() => import("@/pages/flights/FlightResults"));
@@ -186,6 +187,8 @@ const App = () => (
               {/* User Auth (public) */}
               <Route path="/auth/login" element={<Login />} />
               <Route path="/auth/register" element={<Register />} />
+              <Route path="/auth/register-agency" element={<RegisterAgency />} />
+              <Route path="/auth/b2b" element={<RegisterAgency />} />
               <Route path="/auth/forgot-password" element={<ForgotPassword />} />
               <Route path="/auth/verify-otp" element={<VerifyOTP />} />
 
