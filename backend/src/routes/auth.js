@@ -74,6 +74,66 @@ router.post('/register', async (req, res) => {
   }
 });
 
+// POST /auth/register-agency  (B2B agent signup — pending admin verification)
+router.post('/register-agency', async (req, res) => {
+  try {
+    const {
+      agencyName, mocatLicense, country, city, address, postalCode,
+      ownerFirstName, ownerLastName, ownerEmail, ownerMobile,
+      email, mobile, password,
+    } = req.body || {};
+
+    if (!agencyName || !ownerFirstName || !ownerEmail || !ownerMobile || !email || !mobile || !password) {
+      return res.status(400).json({ message: 'Please fill all required fields', status: 400 });
+    }
+    if (password.length < 8) {
+      return res.status(400).json({ message: 'Password must be at least 8 characters', status: 400 });
+    }
+
+    const [existing] = await db.query('SELECT id FROM users WHERE email = ?', [email]);
+    if (existing.length > 0) {
+      return res.status(409).json({ message: 'Email already registered', status: 409 });
+    }
+
+    const id = uuidv4();
+    const hash = await bcrypt.hash(password, 12);
+    await db.query(
+      'INSERT INTO users (id, first_name, last_name, email, phone, password_hash, role) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [id, ownerFirstName, ownerLastName || '', email, mobile, hash, 'agent']
+    );
+
+    try {
+      await db.query(
+        `INSERT INTO agency_profiles
+          (user_id, agency_name, mocat_license, country, city, address, postal_code,
+           owner_first_name, owner_last_name, owner_email, owner_mobile, verification_status)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
+        [id, agencyName, mocatLicense || null, country || 'Bangladesh', city || null, address || null, postalCode || null,
+         ownerFirstName, ownerLastName || null, ownerEmail, ownerMobile]
+      );
+    } catch (e) {
+      if (e?.code === 'ER_NO_SUCH_TABLE') {
+        console.warn('[register-agency] agency_profiles table missing — run agency-registration-migration.sql');
+      } else { throw e; }
+    }
+
+    const [rows] = await db.query('SELECT * FROM users WHERE id = ?', [id]);
+    const user = formatUser(rows[0]);
+    const tokens = generateTokens(rows[0]);
+    await db.query(
+      'INSERT INTO refresh_tokens (id, user_id, token, expires_at) VALUES (?, ?, ?, DATE_ADD(NOW(), INTERVAL 7 DAY))',
+      [uuidv4(), id, tokens.refreshToken]
+    );
+
+    notifyWelcome(id).catch(() => {});
+    res.status(201).json({ user, ...tokens, pendingVerification: true });
+  } catch (err) {
+    console.error('Register agency error:', err);
+    res.status(500).json({ message: 'Something went wrong', status: 500 });
+  }
+});
+
+
 // POST /auth/login
 router.post('/login', async (req, res) => {
   try {
