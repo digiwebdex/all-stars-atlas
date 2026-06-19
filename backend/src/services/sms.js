@@ -61,7 +61,7 @@ function bookingConfirmSMS(bookingRef, type) { return `Seven Trip: Your ${type} 
 function bookingStatusSMS(bookingRef, status) { return `Seven Trip: Booking ${bookingRef} status updated to "${status}". Check your dashboard.`; }
 function paymentReceivedSMS(amount, ref) { return `Seven Trip: Payment of ৳${amount} received (Ref: ${ref}). Thank you!`; }
 function visaStatusSMS(country, status) { return `Seven Trip: Your ${country} visa application is now "${status}". Check your dashboard.`; }
-function welcomeSMS(name) { return `Welcome to Seven Trip, ${name}! Explore flights, hotels & more at seven-trip.com`; }
+function welcomeSMS(name) { return `Welcome to Seven Trip, ${name}! Explore flights, hotels & more at seventrip.net`; }
 function passwordResetSMS(otp) { return `Your Seven Trip password reset code: ${otp}. Valid for 10 minutes.`; }
 
 module.exports = { sendSMS, otpSMS, bookingConfirmSMS, bookingStatusSMS, paymentReceivedSMS, visaStatusSMS, welcomeSMS, passwordResetSMS };

@@ -9,10 +9,10 @@ const COMPANY = {
   name: "Seven Trip",
   parent: "Evan International",
   phone: "+880 1749-373748",
-  email: "support@seven-trip.com",
+  email: "support@seventrip.net",
   address: "Beena Kanon, Flat-4A, House-03, Road-17, Block-E, Banani, Dhaka-1213",
   addressShort: "Banani, Dhaka-1213",
-  website: "www.seven-trip.com",
+  website: "www.seventrip.net",
 };
 
 async function loadLogoBase64(): Promise<string | null> {

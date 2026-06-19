@@ -251,7 +251,7 @@ export const CMS_PAGE_DEFAULTS: Record<string, CmsPageContent> = {
     contactInfo: [
       { icon: "MapPin", title: "Office Address", text: "Beena Kanon, Flat-4A, House-03\nRoad-17, Block-E, Banani, Dhaka-1213" },
       { icon: "Phone", title: "Phone", text: "+880 1749-373748" },
-      { icon: "Mail", title: "Email", text: "support@seven-trip.com\nbooking@seven-trip.com" },
+      { icon: "Mail", title: "Email", text: "support@seventrip.net\nbooking@seventrip.net" },
       { icon: "Clock", title: "Working Hours", text: "Sunday - Thursday: 9AM - 8PM\nFriday - Saturday: 10AM - 6PM" },
     ],
     formTitle: "Send us a Message",
@@ -305,10 +305,10 @@ export const CMS_PAGE_DEFAULTS: Record<string, CmsPageContent> = {
       { id: "4", title: "4. Data Security", content: "We implement industry-standard security measures including SSL encryption, PCI-DSS compliance for payment processing, and regular security audits. Access to personal data is restricted to authorized personnel only.", visible: true, order: 3 },
       { id: "5", title: "5. Cookies", content: "We use cookies and similar tracking technologies to enhance your experience, analyze usage patterns, and deliver personalized content. You can manage cookie preferences through your browser settings.", visible: true, order: 4 },
       { id: "6", title: "6. Data Retention", content: "We retain your personal data for as long as necessary to provide our services, comply with legal obligations, resolve disputes, and enforce our agreements. Booking records are retained for a minimum of 5 years for regulatory compliance.", visible: true, order: 5 },
-      { id: "7", title: "7. Your Rights", content: "You have the right to access, correct, or delete your personal data. You can opt out of marketing communications at any time. To exercise these rights, contact us at privacy@seven-trip.com.", visible: true, order: 6 },
+      { id: "7", title: "7. Your Rights", content: "You have the right to access, correct, or delete your personal data. You can opt out of marketing communications at any time. To exercise these rights, contact us at privacy@seventrip.net.", visible: true, order: 6 },
       { id: "8", title: "8. Children's Privacy", content: "Our services are not directed to children under 18. We do not knowingly collect personal data from minors without parental consent.", visible: true, order: 7 },
       { id: "9", title: "9. Changes to This Policy", content: "We may update this Privacy Policy periodically. We will notify you of significant changes via email or a prominent notice on our Platform.", visible: true, order: 8 },
-      { id: "10", title: "10. Contact Us", content: "For questions about this Privacy Policy or your personal data, contact our Data Protection Officer at privacy@seven-trip.com or call +880 1749-373748.", visible: true, order: 9 },
+      { id: "10", title: "10. Contact Us", content: "For questions about this Privacy Policy or your personal data, contact our Data Protection Officer at privacy@seventrip.net or call +880 1749-373748.", visible: true, order: 9 },
     ],
   },
 
@@ -322,7 +322,7 @@ export const CMS_PAGE_DEFAULTS: Record<string, CmsPageContent> = {
     },
     perks: [],
     positions: [],
-    careersEmail: "careers@seven-trip.com",
+    careersEmail: "careers@seventrip.net",
   },
 
   "/refund-policy": {
