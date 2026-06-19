@@ -52,7 +52,7 @@ router.post('/init', authenticate, async (req, res) => {
 
     const orderId = `ST-NG-${Date.now()}`;
     const datetime = new Date().toISOString().replace('T', ' ').slice(0, 19);
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const frontendUrl = process.env.FRONTEND_URL || 'https://seventrip.net';
 
     // Step 1: Initialize payment
     const initBody = {
@@ -119,7 +119,7 @@ router.post('/init', authenticate, async (req, res) => {
 router.get('/callback', async (req, res) => {
   try {
     const { payment_ref_id, status: nagadStatus, order_id } = req.query;
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const frontendUrl = process.env.FRONTEND_URL || 'https://seventrip.net';
 
     if (nagadStatus === 'Success' && payment_ref_id) {
       // Verify with Nagad
@@ -153,7 +153,7 @@ router.get('/callback', async (req, res) => {
     }
   } catch (err) {
     console.error('[Nagad] Callback error:', err);
-    res.redirect(`${process.env.FRONTEND_URL || ''}/dashboard/payments?status=error&method=nagad`);
+    res.redirect(`${process.env.FRONTEND_URL || 'https://seventrip.net'}/dashboard/payments?status=error&method=nagad`);
   }
 });
 
