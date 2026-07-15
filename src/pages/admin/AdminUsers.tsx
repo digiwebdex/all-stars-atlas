@@ -26,6 +26,8 @@ const AdminUsers = () => {
   const [commissionForm, setCommissionForm] = useState({ discountPct: "", aitPct: "", markupPct: "", notes: "" });
   const [newUser, setNewUser] = useState({ firstName: "", lastName: "", email: "", phone: "", password: "", role: "customer", canApproveDeposits: false, initialWalletBalance: "" });
   const [actionLoading, setActionLoading] = useState(false);
+  const [permForm, setPermForm] = useState({ partial: true, canManageBookings: false, canTogglePartial: false });
+  const [permSaving, setPermSaving] = useState(false);
   const { toast } = useToast();
   const qc = useQueryClient();
 
@@ -145,6 +147,32 @@ const AdminUsers = () => {
     } finally { setActionLoading(false); }
   };
 
+  const openViewUser = async (u: any) => {
+    setShowViewUser(u);
+    setPermForm({ partial: true, canManageBookings: false, canTogglePartial: false });
+    try {
+      const res = await api.get<any>(`/admin/users/${u.id}/partial-permission`);
+      setPermForm(p => ({ ...p, partial: !!res?.enabled }));
+    } catch {}
+  };
+
+  const savePermissions = async () => {
+    if (!showViewUser) return;
+    setPermSaving(true);
+    try {
+      await api.put(`/admin/users/${showViewUser.id}/partial-permission`, { enabled: permForm.partial });
+      try {
+        await api.put(`/admin/users/${showViewUser.id}/admin-flags`, {
+          canManageBookings: permForm.canManageBookings,
+          canTogglePartial: permForm.canTogglePartial,
+        });
+      } catch {}
+      toast({ title: "Permissions saved", description: `${showViewUser.name} updated` });
+    } catch (err: any) {
+      toast({ title: "Error", description: err?.message || "Save failed", variant: "destructive" });
+    } finally { setPermSaving(false); }
+  };
+
   const handleExport = () => {
     downloadCSV('users', ['Name', 'Email', 'Phone', 'Status', 'Bookings', 'Joined'],
       users.map((u: any) => [u.name, u.email, u.phone, u.status, u.bookings, u.joined]));
@@ -210,7 +238,7 @@ const AdminUsers = () => {
                   <TableCell>
                     <DropdownMenu modal={false}><DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="w-4 h-4" /></Button></DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => setShowViewUser(u)}><Eye className="w-4 h-4 mr-2" /> View Profile</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => openViewUser(u)}><Eye className="w-4 h-4 mr-2" /> View Profile</DropdownMenuItem>
                         <DropdownMenuItem onClick={() => openCommission(u)}><Shield className="w-4 h-4 mr-2" /> Set Commission</DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleSuspend(u)} disabled={actionLoading}>
                           {u.status === "active" ? <><Ban className="w-4 h-4 mr-2" /> Suspend</> : <><CheckCircle2 className="w-4 h-4 mr-2" /> Activate</>}
@@ -286,6 +314,32 @@ const AdminUsers = () => {
                 {showViewUser.idVerified && (
                   <p className="text-xs text-success font-medium flex items-center gap-1 pt-1"><CheckCircle2 className="w-3 h-3" /> This user's identity has been verified by an admin.</p>
                 )}
+              </div>
+
+              {/* Permissions */}
+              <div className="border rounded-lg p-3 space-y-3">
+                <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                  <Shield className="w-3.5 h-3.5" /> Permissions
+                </p>
+                <label className="flex items-center justify-between text-sm">
+                  <span>Partial Payment access</span>
+                  <input type="checkbox" checked={permForm.partial} onChange={e => setPermForm(p => ({ ...p, partial: e.target.checked }))} />
+                </label>
+                {(showViewUser.role === 'admin' || showViewUser.role === 'super_admin') && (
+                  <>
+                    <label className="flex items-center justify-between text-sm">
+                      <span>Secondary Admin — Manage Bookings</span>
+                      <input type="checkbox" checked={permForm.canManageBookings} onChange={e => setPermForm(p => ({ ...p, canManageBookings: e.target.checked }))} />
+                    </label>
+                    <label className="flex items-center justify-between text-sm">
+                      <span>Secondary Admin — Toggle Partial for Users</span>
+                      <input type="checkbox" checked={permForm.canTogglePartial} onChange={e => setPermForm(p => ({ ...p, canTogglePartial: e.target.checked }))} />
+                    </label>
+                  </>
+                )}
+                <Button size="sm" onClick={savePermissions} disabled={permSaving}>
+                  {permSaving ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : null} Save Permissions
+                </Button>
               </div>
             </div>
           )}
