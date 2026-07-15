@@ -156,7 +156,10 @@ const Login = () => {
                 </Button>
               </div>
 
-              <p className="text-center text-sm text-muted-foreground pt-4">
+              <p className="text-center text-sm pt-4">
+                <Link to="/auth/login-otp" className="text-primary font-semibold hover:underline">Sign in with OTP instead</Link>
+              </p>
+              <p className="text-center text-sm text-muted-foreground pt-2">
                 Don't have an account? <Link to="/auth/register" className="text-primary font-semibold hover:underline">Create Account</Link>
               </p>
             </CardContent>

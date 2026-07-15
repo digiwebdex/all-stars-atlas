@@ -31,6 +31,7 @@ const ScrollToTopOnNav = () => {
 const Index = lazy(() => import("@/pages/Index"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
 const Login = lazy(() => import("@/pages/auth/Login"));
+const LoginOTP = lazy(() => import("@/pages/auth/LoginOTP"));
 const Register = lazy(() => import("@/pages/auth/Register"));
 const ForgotPassword = lazy(() => import("@/pages/auth/ForgotPassword"));
 const VerifyOTP = lazy(() => import("@/pages/auth/VerifyOTP"));
@@ -185,6 +186,7 @@ const App = () => (
 
               {/* User Auth (public) */}
             <Route path="/auth/login" element={<Login />} />
+              <Route path="/auth/login-otp" element={<LoginOTP />} />
               <Route path="/auth/register" element={<Register />} />
               <Route path="/auth/register-agency" element={<Navigate to="/auth/register" replace />} />
               <Route path="/auth/b2b" element={<Navigate to="/auth/register" replace />} />

@@ -1394,4 +1394,65 @@ router.put('/ticket-issue-requests/:id', async (req, res) => {
 // ── Enterprise extras (route restrictions, per-user commission, deadline editor, agent ID)
 router.use('/', require('./admin-enterprise'));
 
+// ============================================================
+// Per-user partial-payment permission (override of global toggle)
+// ============================================================
+async function ensurePartialPermTable() {
+  try {
+    await db.query(`CREATE TABLE IF NOT EXISTS user_partial_permission (
+      user_id CHAR(36) PRIMARY KEY,
+      enabled TINYINT(1) DEFAULT 1,
+      updated_by CHAR(36) NULL,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    )`);
+  } catch (_) {}
+}
+
+router.get('/users/:id/partial-permission', async (req, res) => {
+  try {
+    await ensurePartialPermTable();
+    const [rows] = await db.query('SELECT enabled FROM user_partial_permission WHERE user_id = ?', [req.params.id]);
+    res.json({ enabled: rows.length ? !!rows[0].enabled : true });
+  } catch (err) {
+    console.error('Get partial permission error:', err);
+    res.status(500).json({ message: 'Failed to load permission' });
+  }
+});
+
+router.put('/users/:id/partial-permission', async (req, res) => {
+  try {
+    await ensurePartialPermTable();
+    const enabled = req.body?.enabled ? 1 : 0;
+    await db.query(
+      `INSERT INTO user_partial_permission (user_id, enabled, updated_by) VALUES (?, ?, ?)
+       ON DUPLICATE KEY UPDATE enabled = VALUES(enabled), updated_by = VALUES(updated_by)`,
+      [req.params.id, enabled, req.user.sub]
+    );
+    res.json({ success: true, enabled: !!enabled });
+  } catch (err) {
+    console.error('Set partial permission error:', err);
+    res.status(500).json({ message: 'Failed to save permission' });
+  }
+});
+
+// Secondary-admin permission flags (can_manage_bookings, can_toggle_partial)
+router.put('/users/:id/admin-flags', async (req, res) => {
+  try {
+    const { canManageBookings, canTogglePartial } = req.body || {};
+    // Best-effort — columns may not exist yet if migration not run
+    try {
+      await db.query(
+        'UPDATE users SET can_manage_bookings = ?, can_toggle_partial = ? WHERE id = ?',
+        [canManageBookings ? 1 : 0, canTogglePartial ? 1 : 0, req.params.id]
+      );
+    } catch (e) {
+      return res.status(500).json({ message: 'Run admin-controls-migration.sql first' });
+    }
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Admin flags error:', err);
+    res.status(500).json({ message: 'Failed to save flags' });
+  }
+});
+
 module.exports = router;
