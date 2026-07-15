@@ -26,6 +26,8 @@ const AdminUsers = () => {
   const [commissionForm, setCommissionForm] = useState({ discountPct: "", aitPct: "", markupPct: "", notes: "" });
   const [newUser, setNewUser] = useState({ firstName: "", lastName: "", email: "", phone: "", password: "", role: "customer", canApproveDeposits: false, initialWalletBalance: "" });
   const [actionLoading, setActionLoading] = useState(false);
+  const [permForm, setPermForm] = useState({ partial: true, canManageBookings: false, canTogglePartial: false });
+  const [permSaving, setPermSaving] = useState(false);
   const { toast } = useToast();
   const qc = useQueryClient();
 
@@ -143,6 +145,32 @@ const AdminUsers = () => {
     } catch (err: any) {
       toast({ title: "Error", description: err?.message || "Failed", variant: "destructive" });
     } finally { setActionLoading(false); }
+  };
+
+  const openViewUser = async (u: any) => {
+    setShowViewUser(u);
+    setPermForm({ partial: true, canManageBookings: false, canTogglePartial: false });
+    try {
+      const res = await api.get<any>(`/admin/users/${u.id}/partial-permission`);
+      setPermForm(p => ({ ...p, partial: !!res?.enabled }));
+    } catch {}
+  };
+
+  const savePermissions = async () => {
+    if (!showViewUser) return;
+    setPermSaving(true);
+    try {
+      await api.put(`/admin/users/${showViewUser.id}/partial-permission`, { enabled: permForm.partial });
+      try {
+        await api.put(`/admin/users/${showViewUser.id}/admin-flags`, {
+          canManageBookings: permForm.canManageBookings,
+          canTogglePartial: permForm.canTogglePartial,
+        });
+      } catch {}
+      toast({ title: "Permissions saved", description: `${showViewUser.name} updated` });
+    } catch (err: any) {
+      toast({ title: "Error", description: err?.message || "Save failed", variant: "destructive" });
+    } finally { setPermSaving(false); }
   };
 
   const handleExport = () => {
