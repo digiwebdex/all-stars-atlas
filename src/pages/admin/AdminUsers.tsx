@@ -315,6 +315,32 @@ const AdminUsers = () => {
                   <p className="text-xs text-success font-medium flex items-center gap-1 pt-1"><CheckCircle2 className="w-3 h-3" /> This user's identity has been verified by an admin.</p>
                 )}
               </div>
+
+              {/* Permissions */}
+              <div className="border rounded-lg p-3 space-y-3">
+                <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                  <Shield className="w-3.5 h-3.5" /> Permissions
+                </p>
+                <label className="flex items-center justify-between text-sm">
+                  <span>Partial Payment access</span>
+                  <input type="checkbox" checked={permForm.partial} onChange={e => setPermForm(p => ({ ...p, partial: e.target.checked }))} />
+                </label>
+                {(showViewUser.role === 'admin' || showViewUser.role === 'super_admin') && (
+                  <>
+                    <label className="flex items-center justify-between text-sm">
+                      <span>Secondary Admin — Manage Bookings</span>
+                      <input type="checkbox" checked={permForm.canManageBookings} onChange={e => setPermForm(p => ({ ...p, canManageBookings: e.target.checked }))} />
+                    </label>
+                    <label className="flex items-center justify-between text-sm">
+                      <span>Secondary Admin — Toggle Partial for Users</span>
+                      <input type="checkbox" checked={permForm.canTogglePartial} onChange={e => setPermForm(p => ({ ...p, canTogglePartial: e.target.checked }))} />
+                    </label>
+                  </>
+                )}
+                <Button size="sm" onClick={savePermissions} disabled={permSaving}>
+                  {permSaving ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : null} Save Permissions
+                </Button>
+              </div>
             </div>
           )}
         </DialogContent>
