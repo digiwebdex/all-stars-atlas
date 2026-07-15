@@ -855,6 +855,22 @@ router.put('/settings', async (req, res) => {
       return res.json({ message: 'Booking rules saved' });
     }
 
+    // Appearance / admin theme
+    if (section === 'appearance') {
+      const keys = ['admin_theme_primary', 'admin_theme_accent', 'admin_theme_sidebar_bg'];
+      for (const k of keys) {
+        if (req.body[k] !== undefined) {
+          const v = String(req.body[k]);
+          await db.query(
+            'INSERT INTO system_settings (setting_key, setting_value, updated_at) VALUES (?, ?, NOW()) ON DUPLICATE KEY UPDATE setting_value = ?, updated_at = NOW()',
+            [k, v, v]
+          );
+        }
+      }
+      return res.json({ message: 'Appearance saved' });
+    }
+
+
     // Markup config
     if (req.body.markup_config) {
       const val = JSON.stringify(req.body.markup_config);
