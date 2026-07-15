@@ -43,7 +43,9 @@ const defaultMarkup: MarkupConfig = {
 };
 
 const SEGMENTS = [
-  { key: "FLIGHT", label: "Flight", icon: Plane },
+  { key: "FLIGHT_DOM", label: "Flight — Domestic", icon: Plane },
+  { key: "FLIGHT_INT", label: "Flight — International", icon: Plane },
+  { key: "FLIGHT_SOTO", label: "Flight — SOTO", icon: Plane },
   { key: "HOTEL", label: "Hotel", icon: Building2 },
   { key: "CAR", label: "Car", icon: Car },
   { key: "VISA", label: "Visa", icon: Globe },
@@ -52,7 +54,7 @@ const SEGMENTS = [
 
 const AdminMarkup = () => {
   const { toast } = useToast();
-  const [activeSegment, setActiveSegment] = useState("FLIGHT");
+  const [activeSegment, setActiveSegment] = useState("FLIGHT_DOM");
   const [markups, setMarkups] = useState<Record<string, MarkupConfig>>({});
   const [airlineMarkups, setAirlineMarkups] = useState<Record<string, AirlineMarkupEntry>>({});
   const [saving, setSaving] = useState(false);
@@ -267,8 +269,8 @@ const AdminMarkup = () => {
         </CardContent>
       </Card>
 
-      {/* Per-airline markup — only for FLIGHT segment */}
-      {activeSegment === "FLIGHT" && (
+      {/* Per-airline markup — for flight scopes */}
+      {activeSegment.startsWith("FLIGHT") && (
         <AirlineMarkupConfig
           airlineMarkups={airlineMarkups}
           globalDiscount={current.fareSummaryDiscount ?? 6.30}
