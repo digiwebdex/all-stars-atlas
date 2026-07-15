@@ -337,4 +337,108 @@ router.post('/upload-id-document', authenticate, idUpload.single('document'), as
   }
 });
 
+// ============================================================
+// OTP Login (passwordless) — email OR SMS
+// ============================================================
+const { sendEmail, otpEmail } = require('../services/email');
+const { sendSMS, otpSMS } = require('../services/sms');
+
+async function ensureOtpTable() {
+  try {
+    await db.query(`CREATE TABLE IF NOT EXISTS otp_login_codes (
+      id BIGINT AUTO_INCREMENT PRIMARY KEY,
+      identifier VARCHAR(255) NOT NULL,
+      channel ENUM('email','sms') NOT NULL,
+      code VARCHAR(10) NOT NULL,
+      attempts INT DEFAULT 0,
+      consumed TINYINT(1) DEFAULT 0,
+      expires_at DATETIME NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      INDEX idx_otp_identifier (identifier)
+    )`);
+  } catch (_) {}
+}
+
+// POST /auth/login-otp/request  { identifier, channel: 'email'|'sms' }
+router.post('/login-otp/request', async (req, res) => {
+  try {
+    const { identifier, channel } = req.body || {};
+    if (!identifier || !['email', 'sms'].includes(channel)) {
+      return res.status(400).json({ message: 'identifier and channel (email|sms) are required' });
+    }
+    await ensureOtpTable();
+
+    const col = channel === 'email' ? 'email' : 'phone';
+    const [rows] = await db.query(`SELECT id, first_name, last_name, email, phone FROM users WHERE ${col} = ? LIMIT 1`, [identifier]);
+    // Neutral response even if user doesn't exist
+    if (rows.length === 0) {
+      return res.json({ message: 'If the account exists, an OTP has been sent.' });
+    }
+
+    const code = String(Math.floor(100000 + Math.random() * 900000));
+    await db.query(
+      `INSERT INTO otp_login_codes (identifier, channel, code, expires_at) VALUES (?, ?, ?, DATE_ADD(NOW(), INTERVAL 10 MINUTE))`,
+      [identifier, channel, code]
+    );
+
+    const u = rows[0];
+    const name = `${u.first_name || ''} ${u.last_name || ''}`.trim() || 'Traveller';
+    if (channel === 'email') {
+      const tpl = otpEmail(name, code);
+      sendEmail({ to: u.email, ...tpl }).catch(err => console.error('OTP email error:', err));
+    } else {
+      sendSMS(u.phone, otpSMS(code)).catch(err => console.error('OTP SMS error:', err));
+    }
+    res.json({ message: 'OTP sent. Please check your ' + (channel === 'email' ? 'email' : 'SMS') + '.' });
+  } catch (err) {
+    console.error('OTP request error:', err);
+    res.status(500).json({ message: 'Failed to send OTP' });
+  }
+});
+
+// POST /auth/login-otp/verify  { identifier, channel, code }
+router.post('/login-otp/verify', async (req, res) => {
+  try {
+    const { identifier, channel, code } = req.body || {};
+    if (!identifier || !channel || !code) {
+      return res.status(400).json({ message: 'identifier, channel, and code are required' });
+    }
+    await ensureOtpTable();
+
+    const [otpRows] = await db.query(
+      `SELECT * FROM otp_login_codes WHERE identifier = ? AND channel = ? AND consumed = 0 AND expires_at > NOW() ORDER BY id DESC LIMIT 1`,
+      [identifier, channel]
+    );
+    if (otpRows.length === 0) {
+      return res.status(400).json({ message: 'Invalid or expired OTP' });
+    }
+    const otp = otpRows[0];
+    if (otp.attempts >= 5) {
+      return res.status(429).json({ message: 'Too many attempts. Request a new OTP.' });
+    }
+    if (String(otp.code) !== String(code)) {
+      await db.query('UPDATE otp_login_codes SET attempts = attempts + 1 WHERE id = ?', [otp.id]);
+      return res.status(400).json({ message: 'Invalid OTP' });
+    }
+    await db.query('UPDATE otp_login_codes SET consumed = 1 WHERE id = ?', [otp.id]);
+
+    const col = channel === 'email' ? 'email' : 'phone';
+    const [users] = await db.query(`SELECT * FROM users WHERE ${col} = ? LIMIT 1`, [identifier]);
+    if (users.length === 0) return res.status(404).json({ message: 'User not found' });
+
+    const user = users[0];
+    if (user.role === 'admin' || user.role === 'super_admin') {
+      return res.status(403).json({ message: 'Admins must sign in via the admin panel.' });
+    }
+    const tokens = generateTokens(user);
+    await db.query('INSERT INTO refresh_tokens (id, user_id, token, expires_at) VALUES (?, ?, ?, DATE_ADD(NOW(), INTERVAL 7 DAY))',
+      [uuidv4(), user.id, tokens.refreshToken]);
+
+    res.json({ user: formatUser(user), ...tokens });
+  } catch (err) {
+    console.error('OTP verify error:', err);
+    res.status(500).json({ message: 'Failed to verify OTP' });
+  }
+});
+
 module.exports = router;
