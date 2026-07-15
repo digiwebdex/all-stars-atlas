@@ -100,6 +100,8 @@ const AdminSettings = () => {
   const [newBank, setNewBank] = useState<Partial<BankAccount>>({});
   const [showAddBank, setShowAddBank] = useState(false);
   const [generalForm, setGeneralForm] = useState({ siteName: 'Seven Trip', supportEmail: 'support@seventrip.net', siteDomain: '', currency: 'bdt', language: 'en' });
+  const [appearance, setAppearance] = useState({ admin_theme_primary: '#2563eb', admin_theme_accent: '#0ea5e9', admin_theme_sidebar_bg: '#0f172a' });
+  const [appearanceSaving, setAppearanceSaving] = useState(false);
   const [searchTabs, setSearchTabs] = useState<SearchTabConfig>({ ...DEFAULT_SEARCH_TABS });
 
   // Load logo + all settings from backend on mount
@@ -121,6 +123,13 @@ const AdminSettings = () => {
         if (data.siteDomain) setGeneralForm(prev => ({ ...prev, siteDomain: data.siteDomain }));
         if (data.defaultCurrency) setGeneralForm(prev => ({ ...prev, currency: data.defaultCurrency }));
         if (data.searchTabs) setSearchTabs(prev => ({ ...prev, ...data.searchTabs }));
+        if (data.settings) {
+          setAppearance(prev => ({
+            admin_theme_primary: data.settings.admin_theme_primary || prev.admin_theme_primary,
+            admin_theme_accent: data.settings.admin_theme_accent || prev.admin_theme_accent,
+            admin_theme_sidebar_bg: data.settings.admin_theme_sidebar_bg || prev.admin_theme_sidebar_bg,
+          }));
+        }
 
         // Mark APIs as enabled if they have keys
         if (data.apiKeys) {
@@ -377,6 +386,46 @@ const AdminSettings = () => {
             </div>
           </div>
           <Button onClick={handleSaveGeneral}>Save Changes</Button>
+        </CardContent>
+      </Card>
+
+      {/* Appearance — Admin Panel Color Customization */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center"><Image className="w-5 h-5 text-primary" /></div>
+            <div><CardTitle className="text-lg">Appearance</CardTitle><CardDescription>Customize admin panel colors. Applied on next reload.</CardDescription></div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {([
+              ['admin_theme_primary', 'Primary Color'],
+              ['admin_theme_accent', 'Accent Color'],
+              ['admin_theme_sidebar_bg', 'Sidebar Background'],
+            ] as const).map(([key, label]) => (
+              <div className="space-y-1.5" key={key}>
+                <Label>{label}</Label>
+                <div className="flex items-center gap-2">
+                  <input type="color" value={appearance[key]} onChange={e => setAppearance(p => ({ ...p, [key]: e.target.value }))} className="h-10 w-14 rounded border border-border cursor-pointer" />
+                  <Input value={appearance[key]} onChange={e => setAppearance(p => ({ ...p, [key]: e.target.value }))} className="font-mono text-xs" />
+                </div>
+              </div>
+            ))}
+          </div>
+          <Button
+            disabled={appearanceSaving}
+            onClick={async () => {
+              setAppearanceSaving(true);
+              try {
+                await api.put('/admin/settings', { section: 'appearance', ...appearance });
+                toast.success('Appearance saved. Reload the admin panel to see the new theme.');
+              } catch { toast.error('Failed to save appearance.'); }
+              finally { setAppearanceSaving(false); }
+            }}
+          >
+            {appearanceSaving ? <><Loader2 className="w-4 h-4 mr-1 animate-spin" /> Saving...</> : 'Save Appearance'}
+          </Button>
         </CardContent>
       </Card>
 
