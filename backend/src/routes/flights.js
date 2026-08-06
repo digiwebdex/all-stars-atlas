@@ -745,6 +745,10 @@ router.get('/search', authenticateOptional, async (req, res) => {
         console.log(`[Search] Provider '${id}' is paused — skipped`);
         return Promise.resolve([]);
       }
+      if (isProviderCoolingDown(id)) {
+        console.log(`[Search] Provider '${id}' in cooldown (recent failure/timeout) — skipped`);
+        return Promise.resolve([]);
+      }
       // Warm cache: identical searches within the TTL return instantly (no GDS round trip)
       const key = cacheKey(id);
       const cached = getCachedProviderResult(key);
@@ -753,16 +757,27 @@ router.get('/search', authenticateOptional, async (req, res) => {
         return Promise.resolve(cached);
       }
       const started = Date.now();
+      let failed = false;
       return withBudget(id, fn().catch(err => {
+        failed = true;
         console.error(`${id} search failed (continuing with other providers):`, err.message);
         return [];
       })).then(rows => {
         const list = Array.isArray(rows) ? rows : [];
-        console.log(`[Search] Provider '${id}' took ${Date.now() - started}ms → ${list.length} fares`);
-        if (list.length > 0) setCachedProviderResult(key, list);
+        const took = Date.now() - started;
+        console.log(`[Search] Provider '${id}' took ${took}ms → ${list.length} fares`);
+        if (list.length > 0) {
+          setCachedProviderResult(key, list);
+        } else {
+          // Nothing usable: cache the empty answer briefly and put slow/broken
+          // suppliers in cooldown so they stop eating the search budget.
+          setCachedProviderResult(key, list, EMPTY_RESULT_TTL_MS);
+          if (failed || took >= PROVIDER_BUDGET_MS - 250) markProviderCooldown(id);
+        }
         return list;
       });
     };
+
 
 
 
