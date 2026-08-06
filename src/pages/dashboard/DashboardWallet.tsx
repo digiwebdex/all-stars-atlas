@@ -111,8 +111,10 @@ const DashboardWallet = () => {
     setFundLoading(true);
     try {
       if (fundMethod === "bank") {
-        if (!depositTxnId.trim()) {
-          toast({ title: "Transaction ID required", description: "Please enter the bank/mobile transaction ID of your deposit.", variant: "destructive" });
+        // Accept the Notes value as transaction ID when the dedicated field is empty
+        const txn = (depositTxnId.trim() || depositNotes.trim());
+        if (!txn) {
+          toast({ title: "Transaction ID required", description: "Enter the bank/mobile transaction ID (or bank slip number) of your deposit.", variant: "destructive" });
           setFundLoading(false);
           return;
         }
@@ -120,7 +122,7 @@ const DashboardWallet = () => {
         const fd = new FormData();
         fd.append("amount", String(amt));
         fd.append("method", "bank");
-        fd.append("transactionId", depositTxnId.trim());
+        fd.append("transactionId", txn);
         if (depositNotes) fd.append("notes", depositNotes);
         if (slipFile) fd.append("depositSlip", slipFile);
         await api.upload("/dashboard/wallet/deposit", fd);
@@ -439,7 +441,7 @@ const DashboardWallet = () => {
 
           <DialogFooter>
             <Button variant="outline" onClick={resetAddFunds}>Cancel</Button>
-            <Button onClick={handleAddFunds} disabled={fundLoading || !fundAmount || (fundMethod === "bank" && !depositTxnId.trim())} className="gap-1.5">
+            <Button onClick={handleAddFunds} disabled={fundLoading || !fundAmount || (fundMethod === "bank" && !depositTxnId.trim() && !depositNotes.trim())} className="gap-1.5">
               {fundLoading ? "Processing..." : fundMethod === "bank" ? `Submit Deposit ৳${Number(fundAmount || 0).toLocaleString()}` : `Pay ৳${Number(fundAmount || 0).toLocaleString()}`}
             </Button>
           </DialogFooter>
