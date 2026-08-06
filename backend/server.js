@@ -32,7 +32,11 @@ app.use(cors({
   origin: [process.env.FRONTEND_URL || 'http://localhost:5173', 'http://localhost:5173', 'http://localhost:8080', 'http://187.77.137.249'],
   credentials: true,
 }));
-app.use(morgan('combined'));
+// Gzip API responses — flight search payloads are large JSON blobs
+let compression = null;
+try { compression = require('compression'); } catch { /* optional dep */ }
+if (compression) app.use(compression({ threshold: 1024 }));
+app.use(morgan(process.env.NODE_ENV === 'production' ? 'tiny' : 'combined'));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 

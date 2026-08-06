@@ -20,6 +20,34 @@ const { loadPartialSettings, evaluatePartialEligibility, isAirlineRouteBlocked, 
 
 const router = express.Router();
 
+// ── Live-fare micro cache ──────────────────────────────────────────────
+// Identical searches (page refresh, back navigation, filter/sort changes)
+// reuse the same GDS payload for a short window instead of re-querying every
+// supplier. TTL is intentionally short so fares stay live and bookable.
+const PROVIDER_CACHE_TTL_MS = parseInt(process.env.PROVIDER_SEARCH_CACHE_TTL_MS) || 120000;
+const PROVIDER_CACHE_MAX = 60;
+const providerSearchCache = new Map();
+
+function getCachedProviderResult(key) {
+  const hit = providerSearchCache.get(key);
+  if (!hit) return null;
+  if (Date.now() > hit.expiry) {
+    providerSearchCache.delete(key);
+    return null;
+  }
+  return hit.rows;
+}
+
+function setCachedProviderResult(key, rows) {
+  if (providerSearchCache.size >= PROVIDER_CACHE_MAX) {
+    const oldest = providerSearchCache.keys().next().value;
+    if (oldest) providerSearchCache.delete(oldest);
+  }
+  providerSearchCache.set(key, { rows, expiry: Date.now() + PROVIDER_CACHE_TTL_MS });
+}
+
+
+
 // Public: check whether the flight is eligible for partial payment.
 // GET /api/flights/partial-eligibility?origin=DAC&destination=JED&departureTime=2026-07-02T12:00&refundable=true&airlineCode=BS
 router.get('/partial-eligibility', async (req, res) => {
@@ -679,7 +707,7 @@ router.get('/search', authenticateOptional, async (req, res) => {
     );
     // Per-provider deadline — one slow supplier must never hold up the whole search.
     // Anything still pending after this budget is dropped (results already returned are kept).
-    const PROVIDER_BUDGET_MS = parseInt(process.env.PROVIDER_SEARCH_BUDGET_MS) || 25000;
+    const PROVIDER_BUDGET_MS = parseInt(process.env.PROVIDER_SEARCH_BUDGET_MS) || 12000;
     const withBudget = (id, promise) => {
       let timer;
       const guard = new Promise(resolve => {
@@ -691,16 +719,32 @@ router.get('/search', authenticateOptional, async (req, res) => {
       return Promise.race([promise, guard]).finally(() => clearTimeout(timer));
     };
 
+    const cacheKey = (id) => `${id}|${JSON.stringify(searchParams)}`;
+
     const runProvider = (id, fn) => {
       if (pausedIds.has(id)) {
         console.log(`[Search] Provider '${id}' is paused — skipped`);
         return Promise.resolve([]);
       }
+      // Warm cache: identical searches within the TTL return instantly (no GDS round trip)
+      const key = cacheKey(id);
+      const cached = getCachedProviderResult(key);
+      if (cached) {
+        console.log(`[Search] Provider '${id}' served from cache (${cached.length} fares)`);
+        return Promise.resolve(cached);
+      }
+      const started = Date.now();
       return withBudget(id, fn().catch(err => {
         console.error(`${id} search failed (continuing with other providers):`, err.message);
         return [];
-      }));
+      })).then(rows => {
+        const list = Array.isArray(rows) ? rows : [];
+        console.log(`[Search] Provider '${id}' took ${Date.now() - started}ms → ${list.length} fares`);
+        if (list.length > 0) setCachedProviderResult(key, list);
+        return list;
+      });
     };
+
 
 
     const [dbFlights, ttiFlights, bdfFlights, flyhubFlights, sabreFlights, galileoFlights, ndcFlights, lccFlights, tlFlights] = await Promise.allSettled([
