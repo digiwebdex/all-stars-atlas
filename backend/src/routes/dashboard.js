@@ -144,6 +144,15 @@ function getTransactionEntryType(txn) {
   return txn.type;
 }
 
+// A booking-linked debit only counts against the wallet once the user actually
+// paid it from wallet (payment_status = 'paid'). Reserved / on-hold bookings must
+// never reduce the balance — money is deducted only on an issue request.
+function isChargeableWalletDebit(txn) {
+  if (!txn.booking_id) return true;
+  const bookingPaid = String(txn.booking_payment_status || '').toLowerCase();
+  return bookingPaid === 'paid' || bookingPaid === 'partial';
+}
+
 function computeWalletTotalsFromTransactions(rows = []) {
   return rows.reduce((acc, txn) => {
     const status = String(txn.status || '').toLowerCase();
@@ -151,7 +160,7 @@ function computeWalletTotalsFromTransactions(rows = []) {
 
     const signedAmount = getSignedTransactionAmount(txn);
     if (signedAmount >= 0) acc.totalCredited += signedAmount;
-    else acc.totalDebited += Math.abs(signedAmount);
+    else if (isChargeableWalletDebit(txn)) acc.totalDebited += Math.abs(signedAmount);
 
     return acc;
   }, { totalCredited: 0, totalDebited: 0 });
