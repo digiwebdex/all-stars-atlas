@@ -361,7 +361,7 @@ router.get('/stats', async (req, res) => {
     );
     const s = sched[0] || {};
 
-    const walletState = await readWalletState(userId).catch(() => null);
+    const walletState = await getEffectiveWalletState(userId).catch(() => null);
     const availableLimit = walletState ? Number(walletState.effectiveBalance || 0) : 0;
 
     const num = v => Number(v || 0);
