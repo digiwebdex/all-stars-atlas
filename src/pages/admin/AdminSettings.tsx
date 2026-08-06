@@ -618,7 +618,52 @@ const AdminSettings = () => {
         </CardContent>
       </Card>
 
+      {/* API Control — Pause / Resume any provider */}
+      <Card className="border-primary/20">
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center"><Power className="w-5 h-5 text-primary" /></div>
+            <div>
+              <CardTitle className="text-lg">API Control (Pause / Resume)</CardTitle>
+              <CardDescription>Temporarily pause any supplier or service API without deleting its credentials. Paused APIs are skipped instantly across search, booking and payments.</CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {providerStatus.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Loading API list…</p>
+          ) : (
+            Array.from(new Set(providerStatus.map(p => p.group || 'Other'))).map(group => (
+              <div key={group} className="space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{group}</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {providerStatus.filter(p => (p.group || 'Other') === group).map(p => (
+                    <div key={p.id} className="flex items-center justify-between gap-3 border rounded-lg px-3 py-2">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium truncate">{p.name}</p>
+                        <Badge variant={p.paused ? 'secondary' : 'default'} className="text-[10px] h-5 mt-0.5">
+                          {p.paused ? 'Paused' : 'Live'}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        {providerBusy === p.id && <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground" />}
+                        <Switch
+                          checked={!p.paused}
+                          disabled={providerBusy === p.id}
+                          onCheckedChange={(v) => toggleProviderPaused(p.id, p.name, !v)}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))
+          )}
+        </CardContent>
+      </Card>
+
       {/* API Integrations */}
+
       <Card>
         <CardHeader>
           <div className="flex items-center gap-3">
