@@ -40,6 +40,7 @@ PREPARE stmt FROM @s; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 -- 4) Defaults for admin theme + B2B partial toggle
 INSERT INTO system_settings (setting_key, setting_value, updated_at) VALUES
   ('b2b_partial_enabled',    'true',    NOW()),
+  ('b2c_partial_enabled',    'false',   NOW()),
   ('admin_theme_primary',    '#2563eb', NOW()),
   ('admin_theme_accent',     '#0ea5e9', NOW()),
   ('admin_theme_sidebar_bg', '#0f172a', NOW())
