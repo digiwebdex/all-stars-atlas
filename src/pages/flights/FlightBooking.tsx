@@ -408,7 +408,15 @@ const FlightBooking = () => {
     currency?: string;
   } | null>(null);
   const [pendingPayLater, setPendingPayLater] = useState(true);
+  // Values must match the backend payment_method enum (bkash|nagad|card|bank_transfer)
+  const PAY_METHODS = [
+    { value: "bkash", label: "bKash" },
+    { value: "nagad", label: "Nagad" },
+    { value: "card", label: "Visa/Master Card" },
+    { value: "bank_transfer", label: "Bank Transfer" },
+  ];
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("");
+
 
   // ── Coupon / Reward Points ──
   const [couponCode, setCouponCode] = useState("");
