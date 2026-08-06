@@ -106,7 +106,7 @@ async function searchFlights({ origin, destination, departDate, returnDate, adul
   };
 
   try {
-    const data = await tlPost('/api/Search', payload, { useSearchBase: true });
+    const data = await tlPost('/api/Search', payload, { useSearchBase: true, timeout: 90000 });
     return normalizeSearch(data, origin, destination);
   } catch (err) {
     console.error('[TripLover] Search error:', err.message);
