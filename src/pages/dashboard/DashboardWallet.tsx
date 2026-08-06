@@ -428,7 +428,7 @@ const DashboardWallet = () => {
                 <div>
                   <Label className="text-xs font-semibold text-muted-foreground mb-1 block">Notes (optional)</Label>
                   <Input
-                    placeholder="Transaction ID, bank name, etc."
+                    placeholder="Any additional information"
                     value={depositNotes}
                     onChange={(e) => setDepositNotes(e.target.value)}
                   />
