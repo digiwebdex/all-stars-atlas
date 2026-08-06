@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { generateTicketPDF } from "@/lib/pdf-generator";
 import { AIRPORTS } from "@/lib/airports";
+import { AIRPORT_COORDS } from "@/lib/airport-coords";
 import { useDashboardBookings } from "@/hooks/useApiData";
 import { api } from "@/lib/api";
 import DataLoader from "@/components/DataLoader";
@@ -116,6 +117,89 @@ function useCountdown(deadline: string | null) {
   }, [deadline]);
   return tl;
 }
+
+/* ── Vertical Flight Leg Timeline (matches search results design) ── */
+function distanceKm(from?: string, to?: string): number | null {
+  const c1 = AIRPORT_COORDS[(from || "").toUpperCase()], c2 = AIRPORT_COORDS[(to || "").toUpperCase()];
+  if (!c1 || !c2) return null;
+  const R = 6371;
+  const dLat = (c2[0] - c1[0]) * Math.PI / 180, dLon = (c2[1] - c1[1]) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(c1[0] * Math.PI / 180) * Math.cos(c2[0] * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
+  return Math.round(2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
+}
+
+const LegTimeline = ({ leg, airline, airlineCode, flightNumber, cabinClass }: {
+  leg: any; airline?: string; airlineCode?: string; flightNumber?: string; cabinClass?: string;
+}) => {
+  const dist = distanceKm(leg.origin, leg.destination);
+  const fno = String(leg.flightNumber || flightNumber || "").replace(/^[A-Z0-9]{2}/, "").trim() || (leg.flightNumber || flightNumber);
+  const opBy = leg.operatingAirline || leg.operatingCarrier || "";
+  const cls = leg.bookingClass || leg.classOfService || "";
+  return (
+    <div className="px-5 py-4">
+      <p className="text-sm font-bold mb-4">
+        {AIRPORTS.find(a => a.code === leg.origin?.toUpperCase())?.city || leg.origin} – {AIRPORTS.find(a => a.code === leg.destination?.toUpperCase())?.city || leg.destination}
+      </p>
+
+      {/* Departure */}
+      <div className="flex gap-3">
+        <div className="w-16 shrink-0 text-left">
+          <p className="text-sm font-bold leading-tight">{fmtTime(leg.departureTime)}</p>
+          <p className="text-[11px] text-muted-foreground">{fmtDate(leg.departureTime)}</p>
+        </div>
+        <div className="flex flex-col items-center shrink-0 pt-1">
+          <span className="w-3 h-3 rounded-full border-2 border-primary bg-primary/80" />
+        </div>
+        <div className="min-w-0 pb-3">
+          <p className="text-sm font-semibold leading-snug">{airportName(leg.origin)} ({leg.origin})</p>
+          <p className="text-[11px] text-muted-foreground">Approx 2 to 3 hours for the check-in</p>
+          {leg.originTerminal && <p className="text-[11px] text-muted-foreground">Terminal: {leg.originTerminal}</p>}
+        </div>
+      </div>
+
+      {/* Middle: duration / distance + airline info */}
+      <div className="flex gap-3">
+        <div className="w-16 shrink-0 space-y-1">
+          <span className="block text-[11px] font-semibold bg-muted px-2 py-0.5 rounded text-center">{leg.duration || "—"}</span>
+          {dist && <span className="block text-[11px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded text-center">{dist.toLocaleString()} Km</span>}
+        </div>
+        <div className="flex flex-col items-center shrink-0 relative">
+          <div className="flex-1 w-0 border-l-2 border-dashed border-muted-foreground/30" />
+          <span className="my-1 w-6 h-6 rounded-full border border-border bg-card flex items-center justify-center">
+            <ChevronUp className="w-3.5 h-3.5 text-muted-foreground" />
+          </span>
+          <div className="flex-1 w-0 border-l-2 border-dashed border-muted-foreground/30" />
+        </div>
+        <div className="min-w-0 py-2 flex items-start gap-2">
+          {airlineLogo(leg.airlineCode || airlineCode) && (
+            <img src={airlineLogo(leg.airlineCode || airlineCode)!} alt="" className="w-5 h-5 object-contain mt-0.5" onError={e => { (e.target as HTMLImageElement).style.display = "none"; }} />
+          )}
+          <div className="min-w-0">
+            <p className="text-sm font-semibold">{leg.airline || airline} - {fno}</p>
+            {opBy && <p className="text-[11px] text-muted-foreground">Operated by : {opBy}</p>}
+            {(leg.aircraft) && <p className="text-[11px] text-muted-foreground">Aircraft : {leg.aircraft}</p>}
+            <p className="text-[11px] text-muted-foreground">Class : {cls || "—"}{cabinClass ? ` - (${cabinClass})` : ""}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Arrival */}
+      <div className="flex gap-3">
+        <div className="w-16 shrink-0">
+          <p className="text-sm font-bold leading-tight">{fmtTime(leg.arrivalTime)}</p>
+          <p className="text-[11px] text-muted-foreground">{fmtDate(leg.arrivalTime)}</p>
+        </div>
+        <div className="flex flex-col items-center shrink-0 pt-1">
+          <span className="w-3 h-3 rounded-full border-2 border-primary bg-primary/80" />
+        </div>
+        <div className="min-w-0">
+          <p className="text-sm font-semibold leading-snug">{airportName(leg.destination)} ({leg.destination})</p>
+          {leg.destinationTerminal && <p className="text-[11px] text-muted-foreground">Terminal: {leg.destinationTerminal}</p>}
+        </div>
+      </div>
+    </div>
+  );
+};
 
 /* ── Collapsible Section ─────────────────────────────── */
 const Section = ({ title, defaultOpen = true, children }: { title: string; defaultOpen?: boolean; children: React.ReactNode }) => {
@@ -520,47 +604,8 @@ const DashboardBookingDetail = () => {
                 duration: booking.duration, originTerminal: null, destinationTerminal: null,
               }]).map((leg: any, i: number, arr: any[]) => (
                 <div key={i}>
-                  {/* Airline row */}
-                  <div className="px-5 py-3 flex flex-wrap items-center gap-3 bg-card">
-                    {airlineLogo(leg.airlineCode || booking.airlineCode) && (
-                      <img src={airlineLogo(leg.airlineCode || booking.airlineCode)!} alt="" className="w-6 h-6 object-contain" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-                    )}
-                    <span className="font-bold text-primary">{leg.airline || booking.airline}</span>
-                    <Separator orientation="vertical" className="h-4" />
-                    <span className="text-sm text-muted-foreground">{leg.airlineCode || booking.airlineCode} - {leg.flightNumber || booking.flightNumber}</span>
-                    <Separator orientation="vertical" className="h-4" />
-                    <span className="text-sm text-muted-foreground">{leg.aircraft || booking.aircraft || "—"}</span>
-                  </div>
+                  <LegTimeline leg={leg} airline={booking.airline} airlineCode={booking.airlineCode} flightNumber={booking.flightNumber} cabinClass={booking.cabinClass} />
 
-                  {/* Departure ←→ Arrival visual */}
-                  <div className="px-5 pb-5 pt-2">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-2xl font-black">{fmtTime(leg.departureTime)}</p>
-                        <p className="text-xs text-muted-foreground mt-1">{fmtDate(leg.departureTime)}</p>
-                        <p className="text-xs text-muted-foreground">{airportName(leg.origin)}</p>
-                        {leg.originTerminal && <p className="text-xs text-muted-foreground">Terminal: {leg.originTerminal}</p>}
-                        <p className="text-xs text-muted-foreground">{booking.cabinClass}</p>
-                      </div>
-                      <div className="flex-1 flex flex-col items-center justify-center pt-3 px-2">
-                        <p className="text-[11px] text-muted-foreground mb-2">⏱ {leg.duration || booking.duration}</p>
-                        <div className="w-full flex items-center">
-                          <div className="w-3 h-3 rounded-full border-2 border-muted-foreground/40 flex-shrink-0" />
-                          <div className="flex-1 border-t-2 border-dashed border-muted-foreground/30 relative mx-1">
-                            {leg.distance && <span className="absolute -bottom-5 left-1/2 -translate-x-1/2 text-[10px] text-muted-foreground whitespace-nowrap">📍 {leg.distance}</span>}
-                          </div>
-                          <Plane className="w-4 h-4 text-muted-foreground/60 flex-shrink-0" />
-                        </div>
-                      </div>
-                      <div className="flex-1 min-w-0 text-right">
-                        <p className="text-2xl font-black">{fmtTime(leg.arrivalTime)}</p>
-                        <p className="text-xs text-muted-foreground mt-1">{fmtDate(leg.arrivalTime)}</p>
-                        <p className="text-xs text-muted-foreground">{airportName(leg.destination)}</p>
-                        {leg.destinationTerminal && <p className="text-xs text-muted-foreground">Terminal: {leg.destinationTerminal}</p>}
-                        <p className="text-xs text-muted-foreground">{booking.cabinClass}</p>
-                      </div>
-                    </div>
-                  </div>
 
                   {/* Layover with duration */}
                   {i < arr.length - 1 && (() => {
@@ -597,33 +642,10 @@ const DashboardBookingDetail = () => {
                   <Separator orientation="vertical" className="h-4" />
                   <span>{fmtDate(booking.returnFlight.departureTime)}</span>
                 </div>
-                <div className="px-5 py-3 flex flex-wrap items-center gap-3 bg-card">
-                  {airlineLogo(booking.returnFlight.airlineCode) && <img src={airlineLogo(booking.returnFlight.airlineCode)!} alt="" className="w-6 h-6 object-contain" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />}
-                  <span className="font-bold text-primary">{booking.returnFlight.airline}</span>
-                  <span className="text-sm text-muted-foreground">{booking.returnFlight.airlineCode} - {booking.returnFlight.flightNumber}</span>
-                </div>
-                <div className="px-5 pb-5 pt-2">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-2xl font-black">{fmtTime(booking.returnFlight.departureTime)}</p>
-                      <p className="text-xs text-muted-foreground mt-1">{fmtDate(booking.returnFlight.departureTime)}</p>
-                      <p className="text-xs text-muted-foreground">{airportName(booking.returnFlight.origin)}</p>
-                    </div>
-                    <div className="flex-1 flex flex-col items-center justify-center pt-3 px-2">
-                      <p className="text-[11px] text-muted-foreground mb-2">⏱ {booking.returnFlight.duration}</p>
-                      <div className="w-full flex items-center">
-                        <div className="w-3 h-3 rounded-full border-2 border-muted-foreground/40 flex-shrink-0" />
-                        <div className="flex-1 border-t-2 border-dashed border-muted-foreground/30 mx-1" />
-                        <Plane className="w-4 h-4 text-muted-foreground/60 flex-shrink-0" />
-                      </div>
-                    </div>
-                    <div className="flex-1 min-w-0 text-right">
-                      <p className="text-2xl font-black">{fmtTime(booking.returnFlight.arrivalTime)}</p>
-                      <p className="text-xs text-muted-foreground mt-1">{fmtDate(booking.returnFlight.arrivalTime)}</p>
-                      <p className="text-xs text-muted-foreground">{airportName(booking.returnFlight.destination)}</p>
-                    </div>
-                  </div>
-                </div>
+                {((booking.returnFlight.legs?.length > 0 ? booking.returnFlight.legs : [booking.returnFlight]) as any[]).map((rleg: any, ri: number) => (
+                  <LegTimeline key={ri} leg={rleg} airline={booking.returnFlight.airline} airlineCode={booking.returnFlight.airlineCode} flightNumber={booking.returnFlight.flightNumber} cabinClass={booking.cabinClass} />
+                ))}
+
               </div>
             )}
           </Section>
