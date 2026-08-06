@@ -1966,7 +1966,7 @@ router.post('/book', authenticate, async (req, res) => {
           gdsBookingId = gdsBookingResult.ttiBookingId || null;
           console.log('[Booking] TTI success | PNR:', gdsPnr, '| Airline PNR:', airlinePnr, '| Booking ID:', gdsBookingId);
 
-          if (gdsBookingResult.ticketTimeLimit && payLater) {
+          if (gdsBookingResult.ticketTimeLimit) {
             const ttiDeadline = new Date(gdsBookingResult.ticketTimeLimit);
             if (!isNaN(ttiDeadline.getTime()) && ttiDeadline > new Date()) {
               paymentDeadline = ttiDeadline;
@@ -2035,7 +2035,7 @@ router.post('/book', authenticate, async (req, res) => {
             }
           }
 
-          if (gdsBookingResult.ticketTimeLimit && payLater) {
+          if (gdsBookingResult.ticketTimeLimit) {
             const sabreDeadline = new Date(gdsBookingResult.ticketTimeLimit);
             if (!isNaN(sabreDeadline.getTime()) && sabreDeadline > new Date()) {
               paymentDeadline = sabreDeadline;
@@ -2227,10 +2227,10 @@ router.post('/book', authenticate, async (req, res) => {
       id: bookingId,
       bookingRef,
       status,
-      payLater: !!payLater,
+      payLater: true,
       paymentStatus: payStatus,
       paymentMethod: normalizedPaymentMethod,
-      requiresPayment: !payLater,
+      requiresPayment: true,
 
       paymentDeadline: paymentDeadline ? paymentDeadline.toISOString() : null,
       totalAmount: totalAmount || 0,
