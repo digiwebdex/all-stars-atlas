@@ -1550,7 +1550,7 @@ router.post('/wallet/deposit', paymentSlipUpload.single('depositSlip'), async (r
 
     const sql = `INSERT INTO transactions (id, user_id, type, amount, description, status, payment_method, reference, meta, created_at)
        VALUES (?, ?, 'deposit', ?, ?, 'pending', ?, ?, ?, NOW())`;
-    const params = [txnId, userId, amt, `Wallet deposit via ${dbMethod} — pending approval`, dbMethod, reference, meta];
+    const params = [txnId, userId, amt, `Wallet deposit via ${dbMethod} (TxnID: ${txnRef}) — pending approval`, dbMethod, reference, meta];
 
     try {
       await db.query(sql, params);
