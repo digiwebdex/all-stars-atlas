@@ -179,7 +179,8 @@ const LegTimeline = ({ leg, airline, airlineCode, flightNumber, cabinClass }: {
             <p className="text-sm font-semibold">{leg.airline || airline} - {fno}</p>
             {opBy && <p className="text-[11px] text-muted-foreground">Operated by : {opBy}</p>}
             {(leg.aircraft) && <p className="text-[11px] text-muted-foreground">Aircraft : {leg.aircraft}</p>}
-            <p className="text-[11px] text-muted-foreground">Class : {cls || "—"}{cabinClass ? ` - (${cabinClass})` : ""}</p>
+            <p className="text-[11px] text-muted-foreground">Class : {cls || "—"}{(leg.cabinClass || cabinClass) ? ` - (${leg.cabinClass || cabinClass})` : ""}</p>
+
           </div>
         </div>
       </div>
