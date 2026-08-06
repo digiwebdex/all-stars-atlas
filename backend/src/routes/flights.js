@@ -13,7 +13,10 @@ const { searchFlights: sabreSearch, createBooking: sabreCreateBooking, revalidat
 const { searchFlights: galileoSearch } = require('./galileo-flights');
 const { searchFlights: ndcSearch } = require('./ndc-flights');
 const { searchAllLCCs } = require('./lcc-flights');
+const { searchFlights: triploverSearch, revalidatePrice: tlRevalidate, createBooking: tlCreateBooking, issueTicket: tlIssueTicket, cancelBooking: tlCancelBooking } = require('./triplover-flights');
+const { getProviderStatuses } = require('../utils/provider-status');
 const { loadPartialSettings, evaluatePartialEligibility, isAirlineRouteBlocked, BD_AIRPORTS: GUARDS_BD } = require('../utils/booking-guards');
+
 
 const router = express.Router();
 
@@ -670,42 +673,38 @@ router.get('/search', authenticateOptional, async (req, res) => {
       console.log(`[Search] Multi-city: ${multiCitySegments.map(s => `${s.from}→${s.to}`).join(', ')}`);
     }
 
-    const [dbFlights, ttiFlights, bdfFlights, flyhubFlights, sabreFlights, galileoFlights, ndcFlights, lccFlights] = await Promise.allSettled([
+    // Providers paused from Admin → Settings → API Control are skipped entirely
+    const pausedIds = new Set(
+      (await getProviderStatuses()).filter(p => p.paused).map(p => p.id)
+    );
+    const runProvider = (id, fn) => {
+      if (pausedIds.has(id)) {
+        console.log(`[Search] Provider '${id}' is paused — skipped`);
+        return Promise.resolve([]);
+      }
+      return fn().catch(err => {
+        console.error(`${id} search failed (continuing with other providers):`, err.message);
+        return [];
+      });
+    };
+
+    const [dbFlights, ttiFlights, bdfFlights, flyhubFlights, sabreFlights, galileoFlights, ndcFlights, lccFlights, tlFlights] = await Promise.allSettled([
       isMultiCity ? Promise.resolve([]) : searchDB({ originCode, destCode, dDate, cabClass, page, limit }),
-      shouldSearchTTI ? ttiSearch(searchParams).catch(err => {
-        console.error('TTI search failed (continuing with other providers):', err.message);
-        return [];
-      }) : Promise.resolve([]),
-      isMultiCity ? Promise.resolve([]) : bdfSearch(searchParams).catch(err => {
-        console.error('BDFare search failed (continuing with other providers):', err.message);
-        return [];
-      }),
-      isMultiCity ? Promise.resolve([]) : flyhubSearch(searchParams).catch(err => {
-        console.error('FlyHub search failed (continuing with other providers):', err.message);
-        return [];
-      }),
-      sabreSearch(searchParams).catch(err => {
-        console.error('Sabre search failed (continuing with other providers):', err.message);
-        return [];
-      }),
-      isMultiCity ? Promise.resolve([]) : galileoSearch(searchParams).catch(err => {
-        console.error('Galileo search failed (continuing with other providers):', err.message);
-        return [];
-      }),
-      isMultiCity ? Promise.resolve([]) : ndcSearch(searchParams).catch(err => {
-        console.error('NDC search failed (continuing with other providers):', err.message);
-        return [];
-      }),
-      isMultiCity ? Promise.resolve([]) : searchAllLCCs(searchParams).catch(err => {
-        console.error('LCC search failed (continuing with other providers):', err.message);
-        return [];
-      }),
+      shouldSearchTTI ? runProvider('tti_astra', () => ttiSearch(searchParams)) : Promise.resolve([]),
+      isMultiCity ? Promise.resolve([]) : runProvider('bdfare', () => bdfSearch(searchParams)),
+      isMultiCity ? Promise.resolve([]) : runProvider('flyhub', () => flyhubSearch(searchParams)),
+      runProvider('sabre', () => sabreSearch(searchParams)),
+      isMultiCity ? Promise.resolve([]) : runProvider('galileo', () => galileoSearch(searchParams)),
+      isMultiCity ? Promise.resolve([]) : runProvider('ndc_gateway', () => ndcSearch(searchParams)),
+      isMultiCity ? Promise.resolve([]) : runProvider('lcc', () => searchAllLCCs(searchParams)),
+      isMultiCity ? Promise.resolve([]) : runProvider('triplover', () => triploverSearch(searchParams)),
     ]);
 
     // Collect results
     let flights = [];
 
-    const providerResults = [dbFlights, ttiFlights, bdfFlights, flyhubFlights, sabreFlights, galileoFlights, ndcFlights, lccFlights];
+    const providerResults = [dbFlights, ttiFlights, bdfFlights, flyhubFlights, sabreFlights, galileoFlights, ndcFlights, lccFlights, tlFlights];
+
     for (const result of providerResults) {
       if (result.status === 'fulfilled') {
         const val = result.value;
@@ -1805,7 +1804,9 @@ router.post('/book', authenticate, async (req, res) => {
     const isSabreFlight = flightSource.includes('sabre') || !!flightData?._sabreSource;
     const isBdfareFlight = flightSource.includes('bdfare') || flightSource.includes('bdf');
     const isFlyhubFlight = flightSource.includes('flyhub');
-    const isGdsFlight = isTtiFlight || isSabreFlight || isBdfareFlight || isFlyhubFlight;
+    const isTriploverFlight = flightSource.includes('triplover') || !!flightData?._tlItemCodeRef;
+    const isGdsFlight = isTtiFlight || isSabreFlight || isBdfareFlight || isFlyhubFlight || isTriploverFlight;
+
 
     if (isGdsFlight) {
       const missingPassportIndex = passengers.findIndex((p) => !p.passportNumber || !p.passportExpiry || !p.nationality);
@@ -2031,6 +2032,59 @@ router.post('/book', authenticate, async (req, res) => {
       }
     }
 
+    // ── TripLover booking (Reprice → Book) ──
+    if (!gdsPnr && isTriploverFlight) {
+      console.log('[Booking] TripLover flight detected — repricing then booking...');
+      try {
+        const uniqueTransID = flightData?._tlUniqueTransID;
+        const itemCodeRef = flightData?._tlItemCodeRef;
+        let segmentCodeRefs = flightData?._tlSegmentCodeRefs || [];
+        if (returnFlightData?._tlSegmentCodeRefs?.length) {
+          segmentCodeRefs = [...segmentCodeRefs, ...returnFlightData._tlSegmentCodeRefs];
+        }
+
+        if (!uniqueTransID || !itemCodeRef) {
+          console.warn('[Booking] TripLover: missing uniqueTransID/itemCodeRef in flight data');
+        } else {
+          const reprice = await tlRevalidate({ uniqueTransID, itemCodeRef, segmentCodeRefs });
+          if (!reprice.success) throw new Error('TripLover reprice failed — fare no longer available');
+
+          gdsBookingResult = await tlCreateBooking({
+            uniqueTransID: reprice.uniqueTransID,
+            itemCodeRef: reprice.itemCodeRef,
+            priceCodeRef: reprice.priceCodeRef,
+            segmentCodeRefs: reprice.segmentCodeRefs?.length ? reprice.segmentCodeRefs : segmentCodeRefs,
+            passengers: passengers.map((p, i) => ({
+              title: p.title || 'Mr',
+              firstName: p.firstName,
+              lastName: p.lastName,
+              type: p.type === 'child' ? 'CNN' : p.type === 'infant' ? 'INF' : 'ADT',
+              dob: p.dateOfBirth || p.dob,
+              gender: p.gender || (/^(mrs|ms|miss)$/i.test(p.title || '') ? 'Female' : 'Male'),
+              nationality: p.nationality || 'BD',
+              issuingCountry: p.issuingCountry || p.nationality || 'BD',
+              passport: p.passportNumber || p.passport,
+              passportExpiry: p.passportExpiry,
+              isLeadPassenger: i === 0,
+            })),
+            contactInfo: contactInfo || {},
+          });
+
+          if (gdsBookingResult?.success && gdsBookingResult?.pnr) {
+            gdsPnr = gdsBookingResult.pnr;
+            airlinePnr = gdsBookingResult.airlinePnr || gdsBookingResult.pnr;
+            gdsBookingId = gdsBookingResult.pnr;
+            console.log('[Booking] ✓ TripLover PNR:', gdsPnr, '| Airline PNR:', airlinePnr);
+          } else {
+            console.warn('[Booking] TripLover booking failed:', gdsBookingResult?.error);
+          }
+        }
+      } catch (tlErr) {
+        console.error('[Booking] TripLover booking exception:', tlErr.message);
+        gdsBookingResult = { success: false, error: tlErr.message };
+      }
+    }
+
 
     // Airline PNR is best-effort (often only available after ticketing for Sabre)
     if (isGdsFlight && !gdsPnr) {
@@ -2177,7 +2231,18 @@ router.post('/cancel', authenticate, async (req, res) => {
           const fhBookingId = details?.gdsBookingId || details?.gdsBookingResult?.bookingId || gdsPnr;
           gdsCancelResult = await fhCancelBooking({ bookingId: fhBookingId, pnr: gdsPnr });
           if (!gdsCancelResult?.success) gdsCancelFailed = true;
+        } else if (source.includes('triplover')) {
+          const refs = details?.gdsBookingResult?.refs || {};
+          gdsCancelResult = await tlCancelBooking({
+            pnr: gdsPnr,
+            uniqueTransID: refs.uniqueTransID || details?.outbound?._tlUniqueTransID,
+            itemCodeRef: refs.itemCodeRef || details?.outbound?._tlItemCodeRef,
+            priceCodeRef: refs.priceCodeRef,
+            bookingCodeRef: refs.bookingCodeRef,
+          });
+          if (!gdsCancelResult?.success) gdsCancelFailed = true;
         } else {
+
           gdsCancelFailed = true;
           gdsCancelResult = { success: false, error: `Unsupported provider/source for cancellation: ${source || 'unknown'}` };
         }
