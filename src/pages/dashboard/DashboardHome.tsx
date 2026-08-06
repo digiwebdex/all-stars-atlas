@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Ticket, CreditCard, Plane, Clock, ArrowRight, MapPin, TrendingUp, Calendar, Globe, Sparkles, ArrowUpRight } from "lucide-react";
+import { Ticket, CreditCard, Plane, Clock, ArrowRight, MapPin, TrendingUp, Calendar, Globe, Sparkles, ArrowUpRight, FileText, Wallet, CalendarDays } from "lucide-react";
+import { Calendar as CalendarPicker } from "@/components/ui/calendar";
 import { Link } from "react-router-dom";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { useDashboardStats, useDashboardBookings } from "@/hooks/useApiData";
