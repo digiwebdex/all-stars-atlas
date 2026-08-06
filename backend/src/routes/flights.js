@@ -592,7 +592,7 @@ router.get('/tti-methods', async (req, res) => {
   }
 });
 
-router.get('/search', async (req, res) => {
+router.get('/search', authenticateOptional, async (req, res) => {
   try {
     const {
       origin, destination, from, to,
