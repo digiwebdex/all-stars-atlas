@@ -881,6 +881,31 @@ const DashboardBookingDetail = () => {
             </DialogContent>
           </Dialog>
 
+          <Dialog open={!!serviceRequest} onOpenChange={(o) => { if (!o) { setServiceRequest(null); setServiceNote(""); } }}>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  {serviceRequest === "refund" ? <Wallet className="w-5 h-5 text-emerald-600" /> : <RefreshCw className="w-5 h-5 text-amber-600" />}
+                  {serviceRequest === "refund" ? "Refund Request" : "Reissue Request"}
+                </DialogTitle>
+              </DialogHeader>
+              <div className="space-y-3">
+                <p className="text-sm text-muted-foreground">
+                  Submit a {serviceRequest === "refund" ? "refund" : "reissue"} request for <strong>{booking.id}</strong> (PNR {booking.airlinePnr || booking.pnr}).
+                </p>
+                <Textarea
+                  placeholder={serviceRequest === "refund" ? "Reason for refund (optional)" : "Preferred new date / route details"}
+                  value={serviceNote}
+                  onChange={e => setServiceNote(e.target.value)}
+                />
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => { setServiceRequest(null); setServiceNote(""); }}>Cancel</Button>
+                <Button onClick={handleServiceRequest} disabled={serviceLoading}>{serviceLoading ? "Submitting..." : "Submit Request"}</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
 
           {/* ━━ Timeline Dialog ━━ */}
           <Dialog open={timelineOpen} onOpenChange={setTimelineOpen}>
