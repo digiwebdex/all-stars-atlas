@@ -713,7 +713,98 @@ const AdminSettings = () => {
         </CardContent>
       </Card>
 
+      {/* API Request Logs — detailed request/response + actionable errors */}
+      <Card className="border-primary/20">
+        <CardHeader>
+          <div className="flex items-start justify-between gap-3 flex-wrap">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center"><FileText className="w-5 h-5 text-primary" /></div>
+              <div>
+                <CardTitle className="text-lg">API Request Logs</CardTitle>
+                <CardDescription>Live request/response trace of supplier API calls (Search, Reprice, Book, Ticket, Cancel) with the exact failure reason and what to do about it. Credentials are redacted.</CardDescription>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <Select value={logsProvider} onValueChange={(v) => { setLogsProvider(v); loadApiLogs({ provider: v }); }}>
+                <SelectTrigger className="w-[190px] h-9"><SelectValue placeholder="All providers" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All providers</SelectItem>
+                  <SelectItem value="triplover">TripLover</SelectItem>
+                </SelectContent>
+              </Select>
+              <div className="flex items-center gap-2 border rounded-md px-3 h-9">
+                <Label htmlFor="errors-only" className="text-xs whitespace-nowrap">Errors only</Label>
+                <Switch id="errors-only" checked={logsErrorsOnly} onCheckedChange={(v) => { setLogsErrorsOnly(v); loadApiLogs({ errorsOnly: v }); }} />
+              </div>
+              <Button variant="outline" size="sm" onClick={() => loadApiLogs()} disabled={logsLoading}>
+                {logsLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />}
+                <span className="ml-1.5">Refresh</span>
+              </Button>
+              <Button variant="ghost" size="sm" onClick={clearApiLogs}><Trash2 className="w-4 h-4 mr-1.5" />Clear</Button>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {apiLogs.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              {logsLoading ? 'Loading logs…' : 'No API calls recorded yet. Run a flight search or booking, then hit Refresh.'}
+            </p>
+          ) : (
+            apiLogs.map(log => (
+              <div key={log.id} className={`border rounded-lg overflow-hidden ${log.ok ? '' : 'border-destructive/40 bg-destructive/5'}`}>
+                <button
+                  type="button"
+                  onClick={() => setExpandedLog(expandedLog === log.id ? null : log.id)}
+                  className="w-full text-left px-3 py-2 flex items-start justify-between gap-3 hover:bg-muted/50 transition-colors"
+                >
+                  <div className="min-w-0 space-y-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Badge variant={log.ok ? 'default' : 'destructive'} className="text-[10px] h-5">
+                        {log.ok ? 'OK' : 'FAILED'}
+                      </Badge>
+                      <span className="text-sm font-medium">{log.provider} · {log.operation}</span>
+                      {log.status != null && <span className="text-xs text-muted-foreground">HTTP {log.status}</span>}
+                      {log.durationMs != null && <span className="text-xs text-muted-foreground">{log.durationMs} ms</span>}
+                      <span className="text-xs text-muted-foreground">{new Date(log.at).toLocaleString()}</span>
+                    </div>
+                    {!log.ok && log.error && <p className="text-xs text-destructive break-words">{log.error}</p>}
+                    {!log.ok && log.hint && <p className="text-xs text-muted-foreground break-words">→ {log.hint}</p>}
+                  </div>
+                  <span className="text-xs text-muted-foreground shrink-0">{expandedLog === log.id ? 'Hide' : 'Details'}</span>
+                </button>
+                {expandedLog === log.id && (
+                  <div className="px-3 pb-3 space-y-3 border-t pt-3">
+                    {log.url && <p className="text-xs font-mono break-all text-muted-foreground">POST {log.url}</p>}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                      <div>
+                        <p className="text-xs font-semibold mb-1">Request</p>
+                        <pre className="text-[11px] bg-muted rounded-md p-2 max-h-72 overflow-auto whitespace-pre-wrap break-words">{log.request || '—'}</pre>
+                      </div>
+                      <div>
+                        <p className="text-xs font-semibold mb-1">Response</p>
+                        <pre className="text-[11px] bg-muted rounded-md p-2 max-h-72 overflow-auto whitespace-pre-wrap break-words">{log.response || '—'}</pre>
+                      </div>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        navigator.clipboard?.writeText(JSON.stringify(log, null, 2));
+                        toast.success('Log entry copied — send it to the supplier');
+                      }}
+                    >
+                      Copy log entry
+                    </Button>
+                  </div>
+                )}
+              </div>
+            ))
+          )}
+        </CardContent>
+      </Card>
+
       {/* API Integrations */}
+
 
       <Card>
         <CardHeader>
