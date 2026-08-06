@@ -44,6 +44,7 @@ const AdminEnterprise = () => {
   // Per-booking override
   const [bookingId, setBookingId] = useState("");
   const [deadline, setDeadline] = useState("");
+  const [b2bPartial, setB2bPartial] = useState(true);
   const [partialOverride, setPartialOverride] = useState(false);
   const [splitPct, setSplitPct] = useState<number | "">("");
   const [savingBooking, setSavingBooking] = useState(false);
@@ -53,6 +54,8 @@ const AdminEnterprise = () => {
       try {
         const data: any = await api.get("/admin/settings");
         const s = data?.settings || {};
+        const enB2b = s.b2b_partial_enabled;
+        setB2bPartial(enB2b === undefined ? true : String(enB2b).toLowerCase() === 'true');
         const en = s.b2c_partial_enabled;
         setB2cPartial(en === undefined ? true : String(en).toLowerCase() === "true");
         if (s.partial_min_hours) setMinHours(Number(s.partial_min_hours));
@@ -72,6 +75,7 @@ const AdminEnterprise = () => {
       await api.put("/admin/settings", {
         section: "booking_rules",
         b2c_partial_enabled: b2cPartial ? "true" : "false",
+        b2b_partial_enabled: b2bPartial ? "true" : "false",
         partial_min_hours: String(minHours),
         partial_upfront_pct: String(upfrontPct),
       });
@@ -153,8 +157,8 @@ const AdminEnterprise = () => {
         <TabsContent value="rules">
           <Card>
             <CardHeader>
-              <CardTitle>Partial Payment Rules (B2C)</CardTitle>
-              <CardDescription>Governs when customers see the "Pay Later / Partial" option on international refundable flights.</CardDescription>
+              <CardTitle>Partial Payment Rules (B2C & B2B)</CardTitle>
+              <CardDescription>Governs when customers and agents see the "Pay Later / Partial" option on international refundable flights.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-5">
               <div className="flex items-center justify-between p-4 rounded-lg border bg-muted/30">
@@ -164,6 +168,15 @@ const AdminEnterprise = () => {
                 </div>
                 <Switch checked={b2cPartial} onCheckedChange={setB2cPartial} />
               </div>
+
+              <div className="flex items-center justify-between p-4 rounded-lg border bg-muted/30">
+                <div>
+                  <Label className="text-sm font-semibold">Show Partial Payment to B2B Agents</Label>
+                  <p className="text-xs text-muted-foreground mt-0.5">Per-agent access can still be switched off in Users → Permissions.</p>
+                </div>
+                <Switch checked={b2bPartial} onCheckedChange={setB2bPartial} />
+              </div>
+
 
               <div className="grid sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">

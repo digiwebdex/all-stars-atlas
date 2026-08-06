@@ -8,7 +8,7 @@ const db = require('../config/db');
 const { authenticate, formatUser } = require('../middleware/auth');
 const { notifyPayment } = require('../services/notify');
 const { safeJsonParse } = require('../utils/json');
-const { loadPartialSettings, evaluatePartialEligibility } = require('../utils/booking-guards');
+const { loadPartialSettings, evaluatePartialEligibility , isPartialAllowedForUser } = require('../utils/booking-guards');
 
 const router = express.Router();
 const UPLOAD_DIR = process.env.UPLOAD_DIR || path.join(__dirname, '../../uploads');
@@ -1722,6 +1722,14 @@ router.post('/bookings/:id/request-partial', async (req, res) => {
     const refundable = o.refundable ?? details.refundable ?? false;
 
     const settings = await loadPartialSettings();
+    const perm = await isPartialAllowedForUser(userId, settings);
+    if (!perm.allowed) {
+      return res.status(403).json({
+        message: perm.reason === 'user_permission_off'
+          ? 'Partial payment is not enabled for your account. Please contact support.'
+          : 'Partial payment is currently disabled by the administrator.',
+      });
+    }
     const elig = evaluatePartialEligibility(
       { origin, destination, departureTime, refundable, partialOverride: !!b.partial_override },
       settings

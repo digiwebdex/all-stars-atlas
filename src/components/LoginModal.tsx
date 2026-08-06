@@ -19,7 +19,8 @@ const LoginModal = ({ open, onOpenChange }: LoginModalProps) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+  const { login, socialLogin } = useAuth();
+  const [socialLoading, setSocialLoading] = useState<string | null>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
   const logoUrl = useSiteLogo();
@@ -54,6 +55,20 @@ const LoginModal = ({ open, onOpenChange }: LoginModalProps) => {
       toast({ title: "Login Failed", description: err?.message || "Invalid credentials", variant: "destructive" });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSocial = async (provider: 'google' | 'facebook') => {
+    setSocialLoading(provider);
+    try {
+      await socialLogin(provider);
+      toast({ title: "Welcome!", description: `Signed in with ${provider === 'google' ? 'Google' : 'Facebook'}` });
+      onOpenChange(false);
+      navigate("/dashboard", { replace: true });
+    } catch (err: any) {
+      toast({ title: "Sign-in failed", description: err?.message || "Please try again", variant: "destructive" });
+    } finally {
+      setSocialLoading(null);
     }
   };
 
@@ -117,7 +132,27 @@ const LoginModal = ({ open, onOpenChange }: LoginModalProps) => {
             </Button>
           </form>
 
+          <div className="relative my-5">
+            <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-border" /></div>
+            <div className="relative flex justify-center text-xs">
+              <span className="bg-background px-2 text-muted-foreground">or continue with</span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <Button variant="outline" className="h-11 font-medium" disabled={!!socialLoading} onClick={() => handleSocial('google')}>
+              {socialLoading === 'google' ? 'Please wait...' : 'Google'}
+            </Button>
+            <Button variant="outline" className="h-11 font-medium" disabled={!!socialLoading} onClick={() => handleSocial('facebook')}>
+              {socialLoading === 'facebook' ? 'Please wait...' : 'Facebook'}
+            </Button>
+          </div>
+
           <p className="text-center text-sm text-muted-foreground pt-4">
+            <a href="/auth/login-otp" className="text-primary font-semibold hover:underline">Sign in with OTP (SMS / Email)</a>
+          </p>
+
+          <p className="text-center text-sm text-muted-foreground pt-2">
             New here?{" "}
             <a href="/auth/register" className="text-primary font-bold hover:underline">
               Sign Up Now!

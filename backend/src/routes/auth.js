@@ -7,7 +7,7 @@ const path = require('path');
 const fs = require('fs');
 const db = require('../config/db');
 const { generateTokens, formatUser, authenticate } = require('../middleware/auth');
-const { notifyOTP, notifyPasswordReset, notifyWelcome } = require('../services/notify');
+const { notifyOTP, notifyPasswordReset, notifyWelcome, notifyAdminsEvent } = require('../services/notify');
 
 const router = express.Router();
 
@@ -66,6 +66,7 @@ router.post('/register', async (req, res) => {
 
     // Send welcome SMS + Email (non-blocking)
     notifyWelcome(id).catch(err => console.error('Welcome notify error:', err));
+    notifyAdminsEvent('New user ID created', [`Name: ${firstName} ${lastName || ''}`, `Email: ${email}`, `Phone: ${phone || '—'}`, 'Type: Personal']).catch(() => {});
 
     res.status(201).json({ user, ...tokens });
   } catch (err) {
@@ -126,6 +127,7 @@ router.post('/register-agency', async (req, res) => {
     );
 
     notifyWelcome(id).catch(() => {});
+    notifyAdminsEvent('New agency (B2B) ID created', [`Email: ${email}`, 'Type: Agency — pending verification']).catch(() => {});
     res.status(201).json({ user, ...tokens, pendingVerification: true });
   } catch (err) {
     console.error('Register agency error:', err);

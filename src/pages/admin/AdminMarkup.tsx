@@ -56,7 +56,8 @@ const AdminMarkup = () => {
   const { toast } = useToast();
   const [activeSegment, setActiveSegment] = useState("FLIGHT_DOM");
   const [markups, setMarkups] = useState<Record<string, MarkupConfig>>({});
-  const [airlineMarkups, setAirlineMarkups] = useState<Record<string, AirlineMarkupEntry>>({});
+  // Per-airline commission is stored per flight scope: { FLIGHT_DOM: { BG: {...} }, ... }
+  const [airlineByScope, setAirlineByScope] = useState<Record<string, Record<string, AirlineMarkupEntry>>>({});
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -79,7 +80,16 @@ const AdminMarkup = () => {
         // Load per-airline markups
         const savedAirlines = data?.settings?.airline_markup_config;
         if (savedAirlines && typeof savedAirlines === "object") {
-          setAirlineMarkups(savedAirlines);
+          const FLIGHT_SCOPES = ["FLIGHT_DOM", "FLIGHT_INT", "FLIGHT_SOTO"];
+          const isScoped = FLIGHT_SCOPES.some(k => savedAirlines[k] && typeof savedAirlines[k] === "object");
+          if (isScoped) {
+            setAirlineByScope(savedAirlines);
+          } else {
+            // Legacy flat config → seed every scope with it
+            const seeded: Record<string, Record<string, AirlineMarkupEntry>> = {};
+            FLIGHT_SCOPES.forEach(k => { seeded[k] = { ...savedAirlines }; });
+            setAirlineByScope(seeded);
+          }
         }
       } catch {
         const init: Record<string, MarkupConfig> = {};
@@ -106,7 +116,7 @@ const AdminMarkup = () => {
     try {
       await api.put("/admin/settings", {
         markup_config: markups,
-        airline_markup_config: airlineMarkups,
+        airline_markup_config: airlineByScope,
       });
       toast({ title: "Saved", description: `Markup settings updated successfully.` });
     } catch (err: any) {
@@ -272,10 +282,14 @@ const AdminMarkup = () => {
       {/* Per-airline markup — for flight scopes */}
       {activeSegment.startsWith("FLIGHT") && (
         <AirlineMarkupConfig
-          airlineMarkups={airlineMarkups}
+          key={activeSegment}
+          airlineMarkups={airlineByScope[activeSegment] || {}}
           globalDiscount={current.fareSummaryDiscount ?? 6.30}
           globalAitVat={current.fareSummaryAitVat ?? 0.3}
-          onChange={setAirlineMarkups}
+          onChange={(next) => setAirlineByScope(prev => ({
+            ...prev,
+            [activeSegment]: typeof next === 'function' ? (next as any)(prev[activeSegment] || {}) : next,
+          }))}
         />
       )}
     </div>

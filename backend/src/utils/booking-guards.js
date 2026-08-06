@@ -10,17 +10,19 @@ const BD_AIRPORTS = ['DAC', 'CXB', 'CGP', 'ZYL', 'JSR', 'RJH', 'SPD', 'BZL', 'IR
 async function loadPartialSettings() {
   try {
     const [rows] = await db.query(
-      "SELECT setting_key, setting_value FROM system_settings WHERE setting_key IN ('b2c_partial_enabled','partial_min_hours','partial_upfront_pct')"
+      "SELECT setting_key, setting_value FROM system_settings WHERE setting_key IN ('b2c_partial_enabled','b2b_partial_enabled','partial_min_hours','partial_upfront_pct')"
     );
     const map = {};
     rows.forEach((r) => { map[r.setting_key] = r.setting_value; });
     return {
       enabled: String(map.b2c_partial_enabled ?? 'true').toLowerCase() === 'true',
+      b2cEnabled: String(map.b2c_partial_enabled ?? 'true').toLowerCase() === 'true',
+      b2bEnabled: String(map.b2b_partial_enabled ?? 'true').toLowerCase() === 'true',
       minHours: Number(map.partial_min_hours ?? 96),
       upfrontPct: Number(map.partial_upfront_pct ?? 30),
     };
   } catch {
-    return { enabled: true, minHours: 96, upfrontPct: 30 };
+    return { enabled: true, b2cEnabled: true, b2bEnabled: true, minHours: 96, upfrontPct: 30 };
   }
 }
 
@@ -129,3 +131,28 @@ module.exports = {
   resolveCommission,
   BD_AIRPORTS,
 };
+
+
+/**
+ * Global (role-based) + per-user partial-payment permission.
+ * Returns { allowed, reason }.
+ */
+async function isPartialAllowedForUser(userId, settings) {
+  const s = settings || await loadPartialSettings();
+  let role = 'customer';
+  try {
+    const [rows] = await db.query('SELECT role FROM users WHERE id = ?', [userId]);
+    role = rows[0]?.role || 'customer';
+  } catch (_) {}
+  const isB2B = role === 'agent' || role === 'agency';
+  const globalOn = isB2B ? (s.b2bEnabled !== false) : (s.b2cEnabled !== false);
+  if (!globalOn) return { allowed: false, reason: isB2B ? 'b2b_partial_disabled' : 'b2c_partial_disabled' };
+  try {
+    const [rows] = await db.query('SELECT enabled FROM user_partial_permission WHERE user_id = ?', [userId]);
+    if (rows.length && !rows[0].enabled) return { allowed: false, reason: 'user_permission_off' };
+  } catch (_) { /* table may not exist */ }
+  return { allowed: true, reason: 'ok' };
+}
+
+module.exports.isPartialAllowedForUser = isPartialAllowedForUser;
+module.exports.loadPartialSettings = loadPartialSettings;

@@ -20,6 +20,8 @@ function formatUser(row) {
     emailVerified: !!row.email_verified,
     phoneVerified: !!row.phone_verified,
     canApproveDeposits: !!row.can_approve_deposits,
+    canManageBookings: !!row.can_manage_bookings,
+    canTogglePartial: !!row.can_toggle_partial,
     createdAt: row.created_at,
   };
 }
@@ -49,11 +51,20 @@ function authenticateOptional(req, _res, next) {
   next();
 }
 
+const ADMIN_ROLES = ['admin', 'super_admin', 'secondary_admin'];
+
 function requireAdmin(req, res, next) {
-  if (!req.user || (req.user.role !== 'admin' && req.user.role !== 'super_admin')) {
+  if (!req.user || !ADMIN_ROLES.includes(req.user.role)) {
     return res.status(403).json({ message: 'Access denied. Admin privileges required.', status: 403 });
   }
   next();
 }
 
-module.exports = { generateTokens, formatUser, authenticate, authenticateOptional, requireAdmin };
+function requireSuperAdmin(req, res, next) {
+  if (!req.user || req.user.role !== 'super_admin') {
+    return res.status(403).json({ message: 'Access denied. Super admin privileges required.', status: 403 });
+  }
+  next();
+}
+
+module.exports = { generateTokens, formatUser, authenticate, authenticateOptional, requireAdmin, requireSuperAdmin, ADMIN_ROLES };

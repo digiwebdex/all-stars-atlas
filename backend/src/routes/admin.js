@@ -904,7 +904,7 @@ router.put('/settings', async (req, res) => {
 
     // Booking rules (B2C partial toggle, min hours, upfront %)
     if (section === 'booking_rules') {
-      const keys = ['b2c_partial_enabled', 'partial_min_hours', 'partial_upfront_pct'];
+      const keys = ['b2c_partial_enabled', 'b2b_partial_enabled', 'partial_min_hours', 'partial_upfront_pct'];
       for (const k of keys) {
         if (req.body[k] !== undefined) {
           const v = String(req.body[k]);

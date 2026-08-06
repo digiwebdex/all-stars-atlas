@@ -44,3 +44,6 @@ INSERT INTO system_settings (setting_key, setting_value, updated_at) VALUES
   ('admin_theme_accent',     '#0ea5e9', NOW()),
   ('admin_theme_sidebar_bg', '#0f172a', NOW())
 ON DUPLICATE KEY UPDATE setting_value = setting_value;
+
+-- 5) Allow the secondary_admin role
+ALTER TABLE users MODIFY COLUMN role ENUM('customer','agent','agency','admin','super_admin','secondary_admin') DEFAULT 'customer';

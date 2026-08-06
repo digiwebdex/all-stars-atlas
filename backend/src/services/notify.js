@@ -17,6 +17,20 @@ async function getAdminEmails() {
 
 // ============ NOTIFICATION FUNCTIONS ============
 
+// Notify all admins (email) about a system event — new booking, new ID created, etc.
+async function notifyAdminsEvent(subject, lines = []) {
+  try {
+    const emails = await getAdminEmails();
+    if (!emails.length) return;
+    const html = `<h2>${subject}</h2><ul>${lines.map(l => `<li>${l}</li>`).join('')}</ul>`;
+    return Promise.allSettled(
+      emails.map(to => sendEmail({ to, subject: `[Seven Trip] ${subject}`, html, text: `${subject}\n${lines.join('\n')}` }))
+    );
+  } catch (err) {
+    console.error('notifyAdminsEvent error:', err.message);
+  }
+}
+
 async function notifyOTP(email, phone, name, otp) {
   const promises = [];
   if (email) {
@@ -122,6 +136,7 @@ async function notifyContactSubmission(contactName, contactEmail) {
 }
 
 module.exports = {
+  notifyAdminsEvent,
   notifyOTP,
   notifyPasswordReset,
   notifyWelcome,
