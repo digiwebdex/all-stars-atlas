@@ -228,28 +228,8 @@ const Register = () => {
                 <img src={logoUrl} alt="Seven Trip" style={{ height: `${Math.round(logoSizes.auth * 0.67)}px` }} className="w-auto" />
               </Link>
 
-              {/* ── Personal / Agency tabs ── */}
-              <div className="flex items-center justify-center mb-4">
-                <div className="inline-flex rounded-xl bg-muted p-1 border border-border">
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab("personal")}
-                    className={`px-4 py-1.5 text-sm font-semibold rounded-lg transition-all ${activeTab === "personal" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}
-                  >
-                    Personal
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab("agency")}
-                    className={`px-4 py-1.5 text-sm font-semibold rounded-lg transition-all ${activeTab === "agency" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}
-                  >
-                    Agency / B2B
-                  </button>
-                </div>
-              </div>
-
-              <CardTitle className="text-2xl">{isAgency ? "Create B2B Agency Account" : "Create Account"}</CardTitle>
-              <CardDescription>{isAgency ? "Apply once — admin verification typically takes 24 hours." : "Start booking with Seven Trip today"}</CardDescription>
+              <CardTitle className="text-2xl">Create Account</CardTitle>
+              <CardDescription>Start booking with Seven Trip today</CardDescription>
             </CardHeader>
 
             <CardContent className="pt-4">

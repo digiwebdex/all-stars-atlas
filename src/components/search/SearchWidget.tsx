@@ -1430,6 +1430,9 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
               >
                 <tab.icon className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${activeTab === tab.id ? 'text-primary' : ''}`} />
                 <span>{tab.label}</span>
+                {tab.id !== "flight" && (
+                  <span className="ml-0.5 px-1.5 py-0.5 rounded-md bg-muted text-[9px] font-bold uppercase tracking-wide text-muted-foreground">Soon</span>
+                )}
               </button>
             ))}
           </div>
@@ -1447,10 +1450,29 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
             transition={{ duration: 0.12 }}
             className="min-w-0"
           >
-            {flightOnly ? tabContent["flight"] : tabContent[activeTab]}
+            {flightOnly || activeTab === "flight" ? tabContent["flight"] : (
+              <div className="flex flex-col items-center justify-center text-center gap-3 py-10 sm:py-14">
+                {(() => {
+                  const t = tabs.find(x => x.id === activeTab);
+                  const Icon = t?.icon ?? Plane;
+                  return (
+                    <>
+                      <div className="w-14 h-14 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center">
+                        <Icon className="w-7 h-7 text-primary" />
+                      </div>
+                      <div className="text-lg font-extrabold">{t?.label} — Coming Soon</div>
+                    </>
+                  );
+                })()}
+                <p className="text-sm text-muted-foreground max-w-sm">
+                  We're working on this service. For now, book your flights with us — this section will go live shortly.
+                </p>
+              </div>
+            )}
           </motion.div>
         </AnimatePresence>
       </div>
+
     </div>
   );
 };

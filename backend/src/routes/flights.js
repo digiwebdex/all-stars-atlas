@@ -4,7 +4,7 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const db = require('../config/db');
-const { authenticate, requireAdmin } = require('../middleware/auth');
+const { authenticate, authenticateOptional, requireAdmin } = require('../middleware/auth');
 const { notifyBookingConfirm } = require('../services/notify');
 const { searchFlights: ttiSearch, createBooking: ttiCreateBooking } = require('./tti-flights');
 const { searchFlights: bdfSearch, createBooking: bdfCreateBooking } = require('./bdf-flights');
@@ -592,7 +592,7 @@ router.get('/tti-methods', async (req, res) => {
   }
 });
 
-router.get('/search', async (req, res) => {
+router.get('/search', authenticateOptional, async (req, res) => {
   try {
     const {
       origin, destination, from, to,
@@ -1223,26 +1223,53 @@ router.get('/search', async (req, res) => {
       console.warn(`[Search] Recovered ${recoveredZeroCount} zero-price flights using airline/global fallback`);
     }
 
-    // ── Apply per-airline fare rules from admin settings ──
+    // ── Apply scope-aware (Domestic / International / SOTO) + per-user fare rules ──
     try {
       const [settingsRows] = await db.query(
         "SELECT setting_key, setting_value FROM system_settings WHERE setting_key IN ('markup_config', 'airline_markup_config')"
       );
+
+      // Determine commission scope from the searched route
+      const routeOrigin = isMultiCity ? multiCitySegments[0].from : originCode;
+      const routeDest = isMultiCity ? multiCitySegments[multiCitySegments.length - 1].to : destCode;
+      const originBD = BD_ROUTE_AIRPORTS.has(routeOrigin);
+      const destBD = BD_ROUTE_AIRPORTS.has(routeDest);
+      const scopeKey = originBD && destBD ? 'FLIGHT_DOM' : (originBD || destBD ? 'FLIGHT_INT' : 'FLIGHT_SOTO');
+
       let globalDiscount = 6.30;
       let globalAitVat = 0.3;
+      let scopeMarkupPct = 0;
+      let scopeFixedMarkup = 0;
       let airlineOverrides = {};
 
       for (const row of settingsRows) {
         const parsed = typeof row.setting_value === 'string' ? JSON.parse(row.setting_value) : (row.setting_value || {});
-        // markup_config stores per-segment configs; FLIGHT segment has fareSummaryDiscount/fareSummaryAitVat
-        if (parsed.FLIGHT && parsed.FLIGHT.fareSummaryDiscount !== undefined) {
-          globalDiscount = parseFloat(parsed.FLIGHT.fareSummaryDiscount) || 6.30;
-          globalAitVat = parseFloat(parsed.FLIGHT.fareSummaryAitVat) || 0.3;
-        }
-        // airline_markup_config is keyed by airline IATA code
-        if (parsed && !parsed.FLIGHT && typeof parsed === 'object') {
+        if (!parsed || typeof parsed !== 'object') continue;
+
+        if (row.setting_key === 'markup_config') {
+          // Prefer the scope-specific config, fall back to the legacy FLIGHT key
+          const cfg = parsed[scopeKey] || parsed.FLIGHT || null;
+          if (cfg) {
+            if (cfg.fareSummaryDiscount !== undefined) globalDiscount = parseFloat(cfg.fareSummaryDiscount) || 0;
+            if (cfg.fareSummaryAitVat !== undefined) globalAitVat = parseFloat(cfg.fareSummaryAitVat) || 0;
+            if (cfg.markupType === 'fixed') scopeFixedMarkup = parseFloat(cfg.markupValue) || 0;
+            else scopeMarkupPct = parseFloat(cfg.markupValue ?? cfg.markup) || 0;
+          }
+        } else if (row.setting_key === 'airline_markup_config') {
           airlineOverrides = parsed;
         }
+      }
+
+      // Per-user commission override (customer / agent) — wins over global + airline
+      let userOverride = null;
+      if (req.user?.sub) {
+        try {
+          const [uRows] = await db.query(
+            'SELECT discount_pct, ait_pct, markup_pct FROM user_commission_overrides WHERE user_id = ?',
+            [req.user.sub]
+          );
+          if (uRows.length) userOverride = uRows[0];
+        } catch (_) { /* table may not exist yet */ }
       }
 
       flights = flights.map(f => {
@@ -1250,8 +1277,8 @@ router.get('/search', async (req, res) => {
         const override = airlineOverrides[code];
         let discount = globalDiscount;
         let aitVat = globalAitVat;
-        let markup = 0;
-        let fixedMarkup = 0;
+        let markup = scopeMarkupPct;
+        let fixedMarkup = scopeFixedMarkup;
 
         if (override && !override.useGlobal) {
           discount = parseFloat(override.discount) || 0;
@@ -1259,11 +1286,23 @@ router.get('/search', async (req, res) => {
           fixedMarkup = parseFloat(override.fixedMarkup) || 0;
         }
 
+        if (userOverride) {
+          if (userOverride.discount_pct != null) discount = Number(userOverride.discount_pct);
+          if (userOverride.ait_pct != null) aitVat = Number(userOverride.ait_pct);
+          if (userOverride.markup_pct != null) markup = Number(userOverride.markup_pct);
+        }
+
         // Attach fare rule params for frontend fare summary display
-        f.fareRules = { discount, aitVat, markup, fixedMarkup, isGlobal: !override || override.useGlobal };
+        f.fareRules = {
+          discount, aitVat, markup, fixedMarkup,
+          scope: scopeKey,
+          isGlobal: !override || override.useGlobal,
+          userOverride: !!userOverride,
+        };
         return f;
       });
     } catch (fareRuleErr) {
+
       console.error('Fare rule loading failed (using defaults):', fareRuleErr.message);
       // Attach default rules so frontend always has them
       flights = flights.map(f => {
