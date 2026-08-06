@@ -1902,8 +1902,22 @@ router.post('/book', authenticate, async (req, res) => {
       paymentDeadline = resolvePaymentDeadline(airlineTimeLimit);
     }
 
-    const status = payLater ? 'on_hold' : 'confirmed';
-    const payStatus = payLater ? 'pending' : 'paid';
+    // Normalize payment method to the DB enum (UI may send labels like "Bank Transfer")
+    const PM_MAP = {
+      bkash: 'bkash', nagad: 'nagad', rocket: 'rocket', card: 'card',
+      'visa/master card': 'card', 'visa': 'card', 'mastercard': 'card', 'credit card': 'card',
+      'bank transfer': 'bank_transfer', bank_transfer: 'bank_transfer',
+      pay_later: 'pay_later', 'pay later': 'pay_later',
+    };
+    const normalizedPaymentMethod = payLater
+      ? 'pay_later'
+      : (PM_MAP[String(paymentMethod || '').trim().toLowerCase()] || 'card');
+
+    // Booking is NEVER marked paid here — payment must be completed through the
+    // gateway (bKash/Nagad/card) or verified by admin (bank transfer) first.
+    const status = 'pending';
+    const payStatus = 'pending';
+
 
     const flightSourceRaw = flightData?.source || flightData?.provider || '';
     const flightSource = String(flightSourceRaw).toLowerCase().trim();
