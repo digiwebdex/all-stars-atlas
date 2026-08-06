@@ -1974,28 +1974,21 @@ const FlightBooking = () => {
                   </div>
                 )}
 
-                {isBiman || !partialEligible ? (
-                  <Card>
-                    <CardHeader><CardTitle className="text-sm sm:text-base flex items-center gap-2"><CreditCard className="w-5 h-5 text-accent" /> Payment (Required)</CardTitle></CardHeader>
-                    <CardContent className="space-y-4">
-                      {!isBiman && (
-                        <div className="text-xs rounded-lg border border-warning/30 bg-warning/5 p-2 text-muted-foreground">
-                          Pay-Later is not available for this flight ({BD_AIRPORTS.includes((bookingFlightData?.origin || '').toUpperCase()) && BD_AIRPORTS.includes((bookingFlightData?.destination || '').toUpperCase()) ? 'domestic route' : bookingFlightData?.refundable === false ? 'non-refundable fare' : `within ${partialRules.minHours}h of departure`}).
-                        </div>
-                      )}
-                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        {PAY_METHODS.map((m) => (
-                          <label key={m.value} className={`flex items-center gap-3 p-3 sm:p-4 rounded-xl border cursor-pointer transition-colors ${
-                            selectedPaymentMethod === m.value ? "border-accent bg-accent/5" : "border-border hover:border-accent/40"
-                          }`}>
-                            <input type="radio" name="payMethod" className="accent-[hsl(var(--accent))]" checked={selectedPaymentMethod === m.value} onChange={() => setSelectedPaymentMethod(m.value)} />
-                            <span className="text-xs sm:text-sm font-medium">{m.label}</span>
-                          </label>
-                        ))}
-                      </div>
-
+                {(
+                  <Card className="border-accent/20 bg-accent/[0.02]">
+                    <CardHeader><CardTitle className="text-sm sm:text-base flex items-center gap-2"><CreditCard className="w-5 h-5 text-accent" /> Payment</CardTitle></CardHeader>
+                    <CardContent className="space-y-3">
+                      <p className="text-sm font-semibold">No payment is required now — your seat is reserved.</p>
+                      <p className="text-xs text-muted-foreground">
+                        Deposit the fare to your account balance later, then submit an <strong>Issue Request</strong> from
+                        <strong> Dashboard → Bookings</strong>. Your booking will show as <strong>In Progress</strong> until our team issues the ticket.
+                      </p>
                     </CardContent>
                   </Card>
+                ) as JSX.Element}
+                {false ? (
+                  <Card />
+
                 ) : (
                   <Card className="border-accent/20 bg-accent/[0.02]">
                     <CardContent className="pt-5 pb-5">
