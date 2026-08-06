@@ -38,13 +38,32 @@ function getCachedProviderResult(key) {
   return hit.rows;
 }
 
-function setCachedProviderResult(key, rows) {
+function setCachedProviderResult(key, rows, ttlMs) {
   if (providerSearchCache.size >= PROVIDER_CACHE_MAX) {
     const oldest = providerSearchCache.keys().next().value;
     if (oldest) providerSearchCache.delete(oldest);
   }
-  providerSearchCache.set(key, { rows, expiry: Date.now() + PROVIDER_CACHE_TTL_MS });
+  providerSearchCache.set(key, { rows, expiry: Date.now() + (ttlMs || PROVIDER_CACHE_TTL_MS) });
 }
+
+// ── Provider cooldown ──────────────────────────────────────────────────
+// A supplier that just failed / timed out / returned nothing is skipped for a
+// short window so it never burns the search budget again on the next request.
+const PROVIDER_COOLDOWN_MS = parseInt(process.env.PROVIDER_COOLDOWN_MS) || 60000;
+const EMPTY_RESULT_TTL_MS = parseInt(process.env.PROVIDER_EMPTY_CACHE_TTL_MS) || 45000;
+const providerCooldown = new Map(); // id → timestamp until which the provider is skipped
+
+function isProviderCoolingDown(id) {
+  const until = providerCooldown.get(id);
+  if (!until) return false;
+  if (Date.now() > until) { providerCooldown.delete(id); return false; }
+  return true;
+}
+
+function markProviderCooldown(id) {
+  providerCooldown.set(id, Date.now() + PROVIDER_COOLDOWN_MS);
+}
+
 
 
 
