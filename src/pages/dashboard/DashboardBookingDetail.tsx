@@ -21,7 +21,6 @@ import { api } from "@/lib/api";
 import DataLoader from "@/components/DataLoader";
 import { useToast } from "@/hooks/use-toast";
 import TravelDocVerificationModal from "@/components/TravelDocVerificationModal";
-import BookingActions from "@/components/flights/BookingActions";
 import FlightStatusBadge from "@/components/flights/FlightStatusBadge";
 import FareRulesModal from "@/components/flights/FareRulesModal";
 import { formatApiDate, formatApiTime } from "@/lib/flight-time";
@@ -46,6 +45,20 @@ function parseAmt(v: any): number | undefined {
 }
 function pickAmt(...vs: any[]) { for (const v of vs) { const p = parseAmt(v); if (p !== undefined) return p; } return undefined; }
 function airportName(code: string) { const a = AIRPORTS.find(x => x.code === code?.toUpperCase()); return a ? a.name : code; }
+
+/** Void window: same calendar day as ticket issuance, from 00:01 AM until 11:30 PM only. */
+const VOID_CUTOFF_MINUTES = 23 * 60 + 30; // 11:30 PM
+function getVoidWindow(issuedAt?: string | null) {
+  if (!issuedAt) return { eligible: false, reason: "Ticket issue time unavailable — void not allowed." };
+  const issued = new Date(issuedAt);
+  if (isNaN(issued.getTime())) return { eligible: false, reason: "Ticket issue time unavailable — void not allowed." };
+  const now = new Date();
+  const sameDay = issued.toDateString() === now.toDateString();
+  if (!sameDay) return { eligible: false, reason: "Void window expired — void is only allowed on the ticket issue date." };
+  const nowMinutes = now.getHours() * 60 + now.getMinutes();
+  if (nowMinutes > VOID_CUTOFF_MINUTES) return { eligible: false, reason: "Void window closed at 11:30 PM on the issue date." };
+  return { eligible: true, reason: "Void allowed until 11:30 PM today (issue date)." };
+}
 
 function mapBooking(b: any) {
   const d = b.details || {}, o = d.outbound || {}, pax = b.passengerInfo || [];
@@ -95,6 +108,7 @@ function mapBooking(b: any) {
     pax: pax.length || 1, paxNames: pax.map((p: any) => `${p.firstName||""} ${p.lastName||""}`.trim()).filter(Boolean),
     ticketNo: resolvedTicketNo, paymentMethod: b.paymentMethod || "—", paymentStatus: b.paymentStatus || "—",
     paymentDeadline: b.paymentDeadline || null,
+    ticketedAt: d.ticketedAt || b.ticketedAt || b.ticketed_at || null,
     airline, airlineCode: ac, flightNumber: fn, cabinClass: cabin, aircraft, departureTime: depTime, arrivalTime: arrTime,
     duration: dur, stops, baggage: bag, refundable, legs, returnFlight: ret, isRoundTrip: rt, source: src,
     origin, destination: dest, details: d, passengers: pax, contactInfo: b.contactInfo || {}, addOns: d.addOns || {},
@@ -229,6 +243,9 @@ const DashboardBookingDetail = () => {
   const [docVerifyOpen, setDocVerifyOpen] = useState(false);
   const [voidOpen, setVoidOpen] = useState(false);
   const [voidLoading, setVoidLoading] = useState(false);
+  const [serviceRequest, setServiceRequest] = useState<null | "reissue" | "refund">(null);
+  const [serviceNote, setServiceNote] = useState("");
+  const [serviceLoading, setServiceLoading] = useState(false);
   const [timelineOpen, setTimelineOpen] = useState(false);
   const [ssrOpen, setSsrOpen] = useState(false);
   const [payDialogOpen, setPayDialogOpen] = useState(false);
@@ -369,6 +386,24 @@ const DashboardBookingDetail = () => {
     finally { setVoidLoading(false); }
   };
 
+  const handleServiceRequest = async () => {
+    if (!booking || !serviceRequest) return;
+    setServiceLoading(true);
+    const label = serviceRequest === "refund" ? "REFUND" : "REISSUE";
+    try {
+      await api.post(`/dashboard/ticket-issue-request`, {
+        bookingId: booking.rawId,
+        notes: `${label} REQUEST: ${serviceNote || "No additional note"}`,
+      });
+      toast({ title: `${label} Request Sent`, description: "Our team will process it shortly." });
+      setServiceRequest(null); setServiceNote(""); refetch();
+    } catch (e: any) {
+      toast({ title: "Failed", description: e.message || "Error", variant: "destructive" });
+    } finally { setServiceLoading(false); }
+  };
+
+
+
   const handlePayWithBalance = async () => {
     if (!booking || hasIssuedWithBalance) return;
     const amount = booking.rawAmount;
@@ -507,7 +542,7 @@ const DashboardBookingDetail = () => {
             )}
             {(isTicketed || hasFinalTicket) && (
               <Badge className="bg-green-600 text-white text-sm px-4 py-2 font-bold gap-1.5">
-                <Ticket className="w-4 h-4" /> {effectiveTicketNo ? `Ticket: ${effectiveTicketNo}` : 'Ticketed'}
+                <Ticket className="w-4 h-4" /> Ticketed
               </Badge>
             )}
             <div className="ml-auto flex flex-wrap gap-2">
@@ -761,14 +796,32 @@ const DashboardBookingDetail = () => {
               <Separator />
               <div>
                 <p className="text-xs font-bold uppercase text-muted-foreground mb-3">Actions</p>
-                <div className="flex flex-wrap gap-3">
-                  <BookingActions booking={booking} isAdmin={false} onActionComplete={() => refetch()} />
-                  {["confirmed", "ticketed"].includes(booking.status) && (
-                    <Button variant="outline" className="text-destructive border-destructive/30 hover:bg-destructive/10 gap-1.5" onClick={() => setVoidOpen(true)}>
-                      <XCircle className="w-4 h-4" /> Void Request
-                    </Button>
-                  )}
-                </div>
+                {(() => {
+                  const vw = getVoidWindow(booking.ticketedAt || latestIssuedRequest?.processed_at || null);
+                  const boxes = [
+                    { key: "void", label: "Void", hint: vw.eligible ? "Available until 11:30 PM today" : vw.reason, icon: XCircle, tone: "text-destructive border-destructive/30 hover:bg-destructive/5", disabled: !vw.eligible, onClick: () => setVoidOpen(true) },
+                    { key: "reissue", label: "Reissue", hint: "Date / route change request", icon: RefreshCw, tone: "text-amber-600 border-amber-500/30 hover:bg-amber-500/5", disabled: false, onClick: () => setServiceRequest("reissue") },
+                    { key: "refund", label: "Refund", hint: booking.refundable ? "Refundable ticket" : "Fare rules apply", icon: Wallet, tone: "text-emerald-600 border-emerald-500/30 hover:bg-emerald-500/5", disabled: false, onClick: () => setServiceRequest("refund") },
+                    { key: "cancel", label: "Itinerary Cancel", hint: "Cancel the whole itinerary", icon: Ban, tone: "text-destructive border-destructive/30 hover:bg-destructive/5", disabled: false, onClick: () => setCancelOpen(true) },
+                  ];
+                  return (
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                      {boxes.map(box => (
+                        <button
+                          key={box.key}
+                          type="button"
+                          disabled={box.disabled}
+                          onClick={box.onClick}
+                          className={`rounded-xl border-2 bg-card p-4 text-left transition-colors ${box.tone} ${box.disabled ? "opacity-50 cursor-not-allowed hover:bg-card" : ""}`}
+                        >
+                          <box.icon className="w-5 h-5 mb-2" />
+                          <p className="text-sm font-bold text-foreground">{box.label}</p>
+                          <p className="text-[11px] text-muted-foreground mt-0.5 leading-snug">{box.hint}</p>
+                        </button>
+                      ))}
+                    </div>
+                  );
+                })()}
               </div>
             </div>
           </Section>
@@ -823,6 +876,31 @@ const DashboardBookingDetail = () => {
               <DialogFooter>
                 <Button variant="outline" onClick={() => setVoidOpen(false)}>Cancel</Button>
                 <Button variant="destructive" onClick={handleVoid} disabled={voidLoading}>{voidLoading ? "Submitting..." : "Submit Void Request"}</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={!!serviceRequest} onOpenChange={(o) => { if (!o) { setServiceRequest(null); setServiceNote(""); } }}>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  {serviceRequest === "refund" ? <Wallet className="w-5 h-5 text-emerald-600" /> : <RefreshCw className="w-5 h-5 text-amber-600" />}
+                  {serviceRequest === "refund" ? "Refund Request" : "Reissue Request"}
+                </DialogTitle>
+              </DialogHeader>
+              <div className="space-y-3">
+                <p className="text-sm text-muted-foreground">
+                  Submit a {serviceRequest === "refund" ? "refund" : "reissue"} request for <strong>{booking.id}</strong> (PNR {booking.airlinePnr || booking.pnr}).
+                </p>
+                <Textarea
+                  placeholder={serviceRequest === "refund" ? "Reason for refund (optional)" : "Preferred new date / route details"}
+                  value={serviceNote}
+                  onChange={e => setServiceNote(e.target.value)}
+                />
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => { setServiceRequest(null); setServiceNote(""); }}>Cancel</Button>
+                <Button onClick={handleServiceRequest} disabled={serviceLoading}>{serviceLoading ? "Submitting..." : "Submit Request"}</Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
