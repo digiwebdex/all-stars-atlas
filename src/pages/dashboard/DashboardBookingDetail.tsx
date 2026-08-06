@@ -133,8 +133,9 @@ const LegTimeline = ({ leg, airline, airlineCode, flightNumber, cabinClass }: {
 }) => {
   const dist = distanceKm(leg.origin, leg.destination);
   const fno = String(leg.flightNumber || flightNumber || "").replace(/^[A-Z0-9]{2}/, "").trim() || (leg.flightNumber || flightNumber);
-  const opBy = leg.operatingAirline || leg.operatingCarrier || "";
+  const opBy = leg.operatingAirline || leg.operatingCarrier || leg.airlineCode || airlineCode || "";
   const cls = leg.bookingClass || leg.classOfService || "";
+
   return (
     <div className="px-5 py-4">
       <p className="text-sm font-bold mb-4">
