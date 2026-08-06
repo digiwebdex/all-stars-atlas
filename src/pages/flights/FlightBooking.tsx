@@ -408,14 +408,6 @@ const FlightBooking = () => {
     currency?: string;
   } | null>(null);
   const [pendingPayLater, setPendingPayLater] = useState(true);
-  // Values must match the backend payment_method enum (bkash|nagad|card|bank_transfer)
-  const PAY_METHODS = [
-    { value: "bkash", label: "bKash" },
-    { value: "nagad", label: "Nagad" },
-    { value: "card", label: "Visa/Master Card" },
-    { value: "bank_transfer", label: "Bank Transfer" },
-  ];
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("");
 
 
   // ── Coupon / Reward Points ──
@@ -999,7 +991,7 @@ const FlightBooking = () => {
         returnFlightData: returnFlight,
         multiCityFlights: isMultiCity ? multiCityFlights : undefined,
         passengers, isRoundTrip, isMultiCity, isDomestic: domestic, payLater,
-        paymentMethod: payLater ? "pay_later" : (selectedPaymentMethod || "card"),
+        paymentMethod: "pay_later",
         totalAmount: finalTotal, baseFare: finalBaseFare, taxes: finalTaxes, serviceCharge,
         discount: overrideFare ? Math.round((finalBaseFare * DISCOUNT_PCT) / 100) : totalDiscount,
         aitVat: overrideFare ? Math.round((finalBaseFare * AIT_VAT_PCT) / 100) : totalAitVat,
