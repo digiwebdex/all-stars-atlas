@@ -167,12 +167,13 @@ const AirlineMarkupConfig = ({ airlineMarkups, globalDiscount, globalAitVat, onC
                         <Input
                           type="number"
                           step="0.01"
+                          min="0"
                           value={selectedEntry.discount}
-                          onChange={(e) => updateAirline(selectedAirline, { discount: parseFloat(e.target.value) || 0 })}
+                          onChange={(e) => updateAirline(selectedAirline, { discount: Math.abs(parseFloat(e.target.value) || 0) })}
                           className="h-9"
                         />
                         <p className="text-[10px] text-muted-foreground">
-                          Overrides global {globalDiscount}%
+                          Overrides global {globalDiscount}% — always entered as a positive number, it is deducted from the base fare.
                         </p>
                       </div>
                       <div className="space-y-1.5">
@@ -180,8 +181,9 @@ const AirlineMarkupConfig = ({ airlineMarkups, globalDiscount, globalAitVat, onC
                         <Input
                           type="number"
                           step="0.01"
+                          min="0"
                           value={selectedEntry.markup}
-                          onChange={(e) => updateAirline(selectedAirline, { markup: parseFloat(e.target.value) || 0 })}
+                          onChange={(e) => updateAirline(selectedAirline, { markup: Math.max(0, parseFloat(e.target.value) || 0) })}
                           className="h-9"
                         />
                       </div>
@@ -217,11 +219,11 @@ const AirlineMarkupConfig = ({ airlineMarkups, globalDiscount, globalAitVat, onC
                   <h5 className="text-xs font-semibold mb-2 text-muted-foreground">Preview (on BDT 100,000 base fare)</h5>
                   {(() => {
                     const base = 100000;
-                    const discPct = selectedEntry.useGlobal ? globalDiscount : selectedEntry.discount;
+                    const discPct = Math.abs(selectedEntry.useGlobal ? globalDiscount : selectedEntry.discount);
                     const disc = Math.round(base * discPct / 100);
                     const aitVat = Math.round((base - disc) * globalAitVat / 100);
-                    const mkp = selectedEntry.useGlobal ? 0 : Math.round(base * selectedEntry.markup / 100);
-                    const fixedMkp = selectedEntry.useGlobal ? 0 : selectedEntry.fixedMarkup;
+                    const mkp = selectedEntry.useGlobal ? 0 : Math.max(0, Math.round(base * selectedEntry.markup / 100));
+                    const fixedMkp = selectedEntry.useGlobal ? 0 : Math.max(0, selectedEntry.fixedMarkup);
                     return (
                       <div className="grid grid-cols-2 gap-y-1 text-xs">
                         <span className="text-muted-foreground">Base Fare:</span>
