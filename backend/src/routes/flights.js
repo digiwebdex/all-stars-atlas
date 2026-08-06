@@ -727,16 +727,24 @@ router.get('/search', authenticateOptional, async (req, res) => {
     // Per-provider deadline — one slow supplier must never hold up the whole search.
     // Anything still pending after this budget is dropped (results already returned are kept).
     const PROVIDER_BUDGET_MS = parseInt(process.env.PROVIDER_SEARCH_BUDGET_MS) || 12000;
+    // TripLover is the primary international content source, so it gets a longer
+    // leash than the local/domestic suppliers.
+    const PROVIDER_BUDGET_OVERRIDES = {
+      triplover: parseInt(process.env.TRIPLOVER_SEARCH_BUDGET_MS) || 35000,
+    };
+    const budgetFor = (id) => PROVIDER_BUDGET_OVERRIDES[id] || PROVIDER_BUDGET_MS;
     const withBudget = (id, promise) => {
+      const ms = budgetFor(id);
       let timer;
       const guard = new Promise(resolve => {
         timer = setTimeout(() => {
-          console.warn(`[Search] Provider '${id}' exceeded ${PROVIDER_BUDGET_MS}ms budget — dropped from this search`);
+          console.warn(`[Search] Provider '${id}' exceeded ${ms}ms budget — dropped from this search`);
           resolve([]);
-        }, PROVIDER_BUDGET_MS);
+        }, ms);
       });
       return Promise.race([promise, guard]).finally(() => clearTimeout(timer));
     };
+
 
     const cacheKey = (id) => `${id}|${JSON.stringify(searchParams)}`;
 
@@ -772,7 +780,7 @@ router.get('/search', authenticateOptional, async (req, res) => {
           // Nothing usable: cache the empty answer briefly and put slow/broken
           // suppliers in cooldown so they stop eating the search budget.
           setCachedProviderResult(key, list, EMPTY_RESULT_TTL_MS);
-          if (failed || took >= PROVIDER_BUDGET_MS - 250) markProviderCooldown(id);
+          if (failed || took >= budgetFor(id) - 250) markProviderCooldown(id);
         }
         return list;
       });
