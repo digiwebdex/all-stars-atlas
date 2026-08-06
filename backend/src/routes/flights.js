@@ -1915,8 +1915,9 @@ router.post('/book', authenticate, async (req, res) => {
 
     // Booking is NEVER marked paid here — payment must be completed through the
     // gateway (bKash/Nagad/card) or verified by admin (bank transfer) first.
-    const status = 'pending';
+    const status = payLater ? 'on_hold' : 'pending';
     const payStatus = 'pending';
+
 
 
     const flightSourceRaw = flightData?.source || flightData?.provider || '';
