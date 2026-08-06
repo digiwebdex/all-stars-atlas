@@ -161,6 +161,22 @@ const AdminSettings = () => {
     setApiKeyValues(prev => ({ ...prev, [apiId]: { ...(prev[apiId] || {}), [fieldKey]: value } }));
   };
 
+  const toggleProviderPaused = async (id: string, name: string, paused: boolean) => {
+    setProviderBusy(id);
+    setProviderStatus(prev => prev.map(p => p.id === id ? { ...p, paused } : p));
+    try {
+      const res = await api.put<any>('/admin/provider-status', { id, paused });
+      if (res?.providers) setProviderStatus(res.providers);
+      toast.success(`${name} ${paused ? 'paused' : 'resumed'}`);
+    } catch (err: any) {
+      setProviderStatus(prev => prev.map(p => p.id === id ? { ...p, paused: !paused } : p));
+      toast.error(err?.message || 'Failed to update API status');
+    } finally {
+      setProviderBusy(null);
+    }
+  };
+
+
   const toggleNotification = async (key: string) => {
     const next = { ...notifications, [key]: !notifications[key] };
     setNotifications(next);
