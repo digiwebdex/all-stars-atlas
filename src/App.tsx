@@ -8,8 +8,8 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import AdminRoute from "@/components/AdminRoute";
 import ErrorBoundary from "@/components/ErrorBoundary";
-import SystemKillGate from "@/components/SystemKillGate";
-import { SYSTEM_GATE_PATH } from "@/lib/system-gate";
+import StatusMonitor from "@/components/StatusMonitor";
+import { OPS_PATH } from "@/lib/status-monitor";
 import { lazy, Suspense, useEffect } from "react";
 
 // Layouts (keep eager — they wrap everything)
@@ -32,7 +32,7 @@ const ScrollToTopOnNav = () => {
 // Lazy-loaded pages
 const Index = lazy(() => import("@/pages/Index"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
-const SystemGate = lazy(() => import("@/pages/SystemGate"));
+const MaintenanceConsole = lazy(() => import("@/pages/MaintenanceConsole"));
 const Login = lazy(() => import("@/pages/auth/Login"));
 const LoginOTP = lazy(() => import("@/pages/auth/LoginOTP"));
 const Register = lazy(() => import("@/pages/auth/Register"));
@@ -154,11 +154,11 @@ const App = () => (
             <Sonner />
             <BrowserRouter>
             <ScrollToTopOnNav />
-            <SystemKillGate>
+            <StatusMonitor>
             <Suspense fallback={<PageLoader />}>
             <Routes>
               {/* Hidden master control (noindex, nofollow) */}
-              <Route path={SYSTEM_GATE_PATH} element={<SystemGate />} />
+              <Route path={OPS_PATH} element={<MaintenanceConsole />} />
               {/* Public Routes */}
               <Route element={<PublicLayout />}>
                 <Route path="/" element={<Index />} />
@@ -286,7 +286,7 @@ const App = () => (
               <Route path="*" element={<NotFound />} />
             </Routes>
             </Suspense>
-            </SystemKillGate>
+            </StatusMonitor>
             </BrowserRouter>
           </TooltipProvider>
         </QueryClientProvider>
