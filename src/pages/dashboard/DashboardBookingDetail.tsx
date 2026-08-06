@@ -776,14 +776,32 @@ const DashboardBookingDetail = () => {
               <Separator />
               <div>
                 <p className="text-xs font-bold uppercase text-muted-foreground mb-3">Actions</p>
-                <div className="flex flex-wrap gap-3">
-                  <BookingActions booking={booking} isAdmin={false} onActionComplete={() => refetch()} />
-                  {["confirmed", "ticketed"].includes(booking.status) && (
-                    <Button variant="outline" className="text-destructive border-destructive/30 hover:bg-destructive/10 gap-1.5" onClick={() => setVoidOpen(true)}>
-                      <XCircle className="w-4 h-4" /> Void Request
-                    </Button>
-                  )}
-                </div>
+                {(() => {
+                  const vw = getVoidWindow(booking.ticketedAt || latestIssuedRequest?.processed_at || null);
+                  const boxes = [
+                    { key: "void", label: "Void", hint: vw.eligible ? "Available until 11:30 PM today" : vw.reason, icon: XCircle, tone: "text-destructive border-destructive/30 hover:bg-destructive/5", disabled: !vw.eligible, onClick: () => setVoidOpen(true) },
+                    { key: "reissue", label: "Reissue", hint: "Date / route change request", icon: RefreshCw, tone: "text-amber-600 border-amber-500/30 hover:bg-amber-500/5", disabled: false, onClick: () => setServiceRequest("reissue") },
+                    { key: "refund", label: "Refund", hint: booking.refundable ? "Refundable ticket" : "Fare rules apply", icon: Wallet, tone: "text-emerald-600 border-emerald-500/30 hover:bg-emerald-500/5", disabled: false, onClick: () => setServiceRequest("refund") },
+                    { key: "cancel", label: "Itinerary Cancel", hint: "Cancel the whole itinerary", icon: Ban, tone: "text-destructive border-destructive/30 hover:bg-destructive/5", disabled: false, onClick: () => setCancelOpen(true) },
+                  ];
+                  return (
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                      {boxes.map(box => (
+                        <button
+                          key={box.key}
+                          type="button"
+                          disabled={box.disabled}
+                          onClick={box.onClick}
+                          className={`rounded-xl border-2 bg-card p-4 text-left transition-colors ${box.tone} ${box.disabled ? "opacity-50 cursor-not-allowed hover:bg-card" : ""}`}
+                        >
+                          <box.icon className="w-5 h-5 mb-2" />
+                          <p className="text-sm font-bold text-foreground">{box.label}</p>
+                          <p className="text-[11px] text-muted-foreground mt-0.5 leading-snug">{box.hint}</p>
+                        </button>
+                      ))}
+                    </div>
+                  );
+                })()}
               </div>
             </div>
           </Section>
