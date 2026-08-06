@@ -141,10 +141,18 @@ async function tlPost(pathname, body, { useSearchBase = false, timeout = 45000 }
     throw new Error(`TripLover ${pathname}: ${error}`);
   }
 
+  // Successful Search responses are megabytes of fare data — log a summary only,
+  // otherwise every search pays a deep-copy + JSON.stringify cost. Failures keep full bodies.
+  const isBulk = /search/i.test(operation);
   logApiCall({
     provider: 'triplover', operation, url, status: res.status, ok: true,
-    durationMs: Date.now() - started, request: body, response: data,
+    durationMs: Date.now() - started,
+    request: body,
+    response: isBulk
+      ? { summary: `${(data?.item1?.airSearchResponses || []).length} itineraries returned`, responseBytes: text.length }
+      : data,
   });
+
   return data;
 }
 
@@ -171,7 +179,10 @@ async function searchFlights({ origin, destination, departDate, returnDate, adul
   };
 
   try {
-    const data = await tlPost('/api/Search', payload, { useSearchBase: true, timeout: 90000 });
+    // Keep just under the aggregator's per-provider budget so a slow UAT aborts
+    // instead of dangling and holding an open socket after the search returned.
+    const data = await tlPost('/api/Search', payload, { useSearchBase: true, timeout: 24000 });
+
     return normalizeSearch(data, origin, destination);
   } catch (err) {
     console.error('[TripLover] Search error:', err.message);

@@ -677,16 +677,31 @@ router.get('/search', authenticateOptional, async (req, res) => {
     const pausedIds = new Set(
       (await getProviderStatuses()).filter(p => p.paused).map(p => p.id)
     );
+    // Per-provider deadline — one slow supplier must never hold up the whole search.
+    // Anything still pending after this budget is dropped (results already returned are kept).
+    const PROVIDER_BUDGET_MS = parseInt(process.env.PROVIDER_SEARCH_BUDGET_MS) || 25000;
+    const withBudget = (id, promise) => {
+      let timer;
+      const guard = new Promise(resolve => {
+        timer = setTimeout(() => {
+          console.warn(`[Search] Provider '${id}' exceeded ${PROVIDER_BUDGET_MS}ms budget — dropped from this search`);
+          resolve([]);
+        }, PROVIDER_BUDGET_MS);
+      });
+      return Promise.race([promise, guard]).finally(() => clearTimeout(timer));
+    };
+
     const runProvider = (id, fn) => {
       if (pausedIds.has(id)) {
         console.log(`[Search] Provider '${id}' is paused — skipped`);
         return Promise.resolve([]);
       }
-      return fn().catch(err => {
+      return withBudget(id, fn().catch(err => {
         console.error(`${id} search failed (continuing with other providers):`, err.message);
         return [];
-      });
+      }));
     };
+
 
     const [dbFlights, ttiFlights, bdfFlights, flyhubFlights, sabreFlights, galileoFlights, ndcFlights, lccFlights, tlFlights] = await Promise.allSettled([
       isMultiCity ? Promise.resolve([]) : searchDB({ originCode, destCode, dDate, cabClass, page, limit }),
