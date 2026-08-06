@@ -18,6 +18,21 @@ import { setGoogleDriveClientId, getGoogleDriveClientId, isGoogleDriveConfigured
 import { clearSocialConfigCache } from "@/lib/social-auth";
 import { SEARCH_TAB_LABELS, DEFAULT_SEARCH_TABS, type SearchTabConfig } from "@/hooks/useSearchTabConfig";
 
+type ApiLogEntry = {
+  id: number;
+  at: string;
+  provider: string;
+  operation: string;
+  url?: string;
+  status?: number | null;
+  ok: boolean;
+  durationMs?: number | null;
+  error?: string | null;
+  hint?: string | null;
+  request?: string | null;
+  response?: string | null;
+};
+
 // ── API Integrations Config ──
 const apiIntegrations = [
   // ── Travel GDS & Suppliers ──
