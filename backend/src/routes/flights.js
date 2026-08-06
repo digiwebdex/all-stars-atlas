@@ -1409,6 +1409,12 @@ router.get('/search', authenticateOptional, async (req, res) => {
           if (userOverride.markup_pct != null) markup = Number(userOverride.markup_pct);
         }
 
+        // Normalize: discount is ALWAYS a deduction (a negative admin entry must not inflate fare)
+        discount = Math.abs(Number(discount) || 0);
+        aitVat = Math.abs(Number(aitVat) || 0);
+        markup = Math.max(0, Number(markup) || 0);
+        fixedMarkup = Math.max(0, Number(fixedMarkup) || 0);
+
         // Attach fare rule params for frontend fare summary display
         f.fareRules = {
           discount, aitVat, markup, fixedMarkup,
