@@ -780,7 +780,7 @@ router.get('/search', authenticateOptional, async (req, res) => {
           // Nothing usable: cache the empty answer briefly and put slow/broken
           // suppliers in cooldown so they stop eating the search budget.
           setCachedProviderResult(key, list, EMPTY_RESULT_TTL_MS);
-          if (failed || took >= PROVIDER_BUDGET_MS - 250) markProviderCooldown(id);
+          if (failed || took >= budgetFor(id) - 250) markProviderCooldown(id);
         }
         return list;
       });
