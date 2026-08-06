@@ -179,7 +179,10 @@ async function searchFlights({ origin, destination, departDate, returnDate, adul
   };
 
   try {
-    const data = await tlPost('/api/Search', payload, { useSearchBase: true, timeout: 90000 });
+    // Keep just under the aggregator's per-provider budget so a slow UAT aborts
+    // instead of dangling and holding an open socket after the search returned.
+    const data = await tlPost('/api/Search', payload, { useSearchBase: true, timeout: 24000 });
+
     return normalizeSearch(data, origin, destination);
   } catch (err) {
     console.error('[TripLover] Search error:', err.message);
