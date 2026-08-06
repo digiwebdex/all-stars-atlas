@@ -59,7 +59,7 @@ const Footer = React.forwardRef<HTMLElement>((_, ref) => {
             </p>
             <div className="flex gap-2">
               {[
-                { Icon: Facebook, label: "Facebook", url: "https://facebook.com/seventrip" },
+                { Icon: Facebook, label: "Facebook", url: "https://www.facebook.com/share/1Bmw7Sasr3/" },
                 { Icon: Instagram, label: "Instagram", url: "https://instagram.com/seventrip" },
                 { Icon: Twitter, label: "Twitter", url: "https://twitter.com/seventrip" },
                 { Icon: Youtube, label: "YouTube", url: "https://youtube.com/seventrip" },
