@@ -22,7 +22,7 @@ const defaultContactInfo = {
 };
 
 const defaultSocialLinks = [
-  { id: "1", platform: "Facebook", url: "https://facebook.com/seventrip", icon: "Facebook", visible: true },
+  { id: "1", platform: "Facebook", url: "https://www.facebook.com/share/1Bmw7Sasr3/", icon: "Facebook", visible: true },
   { id: "2", platform: "Instagram", url: "https://instagram.com/seventrip", icon: "Instagram", visible: true },
   { id: "3", platform: "Twitter", url: "https://twitter.com/seventrip", icon: "Twitter", visible: true },
   { id: "4", platform: "YouTube", url: "https://youtube.com/seventrip", icon: "Youtube", visible: true },
