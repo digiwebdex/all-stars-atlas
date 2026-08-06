@@ -679,7 +679,7 @@ router.get('/search', authenticateOptional, async (req, res) => {
     );
     // Per-provider deadline — one slow supplier must never hold up the whole search.
     // Anything still pending after this budget is dropped (results already returned are kept).
-    const PROVIDER_BUDGET_MS = parseInt(process.env.PROVIDER_SEARCH_BUDGET_MS) || 25000;
+    const PROVIDER_BUDGET_MS = parseInt(process.env.PROVIDER_SEARCH_BUDGET_MS) || 12000;
     const withBudget = (id, promise) => {
       let timer;
       const guard = new Promise(resolve => {
@@ -691,16 +691,32 @@ router.get('/search', authenticateOptional, async (req, res) => {
       return Promise.race([promise, guard]).finally(() => clearTimeout(timer));
     };
 
+    const cacheKey = (id) => `${id}|${JSON.stringify(searchParams)}`;
+
     const runProvider = (id, fn) => {
       if (pausedIds.has(id)) {
         console.log(`[Search] Provider '${id}' is paused — skipped`);
         return Promise.resolve([]);
       }
+      // Warm cache: identical searches within the TTL return instantly (no GDS round trip)
+      const key = cacheKey(id);
+      const cached = getCachedProviderResult(key);
+      if (cached) {
+        console.log(`[Search] Provider '${id}' served from cache (${cached.length} fares)`);
+        return Promise.resolve(cached);
+      }
+      const started = Date.now();
       return withBudget(id, fn().catch(err => {
         console.error(`${id} search failed (continuing with other providers):`, err.message);
         return [];
-      }));
+      })).then(rows => {
+        const list = Array.isArray(rows) ? rows : [];
+        console.log(`[Search] Provider '${id}' took ${Date.now() - started}ms → ${list.length} fares`);
+        if (list.length > 0) setCachedProviderResult(key, list);
+        return list;
+      });
     };
+
 
 
     const [dbFlights, ttiFlights, bdfFlights, flyhubFlights, sabreFlights, galileoFlights, ndcFlights, lccFlights, tlFlights] = await Promise.allSettled([
