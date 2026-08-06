@@ -1362,7 +1362,12 @@ router.get('/search', authenticateOptional, async (req, res) => {
             else scopeMarkupPct = parseFloat(cfg.markupValue ?? cfg.markup) || 0;
           }
         } else if (row.setting_key === 'airline_markup_config') {
-          airlineOverrides = parsed;
+          // Scoped per Domestic / International / SOTO; fall back to legacy flat config
+          const scoped = parsed[scopeKey];
+          const isScoped = ['FLIGHT_DOM', 'FLIGHT_INT', 'FLIGHT_SOTO'].some(
+            (k) => parsed[k] && typeof parsed[k] === 'object'
+          );
+          airlineOverrides = isScoped ? (scoped && typeof scoped === 'object' ? scoped : {}) : parsed;
         }
       }
 
