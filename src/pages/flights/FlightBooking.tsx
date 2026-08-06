@@ -1974,37 +1974,21 @@ const FlightBooking = () => {
                   </div>
                 )}
 
-                {(
-                  <Card className="border-accent/20 bg-accent/[0.02]">
-                    <CardHeader><CardTitle className="text-sm sm:text-base flex items-center gap-2"><CreditCard className="w-5 h-5 text-accent" /> Payment</CardTitle></CardHeader>
-                    <CardContent className="space-y-3">
-                      <p className="text-sm font-semibold">No payment is required now — your seat is reserved.</p>
-                      <p className="text-xs text-muted-foreground">
-                        Deposit the fare to your account balance later, then submit an <strong>Issue Request</strong> from
-                        <strong> Dashboard → Bookings</strong>. Your booking will show as <strong>In Progress</strong> until our team issues the ticket.
-                      </p>
-                    </CardContent>
-                  </Card>
-                ) as JSX.Element}
-                {false ? (
-                  <Card />
-
-                ) : (
-                  <Card className="border-accent/20 bg-accent/[0.02]">
-                    <CardContent className="pt-5 pb-5">
-                      <div className="flex items-start gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center shrink-0"><Timer className="w-5 h-5 text-accent" /></div>
-                        <div>
-                          <p className="font-bold text-sm">Book Now, Pay {partialRules.upfrontPct}% Now / {100 - partialRules.upfrontPct}% Later</p>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            International refundable fare ≥ {partialRules.minHours}h before departure. Pay the balance from your dashboard before the deadline.
-                            {deadlineInfo && <span className="text-destructive font-semibold"> {deadlineInfo.label}.</span>}
-                          </p>
-                        </div>
+                <Card className="border-accent/20 bg-accent/[0.02]">
+                  <CardContent className="pt-5 pb-5">
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center shrink-0"><Timer className="w-5 h-5 text-accent" /></div>
+                      <div>
+                        <p className="font-bold text-sm">Book now — no payment required</p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Your seat is reserved instantly. Deposit the fare to your account balance later, then submit an <strong>Issue Request</strong> from <strong>Dashboard → Bookings</strong> — it will show as <strong>In Progress</strong> until our team issues the ticket.
+                          {deadlineInfo && <span className="text-destructive font-semibold"> {deadlineInfo.label}.</span>}
+                        </p>
                       </div>
-                    </CardContent>
-                  </Card>
-                )}
+                    </div>
+                  </CardContent>
+                </Card>
+
 
                 {/* ── Coupon / Reward Points Section ── */}
                 <Card className="border-warning/20 bg-warning/[0.02]">
