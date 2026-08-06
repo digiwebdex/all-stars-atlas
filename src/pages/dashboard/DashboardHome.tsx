@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Ticket, CreditCard, Plane, Clock, ArrowRight, MapPin, TrendingUp, Calendar, Globe, Sparkles, ArrowUpRight } from "lucide-react";
+import { Ticket, CreditCard, Plane, Clock, ArrowRight, MapPin, TrendingUp, Calendar, Globe, Sparkles, ArrowUpRight, FileText, Wallet, CalendarDays } from "lucide-react";
+import { Calendar as CalendarPicker } from "@/components/ui/calendar";
 import { Link } from "react-router-dom";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { useDashboardStats, useDashboardBookings } from "@/hooks/useApiData";
@@ -65,6 +66,28 @@ const DashboardHome = () => {
   const displayName = user?.name || resolvedStats.user?.name || '';
   const greeting = getGreeting();
 
+  const kpi = resolvedStats.kpi || {};
+  const sched = resolvedStats.scheduledPayment || {};
+  const topAirlines = resolvedStats.topAirlines || [];
+
+  const kpiTiles = [
+    { label: "Total Booking", value: kpi.totalBooking ?? 0, icon: FileText, cls: "kpi-indigo" },
+    { label: "Total Ticket", value: kpi.totalTicket ?? 0, icon: Ticket, cls: "kpi-amber" },
+    { label: "Sales in BDT", value: `৳${Number(kpi.salesBDT || 0).toLocaleString()}`, icon: Wallet, cls: "kpi-violet" },
+    { label: "Top Ticketed Airline", value: kpi.topAirline || "—", icon: Plane, cls: "kpi-red" },
+  ];
+
+  const schedCells = [
+    { label: "Due Today (Count)", value: sched.dueTodayCount ?? 0 },
+    { label: "Due Upcoming (Count)", value: sched.upcomingCount ?? 0 },
+    { label: "Due Expired (Count)", value: sched.expiredCount ?? 0 },
+    { label: "Due Today (Amount)", value: `৳${Number(sched.dueTodayAmount || 0).toLocaleString()}` },
+    { label: "Due Upcoming (Amount)", value: `৳${Number(sched.upcomingAmount || 0).toLocaleString()}` },
+    { label: "Due Expired (Amount)", value: `৳${Number(sched.expiredAmount || 0).toLocaleString()}` },
+    { label: "Agent Limit", value: `৳${Number(sched.agentLimit || 0).toLocaleString()}` },
+    { label: "Available Limit", value: `৳${Number(sched.availableLimit || 0).toLocaleString()}` },
+  ];
+
   return (
     <DataLoader isLoading={statsLoading && bookingsLoading} error={statsError || bookingsError} skeleton="dashboard" retry={statsRefetch}>
       <motion.div className="space-y-6" variants={container} initial="hidden" animate="show">
@@ -92,30 +115,57 @@ const DashboardHome = () => {
         </motion.div>
 
         <div>
-          {/* Stats */}
+          {/* Agent-style KPI tiles */}
           <motion.div variants={item} className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            {stats.map((stat: any, i: number) => {
-              const meta = statMeta[i % statMeta.length];
-              const Icon = meta.icon;
-              return (
-                <div key={i} className={`dash-stat-card ${meta.gradient} p-4 sm:p-5`}>
-                  <div className="flex items-start justify-between mb-3">
-                    <div className={`w-11 h-11 rounded-xl ${meta.iconClass} flex items-center justify-center`}>
-                      <Icon className="w-5 h-5" />
-                    </div>
-                    {stat.change && (
-                      <div className="flex items-center gap-0.5 text-xs font-bold text-success">
-                        <ArrowUpRight className="w-3.5 h-3.5" />
-                        {stat.change}
-                      </div>
-                    )}
-                  </div>
-                  <p className="text-2xl sm:text-3xl font-black tracking-tight">{stat.value}</p>
-                  <p className="text-xs text-muted-foreground mt-1 font-medium">{stat.label}</p>
-                </div>
-              );
-            })}
+            {kpiTiles.map((t, i) => (
+              <div key={i} className={`kpi-tile ${t.cls}`}>
+                <t.icon className="w-7 h-7 mb-3 opacity-90" />
+                <p className="text-xs font-semibold opacity-90">{t.label}</p>
+                <p className="text-xl sm:text-2xl font-black tracking-tight mt-1 truncate">{t.value}</p>
+              </div>
+            ))}
           </motion.div>
+
+          {/* Scheduled Payment Info */}
+          <motion.div variants={item} className="sched-panel mt-6">
+            <div className="sched-panel-head py-2 px-4 text-center text-sm font-semibold">Scheduled Payment Info</div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-y-5 gap-x-3 p-5">
+              {schedCells.map((c, i) => (
+                <div key={i} className="text-center min-w-0">
+                  <p className="text-lg sm:text-xl font-black truncate">{c.value}</p>
+                  <p className="text-[11px] opacity-85 mt-0.5">{c.label}</p>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+
+          {/* Highest Ticketed Airlines + Event Calendar */}
+          <motion.div variants={item} className="grid lg:grid-cols-2 gap-6 mt-6">
+            <div className="chart-card p-5">
+              <h3 className="text-base font-bold mb-4 text-center">Highest Ticketed Airlines</h3>
+              {topAirlines.length > 0 ? (
+                <ResponsiveContainer width="100%" height={240}>
+                  <BarChart data={topAirlines}>
+                    <XAxis dataKey="name" tick={{ fontSize: 11, fill: 'hsl(220, 9%, 46%)' }} axisLine={false} tickLine={false} interval={0} />
+                    <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: 'hsl(220, 9%, 46%)' }} axisLine={false} tickLine={false} />
+                    <Tooltip contentStyle={{ borderRadius: '12px', fontSize: '13px' }} />
+                    <Bar dataKey="count" fill="hsl(var(--primary))" radius={[6, 6, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-16">No ticketed airlines yet</p>
+              )}
+            </div>
+            <div className="chart-card overflow-hidden">
+              <div className="sched-panel-head text-white py-2 px-4 text-sm font-semibold flex items-center gap-2">
+                <CalendarDays className="w-4 h-4" /> Event Calendar
+              </div>
+              <div className="p-3 flex justify-center">
+                <CalendarPicker mode="single" selected={new Date()} className="p-0 pointer-events-auto" />
+              </div>
+            </div>
+          </motion.div>
+
 
           {/* Upcoming Trip Banner */}
           {upcomingTrip && (

@@ -857,6 +857,30 @@ img, video {
     border-color: hsl(24 100% 50% / 0.3);
   }
 
+  /* Agent-style solid KPI tiles (B2B dashboard) */
+  .kpi-tile {
+    @apply rounded-xl p-4 sm:p-5 text-white relative overflow-hidden;
+    box-shadow: 0 10px 30px -12px hsl(var(--foreground) / 0.25);
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .kpi-tile:hover { transform: translateY(-3px); }
+  .kpi-indigo { background: linear-gradient(135deg, hsl(245 75% 60%), hsl(255 70% 55%)); }
+  .kpi-amber  { background: linear-gradient(135deg, hsl(38 95% 52%), hsl(30 95% 50%)); }
+  .kpi-violet { background: linear-gradient(135deg, hsl(278 65% 45%), hsl(288 60% 40%)); }
+  .kpi-red    { background: linear-gradient(135deg, hsl(0 85% 55%), hsl(355 80% 48%)); }
+
+  /* Teal scheduled-payment band */
+  .sched-panel {
+    @apply rounded-xl overflow-hidden text-white;
+    background: linear-gradient(180deg, hsl(186 70% 34%), hsl(186 72% 30%));
+    box-shadow: 0 10px 30px -14px hsl(186 70% 30% / 0.5);
+  }
+  .sched-panel-head {
+    background: hsl(186 72% 28%);
+  }
+
+
+
   /* Colorful icon containers */
   .icon-glow-blue {
     background: linear-gradient(135deg, hsl(217 91% 50%), hsl(230 80% 60%));
