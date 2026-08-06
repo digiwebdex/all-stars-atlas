@@ -63,12 +63,12 @@ function clearPauseCache() { cache = null; cacheTime = 0; }
 // true when the provider is currently paused
 async function isProviderPaused(id) {
   const map = await loadPauseMap();
-  return map[id] === true || map[id] === 'true';
+  return isPausedValue(map, id);
 }
 
 async function getProviderStatuses() {
   const map = await loadPauseMap();
-  return PROVIDERS.map(p => ({ ...p, paused: map[p.id] === true || map[p.id] === 'true' }));
+  return PROVIDERS.map(p => ({ ...p, paused: isPausedValue(map, p.id) }));
 }
 
 async function setProviderPaused(id, paused) {
