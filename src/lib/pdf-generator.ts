@@ -7,7 +7,6 @@ let cachedLogoBase64: string | null = null;
 // Company info — single source of truth for all PDFs
 const COMPANY = {
   name: "Seven Trip",
-  parent: "Evan International",
   phone: "+880 1749-373748",
   email: "support@seventrip.net",
   address: "Beena Kanon, Flat-4A, House-03, Road-17, Block-E, Banani, Dhaka-1213",
@@ -611,7 +610,7 @@ async function buildInvoiceDoc(inv: InvoiceData): Promise<jsPDF> {
   doc.text("This is a computer-generated invoice and does not require a signature.", w / 2, y, { align: "center" });
   y += 4;
   doc.setFontSize(6);
-  doc.text(`${COMPANY.name} — A concern of ${COMPANY.parent} | ${COMPANY.website} | ${COMPANY.phone}`, w / 2, y, { align: "center" });
+  doc.text(`${COMPANY.name} | ${COMPANY.website} | ${COMPANY.phone}`, w / 2, y, { align: "center" });
 
   return doc;
 }
@@ -1685,7 +1684,7 @@ async function buildPremiumTicketDoc(ticket: TicketData): Promise<jsPDF> {
     doc.setFontSize(5.5);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(180, 170, 210);
-    doc.text(`A concern of ${COMPANY.parent} | ${COMPANY.phone} | ${COMPANY.website}`, lm + 16, footY + 10);
+    doc.text(`${COMPANY.phone} | ${COMPANY.website}`, lm + 16, footY + 10);
     doc.text(COMPANY.address, lm + 16, footY + 14);
 
     // Page number
