@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Search, CheckCircle2, XCircle, Eye, Clock, Building2, Smartphone, CreditCard, FileText, Loader2, Download, ImageIcon, ShieldAlert } from "lucide-react";
-import { config } from "@/lib/config";
+import { config, fileUrl } from "@/lib/config";
 import { useToast } from "@/hooks/use-toast";
 import { api } from "@/lib/api";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
