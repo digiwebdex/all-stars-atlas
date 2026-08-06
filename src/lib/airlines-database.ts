@@ -165,4 +165,6 @@ export const AIRLINES_DATABASE: AirlineEntry[] = [
   { code: "6E", name: "IndiGo", country: "India" },
   { code: "7C", name: "Jeju Air", country: "South Korea" },
   { code: "8M", name: "Myanmar Airways International", country: "Myanmar" },
+  { code: "2A", name: "Air Astra", country: "Bangladesh" },
+  { code: "RX", name: "Riyadh Air", country: "Saudi Arabia" },
 ].sort((a, b) => a.name.localeCompare(b.name));
