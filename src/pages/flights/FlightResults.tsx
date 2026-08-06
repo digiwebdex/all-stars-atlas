@@ -966,9 +966,10 @@ function calcRewardPoints(price: number): number {
 /* ─── Payable Price from gross — applies discount + AIT VAT ─── */
 function calcPayableFromGross(grossPrice: number, taxes: number, discountPct = 6.30, aitVatPct = 0.3, markupPct = 0, fixedMarkup = 0): number {
   const baseFare = Math.max(0, Math.round(grossPrice - taxes));
-  const discount = Math.round(baseFare * discountPct / 100);
-  const aitVat = Math.round(baseFare * aitVatPct / 100);
-  const markup = Math.round(baseFare * markupPct / 100);
+  // Discount is always a deduction; markup is always an addition (guard bad admin input like -7%)
+  const discount = Math.round(baseFare * Math.abs(discountPct) / 100);
+  const aitVat = Math.round(baseFare * Math.abs(aitVatPct) / 100);
+  const markup = Math.round(baseFare * Math.max(0, markupPct) / 100);
   return baseFare - discount + taxes + aitVat + markup + fixedMarkup;
 }
 
@@ -2405,10 +2406,10 @@ const FlightCard = ({
   // Always derive baseFare in BDT as (price - taxes) to ensure the breakdown sums correctly.
   const baseFare = Math.max(0, Math.round(grossPrice - taxes));
   // Calculate payable price (with discount and AIT VAT applied)
-  const DISCOUNT_PCT = flight.fareRules?.discount ?? 6.30;
-  const AIT_VAT_PCT = flight.fareRules?.aitVat ?? 0.3;
-  const MARKUP_PCT = flight.fareRules?.markup ?? 0;
-  const FIXED_MARKUP = flight.fareRules?.fixedMarkup ?? 0;
+  const DISCOUNT_PCT = Math.abs(flight.fareRules?.discount ?? 6.30);
+  const AIT_VAT_PCT = Math.abs(flight.fareRules?.aitVat ?? 0.3);
+  const MARKUP_PCT = Math.max(0, flight.fareRules?.markup ?? 0);
+  const FIXED_MARKUP = Math.max(0, flight.fareRules?.fixedMarkup ?? 0);
   const discount = Math.round(baseFare * DISCOUNT_PCT / 100);
   const aitVat = Math.round(baseFare * AIT_VAT_PCT / 100);
   const markup = Math.round(baseFare * MARKUP_PCT / 100) + FIXED_MARKUP;
