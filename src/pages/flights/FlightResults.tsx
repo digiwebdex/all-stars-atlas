@@ -2397,18 +2397,22 @@ const FlightCard = ({
   const availableSeats = getDisplayAvailableSeats(flight);
   const duration = flight.duration || "";
   const stops = flight.stops ?? 0;
-  const grossPrice = flight.price ?? 0;
-  const taxes = flight.taxes ?? 0;
+  // Single source of truth for fare figures (identical to flightPayable)
+  const _apiFare = getApiFareTotals(flight);
+  const grossPrice = _apiFare.grossPrice || (flight.price ?? 0);
+  const taxes = Math.min(_apiFare.taxes || (flight.taxes ?? 0), grossPrice);
   // CRITICAL: baseFare from API may be in foreign currency (e.g. USD from Sabre).
   // Always derive baseFare in BDT as (price - taxes) to ensure the breakdown sums correctly.
   const baseFare = Math.max(0, Math.round(grossPrice - taxes));
   // Calculate payable price (with discount and AIT VAT applied)
   const DISCOUNT_PCT = flight.fareRules?.discount ?? 6.30;
   const AIT_VAT_PCT = flight.fareRules?.aitVat ?? 0.3;
+  const MARKUP_PCT = flight.fareRules?.markup ?? 0;
+  const FIXED_MARKUP = flight.fareRules?.fixedMarkup ?? 0;
   const discount = Math.round(baseFare * DISCOUNT_PCT / 100);
   const aitVat = Math.round(baseFare * AIT_VAT_PCT / 100);
-  const markup = Math.round(baseFare * (flight.fareRules?.markup ?? 0) / 100);
-  const price = baseFare - discount + taxes + aitVat + markup + (flight.fareRules?.fixedMarkup ?? 0);
+  const markup = Math.round(baseFare * MARKUP_PCT / 100) + FIXED_MARKUP;
+  const price = baseFare - discount + taxes + aitVat + markup;
   const refundable = flight.refundable ?? false;
   const fareType = flight.fareType || (refundable ? "Refundable" : "Non-Refundable");
   const nextDay = isNextDay(flight.departureTime, flight.arrivalTime);
@@ -2555,10 +2559,14 @@ const FlightCard = ({
               <PopoverContent side="left" className="w-72 p-3">
                 <p className="text-xs font-bold mb-2">Fare Breakdown</p>
                 <div className="space-y-1.5 text-xs">
+                  <div className="flex justify-between"><span className="text-muted-foreground">Gross Fare (Base + Tax)</span><span className="font-medium">BDT {grossPrice.toLocaleString()}</span></div>
                   <div className="flex justify-between"><span className="text-muted-foreground">Base Fare</span><span className="font-medium">BDT {baseFare.toLocaleString()}</span></div>
                   <div className="flex justify-between"><span className="text-muted-foreground">Taxes & Fees</span><span className="font-medium">BDT {taxes.toLocaleString()}</span></div>
-                  <div className="flex justify-between"><span className="text-muted-foreground">Discount ({DISCOUNT_PCT}%)</span><span className="font-medium text-accent">- BDT {discount.toLocaleString()}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Commission ({DISCOUNT_PCT}%)</span><span className="font-medium text-accent">- BDT {discount.toLocaleString()}</span></div>
                   <div className="flex justify-between"><span className="text-muted-foreground">AIT VAT ({AIT_VAT_PCT}%)</span><span className="font-medium">BDT {aitVat.toLocaleString()}</span></div>
+                  {markup > 0 && (
+                    <div className="flex justify-between"><span className="text-muted-foreground">Markup{MARKUP_PCT > 0 ? ` (${MARKUP_PCT}%)` : ""}</span><span className="font-medium text-destructive">+ BDT {markup.toLocaleString()}</span></div>
+                  )}
                   <Separator className="my-1" />
                   <div className="flex justify-between font-bold"><span>Total Payable</span><span>BDT {price.toLocaleString()}</span></div>
                 </div>
