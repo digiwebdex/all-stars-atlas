@@ -319,7 +319,14 @@ async function createBooking({ uniqueTransID, itemCodeRef, priceCodeRef, segment
 
     const r = data?.item1 || {};
     const pnr = r.pnr || r.bookingRefNumber || null;
-    if (!pnr) return { success: false, error: r.message || 'TripLover booking failed (no PNR)', pnr: null, rawResponse: data };
+    if (!pnr) {
+      // Surface the real supplier reason (item2.message) instead of a generic failure.
+      const reason = r.message || data?.item2?.message
+        || (typeof data?.raw === 'string' ? data.raw.split('\n')[0].trim() : null)
+        || 'TripLover booking failed (no PNR)';
+      console.error('[TripLover] Booking rejected:', reason);
+      return { success: false, error: reason, pnr: null, rawResponse: data };
+    }
 
     console.log('[TripLover] Booking created — PNR:', pnr);
     return {
