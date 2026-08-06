@@ -144,6 +144,15 @@ function getTransactionEntryType(txn) {
   return txn.type;
 }
 
+// A booking-linked debit only counts against the wallet once the user actually
+// paid it from wallet (payment_status = 'paid'). Reserved / on-hold bookings must
+// never reduce the balance — money is deducted only on an issue request.
+function isChargeableWalletDebit(txn) {
+  if (!txn.booking_id) return true;
+  const bookingPaid = String(txn.booking_payment_status || '').toLowerCase();
+  return bookingPaid === 'paid' || bookingPaid === 'partial';
+}
+
 function computeWalletTotalsFromTransactions(rows = []) {
   return rows.reduce((acc, txn) => {
     const status = String(txn.status || '').toLowerCase();
@@ -151,7 +160,7 @@ function computeWalletTotalsFromTransactions(rows = []) {
 
     const signedAmount = getSignedTransactionAmount(txn);
     if (signedAmount >= 0) acc.totalCredited += signedAmount;
-    else acc.totalDebited += Math.abs(signedAmount);
+    else if (isChargeableWalletDebit(txn)) acc.totalDebited += Math.abs(signedAmount);
 
     return acc;
   }, { totalCredited: 0, totalDebited: 0 });
@@ -162,10 +171,12 @@ async function getEffectiveWalletState(userId) {
   const walletBalance = walletInfo.balance;
 
   const [approvedTransactions] = await db.query(
-    `SELECT id, booking_id, type, amount, description, status, payment_method, reference, meta, created_at
-     FROM transactions
-     WHERE user_id = ? AND status IN ('completed', 'approved')
-     ORDER BY created_at DESC`,
+    `SELECT t.id, t.booking_id, t.type, t.amount, t.description, t.status, t.payment_method,
+            t.reference, t.meta, t.created_at, b.payment_status AS booking_payment_status
+     FROM transactions t
+     LEFT JOIN bookings b ON b.id = t.booking_id
+     WHERE t.user_id = ? AND t.status IN ('completed', 'approved')
+     ORDER BY t.created_at DESC`,
     [userId]
   );
 
