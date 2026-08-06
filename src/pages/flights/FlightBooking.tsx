@@ -408,7 +408,15 @@ const FlightBooking = () => {
     currency?: string;
   } | null>(null);
   const [pendingPayLater, setPendingPayLater] = useState(true);
+  // Values must match the backend payment_method enum (bkash|nagad|card|bank_transfer)
+  const PAY_METHODS = [
+    { value: "bkash", label: "bKash" },
+    { value: "nagad", label: "Nagad" },
+    { value: "card", label: "Visa/Master Card" },
+    { value: "bank_transfer", label: "Bank Transfer" },
+  ];
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("");
+
 
   // ── Coupon / Reward Points ──
   const [couponCode, setCouponCode] = useState("");
@@ -1031,7 +1039,13 @@ const FlightBooking = () => {
       const result = await api.post<any>("/flights/book", bookingData);
       setBookingResult(result);
       setBookingComplete(true);
-      toast({ title: payLater ? "Booking Confirmed — Pay Later" : "Booking & Payment Confirmed", description: `Booking Ref: ${result.bookingRef}` });
+      toast({
+        title: payLater ? "Booking Confirmed — Pay Later" : "Reservation Created — Payment Pending",
+        description: payLater
+          ? `Booking Ref: ${result.bookingRef}`
+          : `Booking Ref: ${result.bookingRef}. Complete the payment to issue the ticket.`,
+      });
+
     } catch (err: any) {
       toast({ title: "Booking Failed", description: err.message || "Something went wrong", variant: "destructive" });
     } finally { setBookingLoading(false); }
@@ -1196,9 +1210,11 @@ const FlightBooking = () => {
               <div className="w-16 h-16 rounded-full bg-accent/10 flex items-center justify-center mx-auto">
                 <CheckCircle2 className="w-8 h-8 text-accent" />
               </div>
-              <h2 className="text-xl sm:text-2xl font-black">Booking {bookingResult.payLater ? "On Hold" : "Confirmed"} ✓</h2>
+              <h2 className="text-xl sm:text-2xl font-black">Reservation {bookingResult.payLater ? "On Hold" : "Created"} ✓</h2>
               <p className="text-sm text-muted-foreground">
-                {bookingResult.payLater ? "Your booking has been placed on hold. Complete payment before the deadline." : "Your booking and payment have been confirmed."}
+                {bookingResult.payLater
+                  ? "Your booking has been placed on hold. Complete payment before the deadline."
+                  : "Your seat is reserved. The ticket is issued once your payment is confirmed."}
               </p>
               <div className="bg-muted/50 rounded-xl p-4 text-left space-y-2">
                 <div className="flex justify-between text-sm"><span className="text-muted-foreground">Booking ID</span><span className="font-bold font-mono">{bookingResult.bookingRef}</span></div>
@@ -1206,10 +1222,11 @@ const FlightBooking = () => {
                   <div className="flex justify-between text-sm"><span className="text-muted-foreground">Airlines PNR</span><span className="font-bold font-mono text-accent">{bookingResult.airlinePnr}</span></div>
                 )}
                 <div className="flex justify-between text-sm"><span className="text-muted-foreground">Status</span>
-                  <Badge className={bookingResult.payLater ? "bg-warning/10 text-warning border-warning/20" : "bg-accent/10 text-accent border-accent/20"}>
-                    {bookingResult.payLater ? "On Hold" : "Confirmed"}
+                  <Badge className="bg-warning/10 text-warning border-warning/20">
+                    {bookingResult.payLater ? "On Hold" : "Payment Pending"}
                   </Badge>
                 </div>
+
                 <div className="flex justify-between text-sm"><span className="text-muted-foreground">Total Amount</span><span className="font-bold text-accent">৳{grandTotal.toLocaleString()}</span></div>
                 {bookingResult.payLater && bookingResult.paymentDeadline && (
                   <div className="flex justify-between text-sm"><span className="text-muted-foreground">Payment Deadline</span>
@@ -1246,39 +1263,27 @@ const FlightBooking = () => {
               )}
               <Separator />
               <div className="flex flex-col sm:flex-row gap-3">
-                {bookingResult.payLater ? (
-                  <>
-                    <Button className="flex-1 font-bold bg-accent text-accent-foreground hover:bg-accent/90" onClick={handlePayNow}>
-                      <CreditCard className="w-4 h-4 mr-1.5" /> Pay Now ৳{grandTotal.toLocaleString()}
-                    </Button>
-                    <Button variant="outline" className="flex-1" onClick={() => navigate("/dashboard/bookings")}>
-                      <Timer className="w-4 h-4 mr-1.5" /> Pay Later — Dashboard
-                    </Button>
-                  </>
-                ) : (
-                  <>
-                    <Button className="flex-1 font-bold bg-accent text-accent-foreground hover:bg-accent/90" onClick={() => navigate("/dashboard/bookings")}>
-                      <Plane className="w-4 h-4 mr-1.5" /> View My Bookings
-                    </Button>
-                    <Button variant="outline" className="flex-1" onClick={() => navigate("/")}>Book Another Flight</Button>
-                  </>
-                )}
+                <Button className="flex-1 font-bold bg-accent text-accent-foreground hover:bg-accent/90" onClick={handlePayNow}>
+                  <CreditCard className="w-4 h-4 mr-1.5" /> Pay Now ৳{grandTotal.toLocaleString()}
+                </Button>
+                <Button variant="outline" className="flex-1" onClick={() => navigate("/dashboard/bookings")}>
+                  <Timer className="w-4 h-4 mr-1.5" /> Pay Later — Dashboard
+                </Button>
               </div>
-              {bookingResult.payLater && (
-                <div className="mt-4 space-y-3 text-left">
-                  <p className="text-sm font-semibold">Select Payment Method</p>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {["bKash", "Nagad", "Visa/Master Card", "Bank Transfer"].map(m => (
-                      <label key={m} className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${
-                        selectedPaymentMethod === m ? "border-accent bg-accent/5" : "border-border hover:border-accent/40"
-                      }`}>
-                        <input type="radio" name="payMethod" className="accent-[hsl(var(--accent))]" checked={selectedPaymentMethod === m} onChange={() => setSelectedPaymentMethod(m)} />
-                        <span className="text-sm font-medium">{m}</span>
-                      </label>
-                    ))}
-                  </div>
+              <div className="mt-4 space-y-3 text-left">
+                <p className="text-sm font-semibold">Select Payment Method</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {PAY_METHODS.map(m => (
+                    <label key={m.value} className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${
+                      selectedPaymentMethod === m.value ? "border-accent bg-accent/5" : "border-border hover:border-accent/40"
+                    }`}>
+                      <input type="radio" name="payMethod" className="accent-[hsl(var(--accent))]" checked={selectedPaymentMethod === m.value} onChange={() => setSelectedPaymentMethod(m.value)} />
+                      <span className="text-sm font-medium">{m.label}</span>
+                    </label>
+                  ))}
                 </div>
-              )}
+              </div>
+
             </CardContent>
           </Card>
         </div>
@@ -1979,15 +1984,16 @@ const FlightBooking = () => {
                         </div>
                       )}
                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        {["bKash", "Nagad", "Visa/Master Card", "Bank Transfer"].map((m) => (
-                          <label key={m} className={`flex items-center gap-3 p-3 sm:p-4 rounded-xl border cursor-pointer transition-colors ${
-                            selectedPaymentMethod === m ? "border-accent bg-accent/5" : "border-border hover:border-accent/40"
+                        {PAY_METHODS.map((m) => (
+                          <label key={m.value} className={`flex items-center gap-3 p-3 sm:p-4 rounded-xl border cursor-pointer transition-colors ${
+                            selectedPaymentMethod === m.value ? "border-accent bg-accent/5" : "border-border hover:border-accent/40"
                           }`}>
-                            <input type="radio" name="payMethod" className="accent-[hsl(var(--accent))]" checked={selectedPaymentMethod === m} onChange={() => setSelectedPaymentMethod(m)} />
-                            <span className="text-xs sm:text-sm font-medium">{m}</span>
+                            <input type="radio" name="payMethod" className="accent-[hsl(var(--accent))]" checked={selectedPaymentMethod === m.value} onChange={() => setSelectedPaymentMethod(m.value)} />
+                            <span className="text-xs sm:text-sm font-medium">{m.label}</span>
                           </label>
                         ))}
                       </div>
+
                     </CardContent>
                   </Card>
                 ) : (

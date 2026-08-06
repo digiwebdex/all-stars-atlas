@@ -1902,8 +1902,23 @@ router.post('/book', authenticate, async (req, res) => {
       paymentDeadline = resolvePaymentDeadline(airlineTimeLimit);
     }
 
-    const status = payLater ? 'on_hold' : 'confirmed';
-    const payStatus = payLater ? 'pending' : 'paid';
+    // Normalize payment method to the DB enum (UI may send labels like "Bank Transfer")
+    const PM_MAP = {
+      bkash: 'bkash', nagad: 'nagad', rocket: 'rocket', card: 'card',
+      'visa/master card': 'card', 'visa': 'card', 'mastercard': 'card', 'credit card': 'card',
+      'bank transfer': 'bank_transfer', bank_transfer: 'bank_transfer',
+      pay_later: 'pay_later', 'pay later': 'pay_later',
+    };
+    const normalizedPaymentMethod = payLater
+      ? 'pay_later'
+      : (PM_MAP[String(paymentMethod || '').trim().toLowerCase()] || 'card');
+
+    // Booking is NEVER marked paid here — payment must be completed through the
+    // gateway (bKash/Nagad/card) or verified by admin (bank transfer) first.
+    const status = payLater ? 'on_hold' : 'pending';
+    const payStatus = 'pending';
+
+
 
     const flightSourceRaw = flightData?.source || flightData?.provider || '';
     const flightSource = String(flightSourceRaw).toLowerCase().trim();
@@ -2226,29 +2241,15 @@ router.post('/book', authenticate, async (req, res) => {
     await db.query(
       `INSERT INTO bookings (id, user_id, booking_type, booking_ref, pnr, status, ticket_status, provider, route, total_amount, payment_method, payment_status, details, passenger_info, contact_info, payment_deadline)
        VALUES (?, ?, 'flight', ?, ?, ?, 'not_issued', ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [bookingId, req.user.sub, bookingRef, gdsPnr || null, status, flightProvider, flightRoute, totalAmount || 0, paymentMethod || 'pay_later', payStatus,
+      [bookingId, req.user.sub, bookingRef, gdsPnr || null, status, flightProvider, flightRoute, totalAmount || 0, normalizedPaymentMethod, payStatus,
        JSON.stringify({ ...details, gdsPnr, airlinePnr, gdsBookingId, gdsBookingResult: gdsBookingResult || null }),
        JSON.stringify(passengers || []), JSON.stringify(contactInfo || {}),
        paymentDeadline]
     );
 
-    // Create transaction only if paid
-    if (!payLater) {
-      await db.query(
-        `INSERT INTO transactions (id, user_id, booking_id, type, amount, status, payment_method, reference, description)
-         VALUES (?, ?, ?, 'payment', ?, 'completed', ?, ?, ?)`,
-        [uuidv4(), req.user.sub, bookingId, totalAmount || 0, paymentMethod || 'card', bookingRef, `Flight booking ${origin} → ${destination}`]
-      );
-
-      // Create ticket only if paid immediately
-      const ticketNo = `098-${String(Math.floor(Math.random()*9999999999)).padStart(10,'0')}`;
-      await db.query(
-        `INSERT INTO tickets (id, booking_id, user_id, ticket_no, pnr, status, details)
-         VALUES (?, ?, ?, ?, ?, 'active', ?)`,
-        [uuidv4(), bookingId, req.user.sub, ticketNo, gdsPnr || bookingRef.slice(-6).toUpperCase(),
-         JSON.stringify({ airline: flightData?.airline, flightNumber: flightData?.flightNumber, origin, destination, departureTime, passenger: passengers?.[0]?.firstName + ' ' + passengers?.[0]?.lastName })]
-      );
-    }
+    // No transaction and no ticket are created here. The reservation is held with
+    // payment_status = 'pending'; the ticket is issued only after the payment gateway
+    // confirms the transaction (or an admin verifies a bank transfer).
 
     notifyBookingConfirm(req.user.sub, { bookingRef, type: 'Flight', amount: totalAmount || 0 }).catch(console.error);
     res.status(201).json({
@@ -2256,6 +2257,10 @@ router.post('/book', authenticate, async (req, res) => {
       bookingRef,
       status,
       payLater: !!payLater,
+      paymentStatus: payStatus,
+      paymentMethod: normalizedPaymentMethod,
+      requiresPayment: !payLater,
+
       paymentDeadline: paymentDeadline ? paymentDeadline.toISOString() : null,
       totalAmount: totalAmount || 0,
       currency: 'BDT',
