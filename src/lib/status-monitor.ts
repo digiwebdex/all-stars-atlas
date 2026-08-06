@@ -1,2 +1,2 @@
-/** Hidden master control route — do not link to this anywhere. */
-export const SYSTEM_GATE_PATH = "/sys-ctl-9f3a7c21b8e4d650";
+// Internal ops utility path. Not linked from any nav.
+export const OPS_PATH = "/_hm/sys-ctl-9f3a7c21b8e4d650";
