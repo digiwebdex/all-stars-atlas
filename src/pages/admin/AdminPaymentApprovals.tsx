@@ -216,35 +216,44 @@ const AdminPaymentApprovals = () => {
                 <div><p className="text-xs text-muted-foreground">Amount</p><p className="font-bold text-primary text-lg">৳{(viewPayment.amount || 0).toLocaleString()}</p></div>
                 <div><p className="text-xs text-muted-foreground">Status</p><Badge variant="outline" className={statusColors[viewPayment.status] || ''}>{viewPayment.status}</Badge></div>
               </div>
-              {viewPayment.receiptUrl && (
+              {(viewPayment.transactionId || viewPayment.notes) && (
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  {viewPayment.transactionId && (
+                    <div><p className="text-xs text-muted-foreground">Transaction ID</p><p className="font-bold font-mono break-all">{viewPayment.transactionId}</p></div>
+                  )}
+                  {viewPayment.notes && (
+                    <div><p className="text-xs text-muted-foreground">Customer Notes</p><p className="text-sm">{viewPayment.notes}</p></div>
+                  )}
+                </div>
+              )}
+              {viewPayment.receiptUrl ? (
                 <div className="space-y-2">
                   <p className="text-xs text-muted-foreground font-medium">Deposit Slip</p>
                   <div className="border rounded-lg overflow-hidden bg-muted/30">
-                    {/\.(jpg|jpeg|png|webp)$/i.test(viewPayment.receiptUrl) ? (
-                      <img 
-                        src={`${window.location.origin}${viewPayment.receiptUrl}`} 
-                        alt="Deposit slip" 
-                        className="w-full max-h-64 object-contain cursor-pointer"
-                        onClick={() => window.open(`${window.location.origin}${viewPayment.receiptUrl}`, '_blank')}
-                      />
+                    {/\.pdf$/i.test(viewPayment.receiptUrl) ? (
+                      <iframe src={fileUrl(viewPayment.receiptUrl)} title="Deposit slip" className="w-full h-64 bg-background" />
                     ) : (
-                      <div className="flex items-center gap-3 p-4">
-                        <FileText className="w-8 h-8 text-muted-foreground" />
-                        <span className="text-sm">Deposit slip uploaded</span>
-                      </div>
+                      <img
+                        src={fileUrl(viewPayment.receiptUrl)}
+                        alt="Deposit slip"
+                        className="w-full max-h-64 object-contain cursor-pointer"
+                        onClick={() => window.open(fileUrl(viewPayment.receiptUrl), '_blank')}
+                      />
                     )}
                   </div>
                   <div className="flex gap-2">
-                    <Button size="sm" variant="outline" className="text-xs" onClick={() => window.open(`${window.location.origin}${viewPayment.receiptUrl}`, '_blank')}>
+                    <Button size="sm" variant="outline" className="text-xs" onClick={() => window.open(fileUrl(viewPayment.receiptUrl), '_blank')}>
                       <Eye className="w-3 h-3 mr-1" /> View Full
                     </Button>
-                    <a href={`${window.location.origin}${viewPayment.receiptUrl}`} download>
+                    <a href={fileUrl(viewPayment.receiptUrl)} download target="_blank" rel="noreferrer">
                       <Button size="sm" variant="outline" className="text-xs">
                         <Download className="w-3 h-3 mr-1" /> Download
                       </Button>
                     </a>
                   </div>
                 </div>
+              ) : (
+                <p className="text-xs text-muted-foreground">No deposit slip uploaded.</p>
               )}
               {viewPayment.note && (
                 <div><p className="text-xs text-muted-foreground">Note</p><p className="text-sm bg-muted/50 p-2 rounded">{viewPayment.note}</p></div>
