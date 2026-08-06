@@ -1270,24 +1270,20 @@ const FlightBooking = () => {
                   <Timer className="w-4 h-4 mr-1.5" /> Pay Later — Dashboard
                 </Button>
               </div>
-              {
-
-
-                <div className="mt-4 space-y-3 text-left">
-                  <p className="text-sm font-semibold">Select Payment Method</p>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {PAY_METHODS.map(m => (
-                      <label key={m.value} className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${
-                        selectedPaymentMethod === m.value ? "border-accent bg-accent/5" : "border-border hover:border-accent/40"
-                      }`}>
-                        <input type="radio" name="payMethod" className="accent-[hsl(var(--accent))]" checked={selectedPaymentMethod === m.value} onChange={() => setSelectedPaymentMethod(m.value)} />
-                        <span className="text-sm font-medium">{m.label}</span>
-                      </label>
-                    ))}
-
-                  </div>
+              <div className="mt-4 space-y-3 text-left">
+                <p className="text-sm font-semibold">Select Payment Method</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {PAY_METHODS.map(m => (
+                    <label key={m.value} className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${
+                      selectedPaymentMethod === m.value ? "border-accent bg-accent/5" : "border-border hover:border-accent/40"
+                    }`}>
+                      <input type="radio" name="payMethod" className="accent-[hsl(var(--accent))]" checked={selectedPaymentMethod === m.value} onChange={() => setSelectedPaymentMethod(m.value)} />
+                      <span className="text-sm font-medium">{m.label}</span>
+                    </label>
+                  ))}
                 </div>
-              )}
+              </div>
+
             </CardContent>
           </Card>
         </div>
