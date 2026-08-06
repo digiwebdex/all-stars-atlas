@@ -31,6 +31,7 @@ echo "── 2. TripLover direct integration probe ──────"
 # Uses the exact configured credentials, login endpoint and search payload from
 # the application without printing any credential or bearer token.
 ROUTE_FROM="$ROUTE_FROM" ROUTE_TO="$ROUTE_TO" DATE="$DATE" node - <<'NODE'
+require('dotenv').config({ path: process.cwd() + '/.env' });
 const { searchFlights } = require('./src/routes/triplover-flights');
 const started = Date.now();
 searchFlights({
