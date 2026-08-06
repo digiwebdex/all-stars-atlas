@@ -167,12 +167,13 @@ const AirlineMarkupConfig = ({ airlineMarkups, globalDiscount, globalAitVat, onC
                         <Input
                           type="number"
                           step="0.01"
+                          min="0"
                           value={selectedEntry.discount}
-                          onChange={(e) => updateAirline(selectedAirline, { discount: parseFloat(e.target.value) || 0 })}
+                          onChange={(e) => updateAirline(selectedAirline, { discount: Math.abs(parseFloat(e.target.value) || 0) })}
                           className="h-9"
                         />
                         <p className="text-[10px] text-muted-foreground">
-                          Overrides global {globalDiscount}%
+                          Overrides global {globalDiscount}% — always entered as a positive number, it is deducted from the base fare.
                         </p>
                       </div>
                       <div className="space-y-1.5">
@@ -180,8 +181,9 @@ const AirlineMarkupConfig = ({ airlineMarkups, globalDiscount, globalAitVat, onC
                         <Input
                           type="number"
                           step="0.01"
+                          min="0"
                           value={selectedEntry.markup}
-                          onChange={(e) => updateAirline(selectedAirline, { markup: parseFloat(e.target.value) || 0 })}
+                          onChange={(e) => updateAirline(selectedAirline, { markup: Math.max(0, parseFloat(e.target.value) || 0) })}
                           className="h-9"
                         />
                       </div>
