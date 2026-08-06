@@ -321,9 +321,72 @@ router.get('/stats', async (req, res) => {
       };
     });
 
-    res.json({ stats, user, upcomingTrip, spendingData, bookingBreakdown, bookings });
+    // ---- Agent-style KPI panel (all live data) ----
+    const [ticketed] = await db.query(
+      "SELECT COUNT(*) as total FROM bookings WHERE user_id = ? AND (ticket_number IS NOT NULL AND ticket_number <> '') AND (archived IS NULL OR archived = 0)",
+      [userId]
+    ).catch(() => [[{ total: 0 }]]);
+
+    // Airline mix across all bookings (parsed from details JSON)
+    const [allForAirlines] = await db.query(
+      'SELECT details, total_amount, ticket_number FROM bookings WHERE user_id = ? AND (archived IS NULL OR archived = 0)', [userId]
+    );
+    const airlineCounts = {};
+    for (const row of allForAirlines) {
+      const d = safeJsonParse(row.details, {});
+      const name = d.airline || d.airlineName || d.carrier || null;
+      if (!name) continue;
+      airlineCounts[name] = (airlineCounts[name] || 0) + 1;
+    }
+    const topAirlines = Object.entries(airlineCounts)
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 6);
+
+    // Scheduled payment info (uses payment_deadline on unpaid / partial bookings)
+    const [sched] = await db.query(
+      `SELECT
+         SUM(CASE WHEN DATE(payment_deadline) = CURDATE() THEN 1 ELSE 0 END) AS dueTodayCount,
+         SUM(CASE WHEN DATE(payment_deadline) = CURDATE() THEN total_amount ELSE 0 END) AS dueTodayAmount,
+         SUM(CASE WHEN payment_deadline > NOW() AND DATE(payment_deadline) <> CURDATE() THEN 1 ELSE 0 END) AS upcomingCount,
+         SUM(CASE WHEN payment_deadline > NOW() AND DATE(payment_deadline) <> CURDATE() THEN total_amount ELSE 0 END) AS upcomingAmount,
+         SUM(CASE WHEN payment_deadline < NOW() AND DATE(payment_deadline) <> CURDATE() THEN 1 ELSE 0 END) AS expiredCount,
+         SUM(CASE WHEN payment_deadline < NOW() AND DATE(payment_deadline) <> CURDATE() THEN total_amount ELSE 0 END) AS expiredAmount
+       FROM bookings
+       WHERE user_id = ? AND payment_deadline IS NOT NULL
+         AND payment_status IN ('unpaid','partial','pending')
+         AND status NOT IN ('cancelled','refunded','failed')
+         AND (archived IS NULL OR archived = 0)`,
+      [userId]
+    );
+    const s = sched[0] || {};
+
+    const walletState = await readWalletState(userId).catch(() => null);
+    const availableLimit = walletState ? Number(walletState.effectiveBalance || 0) : 0;
+
+    const num = v => Number(v || 0);
+    const scheduledPayment = {
+      dueTodayCount: num(s.dueTodayCount),
+      upcomingCount: num(s.upcomingCount),
+      expiredCount: num(s.expiredCount),
+      dueTodayAmount: num(s.dueTodayAmount),
+      upcomingAmount: num(s.upcomingAmount),
+      expiredAmount: num(s.expiredAmount),
+      agentLimit: availableLimit,
+      availableLimit,
+    };
+
+    const kpi = {
+      totalBooking: bookingCount[0].total,
+      totalTicket: ticketed?.[0]?.total || 0,
+      salesBDT: parseFloat(totalSpent[0].total) || 0,
+      topAirline: topAirlines[0]?.name || '—',
+    };
+
+    res.json({ stats, user, upcomingTrip, spendingData, bookingBreakdown, bookings, kpi, scheduledPayment, topAirlines });
   } catch (err) { console.error(err); res.status(500).json({ message: 'Something went wrong', status: 500 }); }
 });
+
 
 // GET /dashboard/bookings
 router.get('/bookings', async (req, res) => {
