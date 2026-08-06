@@ -727,10 +727,11 @@ router.get('/search', authenticateOptional, async (req, res) => {
     // Per-provider deadline — one slow supplier must never hold up the whole search.
     // Anything still pending after this budget is dropped (results already returned are kept).
     const PROVIDER_BUDGET_MS = parseInt(process.env.PROVIDER_SEARCH_BUDGET_MS) || 12000;
-    // TripLover is the primary international content source, so it gets a longer
-    // leash than the local/domestic suppliers.
+    // TripLover is the primary international content source. Its UAT search
+    // regularly takes 50–60 seconds, so cutting it off at 35 seconds produces
+    // a false "no flights" result even though the supplier returns inventory.
     const PROVIDER_BUDGET_OVERRIDES = {
-      triplover: parseInt(process.env.TRIPLOVER_SEARCH_BUDGET_MS) || 35000,
+      triplover: parseInt(process.env.TRIPLOVER_SEARCH_BUDGET_MS) || 90000,
     };
     const budgetFor = (id) => PROVIDER_BUDGET_OVERRIDES[id] || PROVIDER_BUDGET_MS;
     const withBudget = (id, promise) => {
@@ -779,8 +780,13 @@ router.get('/search', authenticateOptional, async (req, res) => {
         } else {
           // Nothing usable: cache the empty answer briefly and put slow/broken
           // suppliers in cooldown so they stop eating the search budget.
-          setCachedProviderResult(key, list, EMPTY_RESULT_TTL_MS);
-          if (failed || took >= budgetFor(id) - 250) markProviderCooldown(id);
+          // Do not cache/cool down an empty TripLover response. It is our only
+          // international source while Sabre is paused; caching a timeout as
+          // "no inventory" hides all international flights on repeat searches.
+          if (id !== 'triplover') {
+            setCachedProviderResult(key, list, EMPTY_RESULT_TTL_MS);
+            if (failed || took >= budgetFor(id) - 250) markProviderCooldown(id);
+          }
         }
         return list;
       });
@@ -1466,6 +1472,7 @@ router.get('/search', authenticateOptional, async (req, res) => {
         galileo: galileoFlights.status === 'fulfilled' ? (galileoFlights.value || []).length : 0,
         ndc: ndcFlights.status === 'fulfilled' ? (ndcFlights.value || []).length : 0,
         lcc: lccFlights.status === 'fulfilled' ? (lccFlights.value || []).length : 0,
+        triplover: tlFlights.status === 'fulfilled' ? (tlFlights.value || []).length : 0,
       },
     };
 
