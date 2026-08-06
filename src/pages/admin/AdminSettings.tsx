@@ -6,7 +6,7 @@ import { Switch } from "@/components/ui/switch";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { Settings, Globe, Mail, CreditCard, Shield, Bell, Database, Plug, Eye, EyeOff, Plus, Trash2, Building2, CloudUpload, ExternalLink, Info, Users, Loader2, Search, Plane, Palmtree, FileText, Stethoscope, Car, Smartphone, PhoneCall, Receipt, Image, Upload, RotateCcw } from "lucide-react";
+import { Settings, Globe, Mail, CreditCard, Shield, Bell, Database, Plug, Eye, EyeOff, Plus, Trash2, Building2, CloudUpload, ExternalLink, Info, Users, Loader2, Search, Plane, Palmtree, FileText, Stethoscope, Car, Smartphone, PhoneCall, Receipt, Image, Upload, RotateCcw, Power } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
