@@ -1877,46 +1877,17 @@ router.post('/book', authenticate, async (req, res) => {
       }
     } catch (guardErr) { console.warn('[Booking] route restriction check skipped:', guardErr.message); }
 
-    // ── GUARD: Partial payment eligibility ──
-    if (payLater) {
-      const settings = await loadPartialSettings();
-      const refundable = !!(fareRules?.refundable ?? flightData?.refundable ?? true);
-      const elig = evaluatePartialEligibility({
-        origin, destination, departureTime, refundable,
-        partialOverride: false,
-      }, settings);
-      if (!elig.eligible) {
-        return res.status(422).json({
-          message: `Partial payment not allowed: ${elig.reason.replace(/_/g, ' ')}. Please complete full payment.`,
-          status: 422,
-          code: 'PARTIAL_NOT_ALLOWED',
-          reason: elig.reason,
-        });
-      }
-    }
+    // Bookings are always created as reservations only — no payment is collected here.
+    // The customer deposits funds later and submits an issue request, which admins process.
 
     // Resolve payment deadline: API-only, from airline GDS timeLimit
     const airlineTimeLimit = flightData?.timeLimit || null;
-    let paymentDeadline = null;
-    if (payLater) {
-      paymentDeadline = resolvePaymentDeadline(airlineTimeLimit);
-    }
+    const paymentDeadline = resolvePaymentDeadline(airlineTimeLimit);
 
-    // Normalize payment method to the DB enum (UI may send labels like "Bank Transfer")
-    const PM_MAP = {
-      bkash: 'bkash', nagad: 'nagad', rocket: 'rocket', card: 'card',
-      'visa/master card': 'card', 'visa': 'card', 'mastercard': 'card', 'credit card': 'card',
-      'bank transfer': 'bank_transfer', bank_transfer: 'bank_transfer',
-      pay_later: 'pay_later', 'pay later': 'pay_later',
-    };
-    const normalizedPaymentMethod = payLater
-      ? 'pay_later'
-      : (PM_MAP[String(paymentMethod || '').trim().toLowerCase()] || 'card');
-
-    // Booking is NEVER marked paid here — payment must be completed through the
-    // gateway (bKash/Nagad/card) or verified by admin (bank transfer) first.
-    const status = payLater ? 'on_hold' : 'pending';
+    const normalizedPaymentMethod = 'pay_later';
+    const status = 'on_hold';
     const payStatus = 'pending';
+
 
 
 
