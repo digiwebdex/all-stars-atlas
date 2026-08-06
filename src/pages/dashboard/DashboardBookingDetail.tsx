@@ -21,7 +21,6 @@ import { api } from "@/lib/api";
 import DataLoader from "@/components/DataLoader";
 import { useToast } from "@/hooks/use-toast";
 import TravelDocVerificationModal from "@/components/TravelDocVerificationModal";
-import BookingActions from "@/components/flights/BookingActions";
 import FlightStatusBadge from "@/components/flights/FlightStatusBadge";
 import FareRulesModal from "@/components/flights/FareRulesModal";
 import { formatApiDate, formatApiTime } from "@/lib/flight-time";
