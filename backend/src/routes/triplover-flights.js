@@ -389,8 +389,10 @@ async function createBooking({ uniqueTransID, itemCodeRef, priceCodeRef, segment
       const reason = r.message || data?.item2?.message
         || (typeof data?.raw === 'string' ? data.raw.split('\n')[0].trim() : null)
         || 'TripLover booking failed (no PNR)';
-      console.error('[TripLover] Booking rejected:', reason);
-      return { success: false, error: reason, pnr: null, rawResponse: data };
+      const { error, hint } = describeFailure({ message: reason, body: data, operation: 'Book' });
+      logApiCall({ provider: 'triplover', operation: 'Book (rejected)', ok: false, response: data, error, hint });
+      return { success: false, error, hint, pnr: null, rawResponse: data };
+
     }
 
     console.log('[TripLover] Booking created — PNR:', pnr);
