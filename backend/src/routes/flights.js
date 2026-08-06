@@ -1358,8 +1358,14 @@ router.get('/search', authenticateOptional, async (req, res) => {
           if (cfg) {
             if (cfg.fareSummaryDiscount !== undefined) globalDiscount = parseFloat(cfg.fareSummaryDiscount) || 0;
             if (cfg.fareSummaryAitVat !== undefined) globalAitVat = parseFloat(cfg.fareSummaryAitVat) || 0;
-            if (cfg.markupType === 'fixed') scopeFixedMarkup = parseFloat(cfg.markupValue) || 0;
-            else scopeMarkupPct = parseFloat(cfg.markupValue ?? cfg.markup) || 0;
+            // AdminMarkup stores the current schema as baseFareMarkup/baseFareFixed.
+            // Keep legacy markupValue support for previously saved configurations.
+            scopeMarkupPct = parseFloat(cfg.baseFareMarkup ?? cfg.markupValue ?? cfg.markup) || 0;
+            scopeFixedMarkup = parseFloat(cfg.baseFareFixed) || 0;
+            if (cfg.markupType === 'fixed' && cfg.baseFareFixed === undefined) {
+              scopeFixedMarkup = parseFloat(cfg.markupValue) || 0;
+              scopeMarkupPct = 0;
+            }
           }
         } else if (row.setting_key === 'airline_markup_config') {
           // Scoped per Domestic / International / SOTO; fall back to legacy flat config
