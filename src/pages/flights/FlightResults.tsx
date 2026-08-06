@@ -2397,18 +2397,22 @@ const FlightCard = ({
   const availableSeats = getDisplayAvailableSeats(flight);
   const duration = flight.duration || "";
   const stops = flight.stops ?? 0;
-  const grossPrice = flight.price ?? 0;
-  const taxes = flight.taxes ?? 0;
+  // Single source of truth for fare figures (identical to flightPayable)
+  const _apiFare = getApiFareTotals(flight);
+  const grossPrice = _apiFare.grossPrice || (flight.price ?? 0);
+  const taxes = Math.min(_apiFare.taxes || (flight.taxes ?? 0), grossPrice);
   // CRITICAL: baseFare from API may be in foreign currency (e.g. USD from Sabre).
   // Always derive baseFare in BDT as (price - taxes) to ensure the breakdown sums correctly.
   const baseFare = Math.max(0, Math.round(grossPrice - taxes));
   // Calculate payable price (with discount and AIT VAT applied)
   const DISCOUNT_PCT = flight.fareRules?.discount ?? 6.30;
   const AIT_VAT_PCT = flight.fareRules?.aitVat ?? 0.3;
+  const MARKUP_PCT = flight.fareRules?.markup ?? 0;
+  const FIXED_MARKUP = flight.fareRules?.fixedMarkup ?? 0;
   const discount = Math.round(baseFare * DISCOUNT_PCT / 100);
   const aitVat = Math.round(baseFare * AIT_VAT_PCT / 100);
-  const markup = Math.round(baseFare * (flight.fareRules?.markup ?? 0) / 100);
-  const price = baseFare - discount + taxes + aitVat + markup + (flight.fareRules?.fixedMarkup ?? 0);
+  const markup = Math.round(baseFare * MARKUP_PCT / 100) + FIXED_MARKUP;
+  const price = baseFare - discount + taxes + aitVat + markup;
   const refundable = flight.refundable ?? false;
   const fareType = flight.fareType || (refundable ? "Refundable" : "Non-Refundable");
   const nextDay = isNextDay(flight.departureTime, flight.arrivalTime);
