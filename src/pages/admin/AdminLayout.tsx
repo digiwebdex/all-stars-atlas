@@ -7,7 +7,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
+import { api } from "@/lib/api";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/hooks/useAuth";
@@ -82,14 +83,24 @@ const SidebarNav = ({
   location,
   onNav,
   collapsed = false,
+  role,
 }: {
   location: ReturnType<typeof useLocation>;
   onNav?: () => void;
   collapsed?: boolean;
+  role?: string;
 }) => {
+  const isSecondary = role === 'secondary_admin';
+  const visibleItems = isSecondary
+    ? sidebarItems
+        .filter((i) => !RESTRICTED_LABELS.includes(i.label))
+        .map((i) => (i.children
+          ? { ...i, children: i.children.filter((c) => !RESTRICTED_HREFS.includes(c.href)) }
+          : i))
+    : sidebarItems;
   const [openMenus, setOpenMenus] = useState<Record<string, boolean>>(() => {
     const initial: Record<string, boolean> = {};
-    sidebarItems.forEach((item) => {
+    visibleItems.forEach((item) => {
       if (item.children?.some((c) => location.pathname.startsWith(c.href))) {
         initial[item.label] = true;
       }
@@ -108,7 +119,7 @@ const SidebarNav = ({
 
   return (
     <nav className="flex flex-col gap-0.5 px-2 py-2">
-      {sidebarItems.map((item) => {
+      {visibleItems.map((item) => {
         const hasChildren = !!item.children;
         const isOpen = openMenus[item.label];
         const active = !hasChildren && isActive(item.href);
@@ -239,6 +250,58 @@ const SidebarNav = ({
   );
 };
 
+/** #RRGGBB → "H S% L%" for Tailwind HSL tokens */
+const hexToHslTuple = (hex: string): string | null => {
+  const m = /^#?([a-f\d]{6})$/i.exec(String(hex || '').trim());
+  if (!m) return null;
+  const int = parseInt(m[1], 16);
+  const r = ((int >> 16) & 255) / 255, g = ((int >> 8) & 255) / 255, b = (int & 255) / 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  const l = (max + min) / 2;
+  let h = 0, sat = 0;
+  if (max !== min) {
+    const d = max - min;
+    sat = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    if (max === r) h = ((g - b) / d + (g < b ? 6 : 0));
+    else if (max === g) h = (b - r) / d + 2;
+    else h = (r - g) / d + 4;
+    h *= 60;
+  }
+  return `${h.toFixed(1)} ${(sat * 100).toFixed(1)}% ${(l * 100).toFixed(1)}%`;
+};
+
+const useAdminTheme = () => {
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const data: any = await api.get('/admin/settings');
+        const s = data?.settings || {};
+        if (cancelled) return;
+        const root = document.documentElement;
+        const map: [string, string][] = [
+          ['--primary', s.admin_theme_primary],
+          ['--ring', s.admin_theme_primary],
+          ['--accent', s.admin_theme_accent],
+          ['--sidebar-background', s.admin_theme_sidebar_bg],
+        ];
+        map.forEach(([varName, hex]) => {
+          const hsl = hex ? hexToHslTuple(hex) : null;
+          if (hsl) root.style.setProperty(varName, hsl);
+        });
+      } catch { /* keep default theme */ }
+    })();
+    return () => {
+      cancelled = true;
+      const root = document.documentElement;
+      ['--primary', '--ring', '--accent', '--sidebar-background'].forEach(v => root.style.removeProperty(v));
+    };
+  }, []);
+};
+
+const RESTRICTED_LABELS = ['CMS'];
+const RESTRICTED_HREFS = ['/admin/settings', '/admin/enterprise'];
+
 const AdminLayout = () => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -246,6 +309,7 @@ const AdminLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const logoUrl = useSiteLogo();
+  useAdminTheme();
 
   const sidebarWidth = sidebarCollapsed ? "w-[56px]" : "w-60";
   const mainMargin = sidebarCollapsed ? "md:ml-[56px]" : "md:ml-60";
@@ -315,7 +379,7 @@ const AdminLayout = () => {
                 {sidebarCollapsed ? <ChevronRight className="w-4 h-4" /> : <ArrowLeft className="w-4 h-4" />}
               </button>
             </div>
-            <SidebarNav location={location} collapsed={sidebarCollapsed} />
+            <SidebarNav role={user?.role} location={location} collapsed={sidebarCollapsed} />
           </aside>
 
           {/* Mobile sidebar */}
@@ -337,7 +401,7 @@ const AdminLayout = () => {
                   transition={{ type: "spring", stiffness: 350, damping: 30 }}
                   className="fixed top-14 left-0 bottom-0 z-50 w-60 admin-sidebar-clean py-2 overflow-y-auto md:hidden"
                 >
-                  <SidebarNav location={location} onNav={() => setSidebarOpen(false)} />
+                  <SidebarNav role={user?.role} location={location} onNav={() => setSidebarOpen(false)} />
                 </motion.aside>
               </>
             )}
