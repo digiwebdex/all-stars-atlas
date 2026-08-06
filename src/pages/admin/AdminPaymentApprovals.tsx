@@ -176,7 +176,7 @@ const AdminPaymentApprovals = () => {
                     <TableCell>
                       <div className="flex gap-1">
                         {p.receiptUrl && (
-                          <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-primary" title="View deposit slip" onClick={() => window.open(`${window.location.origin}${p.receiptUrl}`, '_blank')}>
+                          <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-primary" title="View deposit slip" onClick={() => window.open(fileUrl(p.receiptUrl), '_blank')}>
                             <ImageIcon className="w-3.5 h-3.5" />
                           </Button>
                         )}
