@@ -12,6 +12,7 @@ export interface User {
   role: 'customer' | 'admin' | 'super_admin';
   emailVerified: boolean;
   phoneVerified: boolean;
+  canApproveDeposits?: boolean;
   createdAt: string;
 }
 

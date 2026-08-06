@@ -111,7 +111,7 @@ const DashboardWallet = () => {
     setFundLoading(true);
     try {
       if (fundMethod === "bank") {
-        if (!depositTxnId.trim() || depositTxnId.trim().length < 4) {
+        if (!depositTxnId.trim()) {
           toast({ title: "Transaction ID required", description: "Please enter the bank/mobile transaction ID of your deposit.", variant: "destructive" });
           setFundLoading(false);
           return;
@@ -439,7 +439,7 @@ const DashboardWallet = () => {
 
           <DialogFooter>
             <Button variant="outline" onClick={resetAddFunds}>Cancel</Button>
-            <Button onClick={handleAddFunds} disabled={fundLoading || !fundAmount || (fundMethod === "bank" && depositTxnId.trim().length < 4)} className="gap-1.5">
+            <Button onClick={handleAddFunds} disabled={fundLoading || !fundAmount || (fundMethod === "bank" && !depositTxnId.trim())} className="gap-1.5">
               {fundLoading ? "Processing..." : fundMethod === "bank" ? `Submit Deposit ৳${Number(fundAmount || 0).toLocaleString()}` : `Pay ৳${Number(fundAmount || 0).toLocaleString()}`}
             </Button>
           </DialogFooter>

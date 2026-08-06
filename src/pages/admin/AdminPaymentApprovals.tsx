@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Search, CheckCircle2, XCircle, Eye, Clock, Building2, Smartphone, CreditCard, FileText, Loader2, Download, ImageIcon, ShieldAlert } from "lucide-react";
-import { config, fileUrl } from "@/lib/config";
+import { fileUrl } from "@/lib/config";
 import { useToast } from "@/hooks/use-toast";
 import { api } from "@/lib/api";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -37,24 +37,7 @@ const AdminPaymentApprovals = () => {
   const { toast } = useToast();
   const qc = useQueryClient();
   const { user } = useAuth();
-  const canApprove = user?.role === 'super_admin' || (user as any)?.canApproveDeposits === true;
-
-  if (!canApprove) {
-    return (
-      <div className="max-w-2xl mx-auto py-20">
-        <Card className="border-destructive/30 bg-destructive/5">
-          <CardContent className="pt-8 pb-8 text-center space-y-3">
-            <ShieldAlert className="w-12 h-12 mx-auto text-destructive" />
-            <h2 className="text-xl font-bold">Access Restricted</h2>
-            <p className="text-sm text-muted-foreground">Only Super Admin or users with <strong>Deposit Approval</strong> permission can access this page.</p>
-            <p className="text-xs text-muted-foreground">Ask a Super Admin to enable <code>can_approve_deposits</code> on your account.</p>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-
+  const canApprove = user?.role === 'super_admin' || user?.canApproveDeposits === true;
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['admin', 'payment-approvals', activeTab, search],
     queryFn: () => api.get('/admin/payment-approvals', {
@@ -101,6 +84,20 @@ const AdminPaymentApprovals = () => {
     approvedAmount: payments.filter((p: any) => p.status === "Approved").reduce((s: number, p: any) => s + (p.amount || 0), 0),
     rejectedCount: payments.filter((p: any) => p.status === "Rejected").length,
   };
+
+  if (!canApprove) {
+    return (
+      <div className="max-w-2xl mx-auto py-20">
+        <Card className="border-destructive/30 bg-destructive/5">
+          <CardContent className="pt-8 pb-8 text-center space-y-3">
+            <ShieldAlert className="w-12 h-12 mx-auto text-destructive" />
+            <h2 className="text-xl font-bold">Access Restricted</h2>
+            <p className="text-sm text-muted-foreground">Only Super Admin or admins with Deposit Approval permission can access this page.</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   const handleApprove = async (id: string) => {
     setActionLoading(id);
@@ -182,11 +179,11 @@ const AdminPaymentApprovals = () => {
                         )}
                         {p.status === "Pending" && (
                           <>
-                            <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-success" onClick={() => handleApprove(p.id)} disabled={actionLoading === p.id}>
-                              {actionLoading === p.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+                            <Button size="sm" variant="outline" className="h-7 px-2 text-success" onClick={() => handleApprove(p.id)} disabled={actionLoading === p.id}>
+                              {actionLoading === p.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5 mr-1" />} Approve
                             </Button>
-                            <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive" onClick={() => handleReject(p.id)} disabled={actionLoading === p.id}>
-                              <XCircle className="w-3.5 h-3.5" />
+                            <Button size="sm" variant="outline" className="h-7 px-2 text-destructive" onClick={() => handleReject(p.id)} disabled={actionLoading === p.id}>
+                              <XCircle className="w-3.5 h-3.5 mr-1" /> Reject
                             </Button>
                           </>
                         )}

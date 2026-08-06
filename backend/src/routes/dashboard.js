@@ -1531,8 +1531,8 @@ router.post('/wallet/deposit', paymentSlipUpload.single('depositSlip'), async (r
       return res.status(400).json({ message: 'Maximum single deposit is ৳500,000' });
     }
     const txnRef = String(transactionId || '').trim();
-    if (!txnRef || txnRef.length < 4) {
-      return res.status(400).json({ message: 'Transaction ID is required (minimum 4 characters)' });
+    if (!txnRef) {
+      return res.status(400).json({ message: 'Transaction ID is required' });
     }
 
     const txnId = uuidv4();
