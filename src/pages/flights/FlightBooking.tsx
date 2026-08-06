@@ -1263,25 +1263,15 @@ const FlightBooking = () => {
               )}
               <Separator />
               <div className="flex flex-col sm:flex-row gap-3">
-                {bookingResult.payLater ? (
-                  <>
-                    <Button className="flex-1 font-bold bg-accent text-accent-foreground hover:bg-accent/90" onClick={handlePayNow}>
-                      <CreditCard className="w-4 h-4 mr-1.5" /> Pay Now ৳{grandTotal.toLocaleString()}
-                    </Button>
-                    <Button variant="outline" className="flex-1" onClick={() => navigate("/dashboard/bookings")}>
-                      <Timer className="w-4 h-4 mr-1.5" /> Pay Later — Dashboard
-                    </Button>
-                  </>
-                ) : (
-                  <>
-                    <Button className="flex-1 font-bold bg-accent text-accent-foreground hover:bg-accent/90" onClick={() => navigate("/dashboard/bookings")}>
-                      <Plane className="w-4 h-4 mr-1.5" /> View My Bookings
-                    </Button>
-                    <Button variant="outline" className="flex-1" onClick={() => navigate("/")}>Book Another Flight</Button>
-                  </>
-                )}
+                <Button className="flex-1 font-bold bg-accent text-accent-foreground hover:bg-accent/90" onClick={handlePayNow}>
+                  <CreditCard className="w-4 h-4 mr-1.5" /> Pay Now ৳{grandTotal.toLocaleString()}
+                </Button>
+                <Button variant="outline" className="flex-1" onClick={() => navigate("/dashboard/bookings")}>
+                  <Timer className="w-4 h-4 mr-1.5" /> Pay Later — Dashboard
+                </Button>
               </div>
-              {bookingResult.payLater && (
+              {(
+
                 <div className="mt-4 space-y-3 text-left">
                   <p className="text-sm font-semibold">Select Payment Method</p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
