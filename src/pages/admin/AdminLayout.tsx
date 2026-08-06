@@ -273,26 +273,30 @@ const hexToHslTuple = (hex: string): string | null => {
 const useAdminTheme = () => {
   useEffect(() => {
     let cancelled = false;
+    const applyTheme = (s: Record<string, string>) => {
+      const root = document.documentElement;
+      const map: [string, string][] = [
+        ['--primary', s.admin_theme_primary], ['--ring', s.admin_theme_primary],
+        ['--accent', s.admin_theme_accent], ['--sidebar-background', s.admin_theme_sidebar_bg],
+      ];
+      map.forEach(([varName, hex]) => {
+        const hsl = hex ? hexToHslTuple(hex) : null;
+        if (hsl) root.style.setProperty(varName, hsl);
+      });
+    };
+    const onThemeUpdated = (event: Event) => applyTheme((event as CustomEvent<Record<string, string>>).detail || {});
+    window.addEventListener('admin-theme-updated', onThemeUpdated);
     (async () => {
       try {
         const data: any = await api.get('/admin/settings');
         const s = data?.settings || {};
         if (cancelled) return;
-        const root = document.documentElement;
-        const map: [string, string][] = [
-          ['--primary', s.admin_theme_primary],
-          ['--ring', s.admin_theme_primary],
-          ['--accent', s.admin_theme_accent],
-          ['--sidebar-background', s.admin_theme_sidebar_bg],
-        ];
-        map.forEach(([varName, hex]) => {
-          const hsl = hex ? hexToHslTuple(hex) : null;
-          if (hsl) root.style.setProperty(varName, hsl);
-        });
+        applyTheme(s);
       } catch { /* keep default theme */ }
     })();
     return () => {
       cancelled = true;
+      window.removeEventListener('admin-theme-updated', onThemeUpdated);
       const root = document.documentElement;
       ['--primary', '--ring', '--accent', '--sidebar-background'].forEach(v => root.style.removeProperty(v));
     };

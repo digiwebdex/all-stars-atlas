@@ -149,7 +149,7 @@ async function isPartialAllowedForUser(userId, settings) {
   if (!globalOn) return { allowed: false, reason: isB2B ? 'b2b_partial_disabled' : 'b2c_partial_disabled' };
   try {
     const [rows] = await db.query('SELECT enabled FROM user_partial_permission WHERE user_id = ?', [userId]);
-    if (rows.length && !rows[0].enabled) return { allowed: false, reason: 'user_permission_off' };
+    if (!rows.length || !rows[0].enabled) return { allowed: false, reason: 'user_permission_off' };
   } catch (_) { /* table may not exist */ }
   return { allowed: true, reason: 'ok' };
 }

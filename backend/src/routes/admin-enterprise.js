@@ -82,7 +82,7 @@ router.post('/users', async (req, res) => {
     const userId = uuidv4();
     const hashed = await bcrypt.hash(password, 10);
     await db.query(
-      `INSERT INTO users (id, first_name, last_name, email, phone, password, role, email_verified, phone_verified, can_approve_deposits, created_at)
+      `INSERT INTO users (id, first_name, last_name, email, phone, password_hash, role, email_verified, phone_verified, can_approve_deposits, created_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, 1, 1, ?, NOW())`,
       [userId, firstName, lastName || '', email, phone || null, hashed, role || 'customer', canApproveDeposits ? 1 : 0]
     );
@@ -97,7 +97,7 @@ router.post('/users', async (req, res) => {
       } catch (e) { console.warn('[admin-enterprise] initial wallet skipped:', e.message); }
     }
 
-    res.status(201).json({ success: true, userId, email, tempPassword: password });
+    res.status(201).json({ success: true, userId, email });
   } catch (err) {
     console.error('[admin-enterprise] create user', err);
     res.status(500).json({ message: 'Failed to create user' });

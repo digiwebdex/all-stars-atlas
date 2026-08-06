@@ -39,7 +39,7 @@ const Login = () => {
       const storedUser = localStorage.getItem('user');
       if (storedUser) {
         const user = JSON.parse(storedUser);
-        if (user.role === 'admin' || user.role === 'super_admin') {
+        if (user.role === 'admin' || user.role === 'super_admin' || user.role === 'secondary_admin') {
           localStorage.removeItem('auth_token');
           localStorage.removeItem('refresh_token');
           localStorage.removeItem('user');

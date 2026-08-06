@@ -180,7 +180,7 @@ router.post('/admin/login', async (req, res) => {
     }
 
     const user = rows[0];
-    if (user.role !== 'admin' && user.role !== 'super_admin') {
+    if (!['admin', 'super_admin', 'secondary_admin'].includes(user.role)) {
       return res.status(403).json({ message: 'Access denied. Admin privileges required.', status: 403 });
     }
 
@@ -429,7 +429,7 @@ router.post('/login-otp/verify', async (req, res) => {
     if (users.length === 0) return res.status(404).json({ message: 'User not found' });
 
     const user = users[0];
-    if (user.role === 'admin' || user.role === 'super_admin') {
+    if (['admin', 'super_admin', 'secondary_admin'].includes(user.role)) {
       return res.status(403).json({ message: 'Admins must sign in via the admin panel.' });
     }
     const tokens = generateTokens(user);

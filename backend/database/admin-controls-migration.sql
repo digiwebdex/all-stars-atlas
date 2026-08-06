@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS otp_login_codes (
 -- 2) Per-user partial payment permission (override of global toggle)
 CREATE TABLE IF NOT EXISTS user_partial_permission (
   user_id CHAR(36) PRIMARY KEY,
-  enabled TINYINT(1) DEFAULT 1,
+  enabled TINYINT(1) DEFAULT 0,
   updated_by CHAR(36) NULL,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
@@ -40,6 +40,7 @@ PREPARE stmt FROM @s; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 -- 4) Defaults for admin theme + B2B partial toggle
 INSERT INTO system_settings (setting_key, setting_value, updated_at) VALUES
   ('b2b_partial_enabled',    'true',    NOW()),
+  ('b2c_partial_enabled',    'false',   NOW()),
   ('admin_theme_primary',    '#2563eb', NOW()),
   ('admin_theme_accent',     '#0ea5e9', NOW()),
   ('admin_theme_sidebar_bg', '#0f172a', NOW())
@@ -47,3 +48,5 @@ ON DUPLICATE KEY UPDATE setting_value = setting_value;
 
 -- 5) Allow the secondary_admin role
 ALTER TABLE users MODIFY COLUMN role ENUM('customer','agent','agency','admin','super_admin','secondary_admin') DEFAULT 'customer';
+
+ALTER TABLE user_partial_permission MODIFY COLUMN enabled TINYINT(1) DEFAULT 0;

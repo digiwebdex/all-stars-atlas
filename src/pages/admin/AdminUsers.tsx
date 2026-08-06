@@ -36,6 +36,9 @@ const AdminUsers = () => {
   const apiUsers = (data as any)?.users?.map((u: any) => ({
     id: u.id, name: u.name, email: u.email, phone: u.phone || "—",
     role: u.role || "customer", status: u.status || "active",
+    canApproveDeposits: !!u.canApproveDeposits,
+    canManageBookings: !!u.canManageBookings,
+    canTogglePartial: !!u.canTogglePartial,
     bookings: u.bookings || 0, joined: u.joined || "—",
     idDocument: u.idDocument || null, idDocType: u.idDocType || null, idVerified: u.idVerified || false,
   })) || [];
@@ -149,7 +152,7 @@ const AdminUsers = () => {
 
   const openViewUser = async (u: any) => {
     setShowViewUser(u);
-    setPermForm({ partial: true, canManageBookings: false, canTogglePartial: false });
+    setPermForm({ partial: false, canManageBookings: !!u.canManageBookings, canTogglePartial: !!u.canTogglePartial });
     try {
       const res = await api.get<any>(`/admin/users/${u.id}/partial-permission`);
       setPermForm(p => ({ ...p, partial: !!res?.enabled }));
@@ -161,12 +164,10 @@ const AdminUsers = () => {
     setPermSaving(true);
     try {
       await api.put(`/admin/users/${showViewUser.id}/partial-permission`, { enabled: permForm.partial });
-      try {
-        await api.put(`/admin/users/${showViewUser.id}/admin-flags`, {
-          canManageBookings: permForm.canManageBookings,
-          canTogglePartial: permForm.canTogglePartial,
-        });
-      } catch {}
+      await api.put(`/admin/users/${showViewUser.id}/admin-flags`, {
+        canManageBookings: permForm.canManageBookings,
+        canTogglePartial: permForm.canTogglePartial,
+      });
       toast({ title: "Permissions saved", description: `${showViewUser.name} updated` });
     } catch (err: any) {
       toast({ title: "Error", description: err?.message || "Save failed", variant: "destructive" });
@@ -268,6 +269,29 @@ const AdminUsers = () => {
                 <div><p className="text-xs text-muted-foreground">Status</p><Badge variant="outline" className={`text-[11px] capitalize ${showViewUser.status === "active" ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"}`}>{showViewUser.status}</Badge></div>
                 <div><p className="text-xs text-muted-foreground">Bookings</p><p className="font-semibold">{showViewUser.bookings}</p></div>
                 <div><p className="text-xs text-muted-foreground">Joined</p><p className="font-semibold">{showViewUser.joined}</p></div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label>Account Role</Label>
+                <Select value={showViewUser.role} onValueChange={async (role) => {
+                  try {
+                    await api.put(`/admin/users/${showViewUser.id}`, { role });
+                    setShowViewUser({ ...showViewUser, role });
+                    toast({ title: "Role updated" });
+                    refetch();
+                  } catch (err: any) {
+                    toast({ title: "Role update failed", description: err?.message, variant: "destructive" });
+                  }
+                }}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="customer">Customer (B2C)</SelectItem>
+                    <SelectItem value="agent">Agent (B2B)</SelectItem>
+                    <SelectItem value="secondary_admin">Secondary Admin</SelectItem>
+                    <SelectItem value="admin">Admin</SelectItem>
+                    <SelectItem value="super_admin">Super Admin</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               {/* ID Document Section */}
