@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { generateTicketPDF } from "@/lib/pdf-generator";
 import { AIRPORTS } from "@/lib/airports";
+import { AIRPORT_COORDS } from "@/lib/airport-coords";
 import { useDashboardBookings } from "@/hooks/useApiData";
 import { api } from "@/lib/api";
 import DataLoader from "@/components/DataLoader";
