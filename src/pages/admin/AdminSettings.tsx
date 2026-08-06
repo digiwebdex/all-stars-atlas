@@ -496,7 +496,8 @@ const AdminSettings = () => {
               setAppearanceSaving(true);
               try {
                 await api.put('/admin/settings', { section: 'appearance', ...appearance });
-                toast.success('Appearance saved. Reload the admin panel to see the new theme.');
+                window.dispatchEvent(new CustomEvent('admin-theme-updated', { detail: appearance }));
+                toast.success('Appearance saved and applied.');
               } catch { toast.error('Failed to save appearance.'); }
               finally { setAppearanceSaving(false); }
             }}

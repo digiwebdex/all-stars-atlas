@@ -11,7 +11,7 @@ async function getUser(userId) {
 
 // Helper to get admin emails
 async function getAdminEmails() {
-  const [rows] = await db.query("SELECT email FROM users WHERE role IN ('admin', 'super_admin')");
+  const [rows] = await db.query("SELECT email FROM users WHERE role IN ('admin', 'super_admin', 'secondary_admin')");
   return rows.map(r => r.email);
 }
 

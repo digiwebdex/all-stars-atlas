@@ -105,6 +105,9 @@ router.get('/users', async (req, res) => {
       idDocument: u.id_document_path || null,
       idDocType: u.id_document_type || null,
       idVerified: !!u.id_verified,
+      canApproveDeposits: !!u.can_approve_deposits,
+      canManageBookings: !!u.can_manage_bookings,
+      canTogglePartial: !!u.can_toggle_partial,
     }));
 
     res.json({
@@ -1492,7 +1495,7 @@ router.get('/users/:id/partial-permission', async (req, res) => {
   try {
     await ensurePartialPermTable();
     const [rows] = await db.query('SELECT enabled FROM user_partial_permission WHERE user_id = ?', [req.params.id]);
-    res.json({ enabled: rows.length ? !!rows[0].enabled : true });
+    res.json({ enabled: rows.length ? !!rows[0].enabled : false });
   } catch (err) {
     console.error('Get partial permission error:', err);
     res.status(500).json({ message: 'Failed to load permission' });
