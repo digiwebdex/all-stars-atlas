@@ -219,11 +219,11 @@ const AirlineMarkupConfig = ({ airlineMarkups, globalDiscount, globalAitVat, onC
                   <h5 className="text-xs font-semibold mb-2 text-muted-foreground">Preview (on BDT 100,000 base fare)</h5>
                   {(() => {
                     const base = 100000;
-                    const discPct = selectedEntry.useGlobal ? globalDiscount : selectedEntry.discount;
+                    const discPct = Math.abs(selectedEntry.useGlobal ? globalDiscount : selectedEntry.discount);
                     const disc = Math.round(base * discPct / 100);
                     const aitVat = Math.round((base - disc) * globalAitVat / 100);
-                    const mkp = selectedEntry.useGlobal ? 0 : Math.round(base * selectedEntry.markup / 100);
-                    const fixedMkp = selectedEntry.useGlobal ? 0 : selectedEntry.fixedMarkup;
+                    const mkp = selectedEntry.useGlobal ? 0 : Math.max(0, Math.round(base * selectedEntry.markup / 100));
+                    const fixedMkp = selectedEntry.useGlobal ? 0 : Math.max(0, selectedEntry.fixedMarkup);
                     return (
                       <div className="grid grid-cols-2 gap-y-1 text-xs">
                         <span className="text-muted-foreground">Base Fare:</span>
