@@ -3,16 +3,20 @@ import { api, type ApiError } from '@/lib/api';
 import { API_ENDPOINTS } from '@/lib/constants';
 import { signInWithGoogle, signInWithFacebook } from '@/lib/social-auth';
 
-export interface User {
+export const ADMIN_ROLES = ['admin', 'super_admin', 'secondary_admin'];
+
+interface User {
   id: string;
   name: string;
   email: string;
   phone?: string;
   avatar?: string;
-  role: 'customer' | 'admin' | 'super_admin';
+  role: 'customer' | 'agent' | 'admin' | 'super_admin' | 'secondary_admin';
   emailVerified: boolean;
   phoneVerified: boolean;
   canApproveDeposits?: boolean;
+  canManageBookings?: boolean;
+  canTogglePartial?: boolean;
   createdAt: string;
 }
 
@@ -80,7 +84,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           user,
           isAuthenticated: true,
           isLoading: false,
-          isAdmin: user.role === 'admin' || user.role === 'super_admin',
+          isAdmin: ADMIN_ROLES.includes(user.role),
         });
       } catch {
         localStorage.removeItem('user');
@@ -106,7 +110,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       user: data.user,
       isAuthenticated: true,
       isLoading: false,
-      isAdmin: data.user.role === 'admin' || data.user.role === 'super_admin',
+      isAdmin: ADMIN_ROLES.includes(data.user.role),
     });
   };
 
@@ -117,7 +121,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const adminLogin = useCallback(async (payload: LoginPayload) => {
     const data = await api.post<AuthResponse>(API_ENDPOINTS.ADMIN_LOGIN, payload);
-    if (data.user.role !== 'admin' && data.user.role !== 'super_admin') {
+    if (!ADMIN_ROLES.includes(data.user.role)) {
       throw { message: 'Access denied. Admin privileges required.', status: 403 } as ApiError;
     }
     setAuth(data);

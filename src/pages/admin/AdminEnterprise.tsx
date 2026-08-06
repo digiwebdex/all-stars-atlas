@@ -44,6 +44,7 @@ const AdminEnterprise = () => {
   // Per-booking override
   const [bookingId, setBookingId] = useState("");
   const [deadline, setDeadline] = useState("");
+  const [b2bPartial, setB2bPartial] = useState(true);
   const [partialOverride, setPartialOverride] = useState(false);
   const [splitPct, setSplitPct] = useState<number | "">("");
   const [savingBooking, setSavingBooking] = useState(false);
@@ -53,6 +54,8 @@ const AdminEnterprise = () => {
       try {
         const data: any = await api.get("/admin/settings");
         const s = data?.settings || {};
+        const enB2b = s.b2b_partial_enabled;
+        setB2bPartial(enB2b === undefined ? true : String(enB2b).toLowerCase() === 'true');
         const en = s.b2c_partial_enabled;
         setB2cPartial(en === undefined ? true : String(en).toLowerCase() === "true");
         if (s.partial_min_hours) setMinHours(Number(s.partial_min_hours));
@@ -72,6 +75,7 @@ const AdminEnterprise = () => {
       await api.put("/admin/settings", {
         section: "booking_rules",
         b2c_partial_enabled: b2cPartial ? "true" : "false",
+        b2b_partial_enabled: b2bPartial ? "true" : "false",
         partial_min_hours: String(minHours),
         partial_upfront_pct: String(upfrontPct),
       });

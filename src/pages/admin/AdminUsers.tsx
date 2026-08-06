@@ -325,7 +325,7 @@ const AdminUsers = () => {
                   <span>Partial Payment access</span>
                   <input type="checkbox" checked={permForm.partial} onChange={e => setPermForm(p => ({ ...p, partial: e.target.checked }))} />
                 </label>
-                {(showViewUser.role === 'admin' || showViewUser.role === 'super_admin') && (
+                {(showViewUser.role === 'admin' || showViewUser.role === 'super_admin' || showViewUser.role === 'secondary_admin') && (
                   <>
                     <label className="flex items-center justify-between text-sm">
                       <span>Secondary Admin — Manage Bookings</span>
@@ -368,6 +368,7 @@ const AdminUsers = () => {
                     <SelectItem value="customer">Customer</SelectItem>
                     <SelectItem value="agent">Agent</SelectItem>
                     <SelectItem value="admin">Admin</SelectItem>
+                    <SelectItem value="secondary_admin">Secondary Admin</SelectItem>
                     <SelectItem value="super_admin">Super Admin</SelectItem>
                   </SelectContent>
                 </Select>
