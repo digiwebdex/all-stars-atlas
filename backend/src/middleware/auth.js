@@ -38,6 +38,17 @@ function authenticate(req, res, next) {
   }
 }
 
+// Attaches req.user when a valid token is present, but never blocks the request.
+function authenticateOptional(req, _res, next) {
+  const header = req.headers.authorization;
+  if (header && header.startsWith('Bearer ')) {
+    try {
+      req.user = jwt.verify(header.split(' ')[1], SECRET);
+    } catch (_) { /* ignore — treat as guest */ }
+  }
+  next();
+}
+
 function requireAdmin(req, res, next) {
   if (!req.user || (req.user.role !== 'admin' && req.user.role !== 'super_admin')) {
     return res.status(403).json({ message: 'Access denied. Admin privileges required.', status: 403 });
@@ -45,4 +56,4 @@ function requireAdmin(req, res, next) {
   next();
 }
 
-module.exports = { generateTokens, formatUser, authenticate, requireAdmin };
+module.exports = { generateTokens, formatUser, authenticate, authenticateOptional, requireAdmin };
