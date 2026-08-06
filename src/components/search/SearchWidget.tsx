@@ -786,26 +786,38 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
               </SelectContent>
             </Select>
 
-            <Select value={preferredCarrier} onValueChange={setPreferredCarrier}>
-              <SelectTrigger className="h-8 w-auto text-xs border gap-1 rounded-lg font-semibold flex-1 sm:flex-none">
-                <SelectValue placeholder="Any Airline" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="any">Any Airline</SelectItem>
-                <SelectItem value="BG">Biman Bangladesh</SelectItem>
-                <SelectItem value="2A">Air Astra</SelectItem>
-                <SelectItem value="BS">US-Bangla</SelectItem>
-                <SelectItem value="VQ">Novoair</SelectItem>
-                <SelectItem value="EK">Emirates</SelectItem>
-                <SelectItem value="QR">Qatar Airways</SelectItem>
-                <SelectItem value="SQ">Singapore Airlines</SelectItem>
-                <SelectItem value="TG">Thai Airways</SelectItem>
-                <SelectItem value="MH">Malaysia Airlines</SelectItem>
-                <SelectItem value="6E">IndiGo</SelectItem>
-                <SelectItem value="TK">Turkish Airlines</SelectItem>
-                <SelectItem value="SV">Saudia</SelectItem>
-              </SelectContent>
-            </Select>
+            <Popover open={carrierOpen} onOpenChange={setCarrierOpen}>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5 rounded-lg font-semibold flex-1 sm:flex-none">
+                  <Plane className="w-3.5 h-3.5" />
+                  {preferredCarrier === "any"
+                    ? "Preferred Airline"
+                    : `${preferredCarrier} - ${AIRLINES_DATABASE.find(a => a.code === preferredCarrier)?.name || ""}`}
+                  <ChevronDown className="w-3 h-3" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-72 p-0" align="end">
+                <Command>
+                  <CommandInput placeholder="Example: BS, VQ, TK" />
+                  <CommandList>
+                    <CommandEmpty>No airline found.</CommandEmpty>
+                    <CommandGroup>
+                      <CommandItem value="any Any Airline" onSelect={() => { setPreferredCarrier("any"); setCarrierOpen(false); }}>
+                        Any Airline
+                      </CommandItem>
+                      {AIRLINES_DATABASE.map(a => (
+                        <CommandItem key={a.code} value={`${a.code} ${a.name} ${a.country}`}
+                          onSelect={() => { setPreferredCarrier(a.code); setCarrierOpen(false); }}>
+                          <span className="font-mono font-semibold w-8">{a.code}</span>
+                          <span className="truncate">{a.name}</span>
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+
           </div>
         </div>
 
