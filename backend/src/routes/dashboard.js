@@ -1498,6 +1498,26 @@ router.post('/wallet/pay', async (req, res) => {
   }
 });
 
+// ── Ensure transactions enums support wallet flows (self-healing) ──
+let txnEnumsEnsured = false;
+async function ensureTransactionEnums() {
+  if (txnEnumsEnsured) return;
+  try {
+    await db.query(
+      `ALTER TABLE transactions MODIFY COLUMN type ENUM('payment','refund','recharge','bill_payment','esim_purchase','deposit','credit','debit','transfer_in','transfer_out','adjustment') NOT NULL`
+    );
+    await db.query(
+      `ALTER TABLE transactions MODIFY COLUMN payment_method ENUM('bkash','nagad','rocket','card','bank_transfer','wallet','admin_credit','pay_later','cash','cheque') NULL`
+    );
+    await db.query(
+      `ALTER TABLE transactions MODIFY COLUMN status ENUM('pending','completed','failed','reversed','approved','rejected') DEFAULT 'pending'`
+    );
+  } catch (e) {
+    console.warn('ensureTransactionEnums:', e.message);
+  }
+  txnEnumsEnsured = true;
+}
+
 // ── Wallet Deposit Request (with optional deposit slip) ──
 router.post('/wallet/deposit', paymentSlipUpload.single('depositSlip'), async (req, res) => {
   try {
@@ -1522,18 +1542,26 @@ router.post('/wallet/deposit', paymentSlipUpload.single('depositSlip'), async (r
       notes: notes || null,
     });
 
-    await db.query(
-      `INSERT INTO transactions (id, user_id, type, amount, description, status, payment_method, reference, meta, created_at)
-       VALUES (?, ?, 'deposit', ?, ?, 'pending', ?, ?, ?, NOW())`,
-      [txnId, userId, amt, `Wallet deposit via ${dbMethod} — pending approval`, dbMethod, reference, meta]
-    );
+    const sql = `INSERT INTO transactions (id, user_id, type, amount, description, status, payment_method, reference, meta, created_at)
+       VALUES (?, ?, 'deposit', ?, ?, 'pending', ?, ?, ?, NOW())`;
+    const params = [txnId, userId, amt, `Wallet deposit via ${dbMethod} — pending approval`, dbMethod, reference, meta];
+
+    try {
+      await db.query(sql, params);
+    } catch (insertErr) {
+      // Legacy schemas lack the 'deposit' enum value — widen the enums and retry once
+      console.warn('Deposit insert failed, attempting schema self-heal:', insertErr.message);
+      await ensureTransactionEnums();
+      await db.query(sql, params);
+    }
 
     res.json({ success: true, message: 'Deposit request created. Admin will review and approve.', transactionId: txnId, reference });
   } catch (err) {
     console.error('Wallet deposit error:', err);
-    res.status(500).json({ message: 'Failed to create deposit request' });
+    res.status(500).json({ message: err?.sqlMessage || err?.message || 'Failed to create deposit request' });
   }
 });
+
 
 // ── Wallet Transfer ─────────────────────────────────────
 router.post('/wallet/transfer', async (req, res) => {
