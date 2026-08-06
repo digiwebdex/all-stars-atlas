@@ -1039,7 +1039,13 @@ const FlightBooking = () => {
       const result = await api.post<any>("/flights/book", bookingData);
       setBookingResult(result);
       setBookingComplete(true);
-      toast({ title: payLater ? "Booking Confirmed — Pay Later" : "Booking & Payment Confirmed", description: `Booking Ref: ${result.bookingRef}` });
+      toast({
+        title: payLater ? "Booking Confirmed — Pay Later" : "Reservation Created — Payment Pending",
+        description: payLater
+          ? `Booking Ref: ${result.bookingRef}`
+          : `Booking Ref: ${result.bookingRef}. Complete the payment to issue the ticket.`,
+      });
+
     } catch (err: any) {
       toast({ title: "Booking Failed", description: err.message || "Something went wrong", variant: "destructive" });
     } finally { setBookingLoading(false); }
