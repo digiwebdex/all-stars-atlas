@@ -47,6 +47,20 @@ function parseAmt(v: any): number | undefined {
 function pickAmt(...vs: any[]) { for (const v of vs) { const p = parseAmt(v); if (p !== undefined) return p; } return undefined; }
 function airportName(code: string) { const a = AIRPORTS.find(x => x.code === code?.toUpperCase()); return a ? a.name : code; }
 
+/** Void window: same calendar day as ticket issuance, from 00:01 AM until 11:30 PM only. */
+const VOID_CUTOFF_MINUTES = 23 * 60 + 30; // 11:30 PM
+function getVoidWindow(issuedAt?: string | null) {
+  if (!issuedAt) return { eligible: false, reason: "Ticket issue time unavailable — void not allowed." };
+  const issued = new Date(issuedAt);
+  if (isNaN(issued.getTime())) return { eligible: false, reason: "Ticket issue time unavailable — void not allowed." };
+  const now = new Date();
+  const sameDay = issued.toDateString() === now.toDateString();
+  if (!sameDay) return { eligible: false, reason: "Void window expired — void is only allowed on the ticket issue date." };
+  const nowMinutes = now.getHours() * 60 + now.getMinutes();
+  if (nowMinutes > VOID_CUTOFF_MINUTES) return { eligible: false, reason: "Void window closed at 11:30 PM on the issue date." };
+  return { eligible: true, reason: "Void allowed until 11:30 PM today (issue date)." };
+}
+
 function mapBooking(b: any) {
   const d = b.details || {}, o = d.outbound || {}, pax = b.passengerInfo || [];
   const origin = o.origin || d.origin || "", dest = o.destination || d.destination || "";
