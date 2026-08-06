@@ -1000,6 +1000,8 @@ router.get('/payment-approvals', async (req, res) => {
       status: t.status === 'completed' ? 'Approved' : t.status === 'failed' ? 'Rejected' : 'Pending',
       reference: t.reference || `TXN-${t.id.substring(0, 8).toUpperCase()}`,
       receiptUrl: t.meta ? (safeJsonParse(t.meta, {}).receiptUrl || null) : null,
+      transactionId: t.meta ? (safeJsonParse(t.meta, {}).transactionId || null) : null,
+      notes: t.meta ? (safeJsonParse(t.meta, {}).notes || null) : null,
       note: t.description,
       date: t.created_at,
     }));

@@ -39,3 +39,15 @@ export const config = {
   addressShort: 'Banani, Dhaka-1213',
   website: 'www.seventrip.net',
 } as const;
+
+/**
+ * Resolve an uploaded-file path (e.g. "/uploads/payment-slips/x.jpg") to a URL
+ * that is reachable through the API host/proxy.
+ */
+export const fileUrl = (filePath?: string | null): string => {
+  if (!filePath) return '';
+  if (/^https?:\/\//i.test(filePath)) return filePath;
+  const path = filePath.startsWith('/') ? filePath : `/${filePath}`;
+  if (path.startsWith('/api/')) return path;
+  return `${normalizeBaseUrl(config.apiBaseUrl)}${path}`;
+};

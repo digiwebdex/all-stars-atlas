@@ -37,6 +37,7 @@ const DashboardWallet = () => {
   const [slipFile, setSlipFile] = useState<File | null>(null);
   const [slipPreview, setSlipPreview] = useState<string | null>(null);
   const [depositNotes, setDepositNotes] = useState("");
+  const [depositTxnId, setDepositTxnId] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
   const [copiedAcct, setCopiedAcct] = useState<string | null>(null);
   const [selectedBankIdx, setSelectedBankIdx] = useState<string>("");
@@ -93,6 +94,7 @@ const DashboardWallet = () => {
     setFundMethod("ssl");
     removeSlip();
     setDepositNotes("");
+    setDepositTxnId("");
   };
 
   const handleAddFunds = async () => {
@@ -109,10 +111,16 @@ const DashboardWallet = () => {
     setFundLoading(true);
     try {
       if (fundMethod === "bank") {
+        if (!depositTxnId.trim() || depositTxnId.trim().length < 4) {
+          toast({ title: "Transaction ID required", description: "Please enter the bank/mobile transaction ID of your deposit.", variant: "destructive" });
+          setFundLoading(false);
+          return;
+        }
         // Bank transfer: send as multipart with optional deposit slip
         const fd = new FormData();
         fd.append("amount", String(amt));
         fd.append("method", "bank");
+        fd.append("transactionId", depositTxnId.trim());
         if (depositNotes) fd.append("notes", depositNotes);
         if (slipFile) fd.append("depositSlip", slipFile);
         await api.upload("/dashboard/wallet/deposit", fd);
@@ -408,6 +416,16 @@ const DashboardWallet = () => {
                   <input ref={fileRef} type="file" accept="image/*,.pdf" className="hidden" onChange={handleFileChange} />
                 </div>
                 <div>
+                  <Label className="text-xs font-semibold text-muted-foreground mb-1 block">Transaction ID <span className="text-destructive">*</span></Label>
+                  <Input
+                    placeholder="e.g. TRX8837261 / bank slip number"
+                    value={depositTxnId}
+                    onChange={(e) => setDepositTxnId(e.target.value)}
+                    required
+                  />
+                  <p className="text-[11px] text-muted-foreground mt-1">Deposit request cannot be submitted without a transaction ID.</p>
+                </div>
+                <div>
                   <Label className="text-xs font-semibold text-muted-foreground mb-1 block">Notes (optional)</Label>
                   <Input
                     placeholder="Transaction ID, bank name, etc."
@@ -421,7 +439,7 @@ const DashboardWallet = () => {
 
           <DialogFooter>
             <Button variant="outline" onClick={resetAddFunds}>Cancel</Button>
-            <Button onClick={handleAddFunds} disabled={fundLoading || !fundAmount} className="gap-1.5">
+            <Button onClick={handleAddFunds} disabled={fundLoading || !fundAmount || (fundMethod === "bank" && depositTxnId.trim().length < 4)} className="gap-1.5">
               {fundLoading ? "Processing..." : fundMethod === "bank" ? `Submit Deposit ৳${Number(fundAmount || 0).toLocaleString()}` : `Pay ৳${Number(fundAmount || 0).toLocaleString()}`}
             </Button>
           </DialogFooter>

@@ -43,8 +43,10 @@ app.use(express.urlencoded({ extended: true }));
 // Rate limiting for auth endpoints
 const authLimiter = rateLimit({ windowMs: 60 * 1000, max: 10, message: { message: 'Too many requests. Try again later.', status: 429 } });
 
-// Static uploads
-app.use('/uploads', express.static(path.join(__dirname, process.env.UPLOAD_DIR || 'uploads')));
+// Static uploads (also exposed under /api so it works behind an /api-only proxy)
+const uploadsStatic = express.static(path.join(__dirname, process.env.UPLOAD_DIR || 'uploads'));
+app.use('/uploads', uploadsStatic);
+app.use('/api/uploads', uploadsStatic);
 
 // Health check
 app.get('/api/health', (req, res) => res.json({ status: 'ok', timestamp: new Date().toISOString() }));
