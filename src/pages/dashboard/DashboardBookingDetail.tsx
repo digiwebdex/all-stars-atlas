@@ -522,7 +522,7 @@ const DashboardBookingDetail = () => {
             )}
             {(isTicketed || hasFinalTicket) && (
               <Badge className="bg-green-600 text-white text-sm px-4 py-2 font-bold gap-1.5">
-                <Ticket className="w-4 h-4" /> {effectiveTicketNo ? `Ticket: ${effectiveTicketNo}` : 'Ticketed'}
+                <Ticket className="w-4 h-4" /> Ticketed
               </Badge>
             )}
             <div className="ml-auto flex flex-wrap gap-2">
