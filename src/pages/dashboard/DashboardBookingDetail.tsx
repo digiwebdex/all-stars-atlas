@@ -642,33 +642,10 @@ const DashboardBookingDetail = () => {
                   <Separator orientation="vertical" className="h-4" />
                   <span>{fmtDate(booking.returnFlight.departureTime)}</span>
                 </div>
-                <div className="px-5 py-3 flex flex-wrap items-center gap-3 bg-card">
-                  {airlineLogo(booking.returnFlight.airlineCode) && <img src={airlineLogo(booking.returnFlight.airlineCode)!} alt="" className="w-6 h-6 object-contain" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />}
-                  <span className="font-bold text-primary">{booking.returnFlight.airline}</span>
-                  <span className="text-sm text-muted-foreground">{booking.returnFlight.airlineCode} - {booking.returnFlight.flightNumber}</span>
-                </div>
-                <div className="px-5 pb-5 pt-2">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-2xl font-black">{fmtTime(booking.returnFlight.departureTime)}</p>
-                      <p className="text-xs text-muted-foreground mt-1">{fmtDate(booking.returnFlight.departureTime)}</p>
-                      <p className="text-xs text-muted-foreground">{airportName(booking.returnFlight.origin)}</p>
-                    </div>
-                    <div className="flex-1 flex flex-col items-center justify-center pt-3 px-2">
-                      <p className="text-[11px] text-muted-foreground mb-2">⏱ {booking.returnFlight.duration}</p>
-                      <div className="w-full flex items-center">
-                        <div className="w-3 h-3 rounded-full border-2 border-muted-foreground/40 flex-shrink-0" />
-                        <div className="flex-1 border-t-2 border-dashed border-muted-foreground/30 mx-1" />
-                        <Plane className="w-4 h-4 text-muted-foreground/60 flex-shrink-0" />
-                      </div>
-                    </div>
-                    <div className="flex-1 min-w-0 text-right">
-                      <p className="text-2xl font-black">{fmtTime(booking.returnFlight.arrivalTime)}</p>
-                      <p className="text-xs text-muted-foreground mt-1">{fmtDate(booking.returnFlight.arrivalTime)}</p>
-                      <p className="text-xs text-muted-foreground">{airportName(booking.returnFlight.destination)}</p>
-                    </div>
-                  </div>
-                </div>
+                {((booking.returnFlight.legs?.length > 0 ? booking.returnFlight.legs : [booking.returnFlight]) as any[]).map((rleg: any, ri: number) => (
+                  <LegTimeline key={ri} leg={rleg} airline={booking.returnFlight.airline} airlineCode={booking.returnFlight.airlineCode} flightNumber={booking.returnFlight.flightNumber} cabinClass={booking.cabinClass} />
+                ))}
+
               </div>
             )}
           </Section>
