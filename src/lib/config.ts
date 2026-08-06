@@ -49,5 +49,10 @@ export const fileUrl = (filePath?: string | null): string => {
   if (/^https?:\/\//i.test(filePath)) return filePath;
   const path = filePath.startsWith('/') ? filePath : `/${filePath}`;
   if (path.startsWith('/api/')) return path;
-  return `${normalizeBaseUrl(config.apiBaseUrl)}${path}`;
+  const base = normalizeBaseUrl(config.apiBaseUrl);
+  // Uploaded files are served by nginx via the dedicated `^~ /uploads/` location,
+  // which is not shadowed by the static image regex location (unlike /api/uploads).
+  if (path.startsWith('/uploads/') && base === '/api') return path;
+  return `${base}${path}`;
 };
+
