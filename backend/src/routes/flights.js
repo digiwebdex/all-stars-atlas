@@ -5,7 +5,7 @@ const path = require('path');
 const fs = require('fs');
 const db = require('../config/db');
 const { authenticate, authenticateOptional, requireAdmin } = require('../middleware/auth');
-const { notifyBookingConfirm } = require('../services/notify');
+const { notifyBookingConfirm, notifyAdminsEvent } = require('../services/notify');
 const { searchFlights: ttiSearch, createBooking: ttiCreateBooking } = require('./tti-flights');
 const { searchFlights: bdfSearch, createBooking: bdfCreateBooking } = require('./bdf-flights');
 const { searchFlights: flyhubSearch, createBooking: flyhubCreateBooking } = require('./flyhub-flights');
@@ -2228,6 +2228,11 @@ router.post('/book', authenticate, async (req, res) => {
     // confirms the transaction (or an admin verifies a bank transfer).
 
     notifyBookingConfirm(req.user.sub, { bookingRef, type: 'Flight', amount: totalAmount || 0 }).catch(console.error);
+    notifyAdminsEvent('New flight booking created', [
+      `Booking Ref: ${bookingRef}`,
+      `Amount: BDT ${Number(totalAmount || 0).toLocaleString()}`,
+      `User ID: ${req.user.sub}`,
+    ]).catch(() => {});
     res.status(201).json({
       id: bookingId,
       bookingRef,
