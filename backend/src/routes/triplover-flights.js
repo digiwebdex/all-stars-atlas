@@ -181,7 +181,9 @@ async function searchFlights({ origin, destination, departDate, returnDate, adul
   try {
     // Keep just under the aggregator's per-provider budget so a slow UAT aborts
     // instead of dangling and holding an open socket after the search returned.
-    const data = await tlPost('/api/Search', payload, { useSearchBase: true, timeout: 24000 });
+    const searchTimeout = parseInt(process.env.TRIPLOVER_SEARCH_TIMEOUT_MS) || 34000;
+    const data = await tlPost('/api/Search', payload, { useSearchBase: true, timeout: searchTimeout });
+
 
     return normalizeSearch(data, origin, destination);
   } catch (err) {
