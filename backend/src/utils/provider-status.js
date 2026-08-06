@@ -24,9 +24,21 @@ const PROVIDERS = [
   { id: 'nagad', name: 'Nagad (Payment)', category: 'payment' },
 ];
 
+// Providers paused by default (unless explicitly resumed from Admin → API Control).
+// Only the new TripLover API is used for flight search right now.
+const DEFAULT_PAUSED = new Set(['sabre', 'galileo', 'ndc_gateway', 'lcc', 'bdfare', 'flyhub']);
+
+const isPausedValue = (map, id) => {
+  const v = map[id];
+  if (v === true || v === 'true') return true;
+  if (v === false || v === 'false') return false;
+  return DEFAULT_PAUSED.has(id);
+};
+
 let cache = null;
 let cacheTime = 0;
 const TTL = 30 * 1000; // short TTL so pausing takes effect almost immediately
+
 
 async function loadPauseMap() {
   if (cache && Date.now() - cacheTime < TTL) return cache;
