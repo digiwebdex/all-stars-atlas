@@ -1040,11 +1040,10 @@ const FlightBooking = () => {
       setBookingResult(result);
       setBookingComplete(true);
       toast({
-        title: payLater ? "Booking Confirmed — Pay Later" : "Reservation Created — Payment Pending",
-        description: payLater
-          ? `Booking Ref: ${result.bookingRef}`
-          : `Booking Ref: ${result.bookingRef}. Complete the payment to issue the ticket.`,
+        title: "Booking Confirmed — No Payment Required",
+        description: `Booking Ref: ${result.bookingRef}. Deposit later and submit an issue request to get your ticket.`,
       });
+
 
     } catch (err: any) {
       toast({ title: "Booking Failed", description: err.message || "Something went wrong", variant: "destructive" });
