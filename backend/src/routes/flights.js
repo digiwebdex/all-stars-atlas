@@ -20,6 +20,34 @@ const { loadPartialSettings, evaluatePartialEligibility, isAirlineRouteBlocked, 
 
 const router = express.Router();
 
+// ── Live-fare micro cache ──────────────────────────────────────────────
+// Identical searches (page refresh, back navigation, filter/sort changes)
+// reuse the same GDS payload for a short window instead of re-querying every
+// supplier. TTL is intentionally short so fares stay live and bookable.
+const PROVIDER_CACHE_TTL_MS = parseInt(process.env.PROVIDER_SEARCH_CACHE_TTL_MS) || 120000;
+const PROVIDER_CACHE_MAX = 60;
+const providerSearchCache = new Map();
+
+function getCachedProviderResult(key) {
+  const hit = providerSearchCache.get(key);
+  if (!hit) return null;
+  if (Date.now() > hit.expiry) {
+    providerSearchCache.delete(key);
+    return null;
+  }
+  return hit.rows;
+}
+
+function setCachedProviderResult(key, rows) {
+  if (providerSearchCache.size >= PROVIDER_CACHE_MAX) {
+    const oldest = providerSearchCache.keys().next().value;
+    if (oldest) providerSearchCache.delete(oldest);
+  }
+  providerSearchCache.set(key, { rows, expiry: Date.now() + PROVIDER_CACHE_TTL_MS });
+}
+
+
+
 // Public: check whether the flight is eligible for partial payment.
 // GET /api/flights/partial-eligibility?origin=DAC&destination=JED&departureTime=2026-07-02T12:00&refundable=true&airlineCode=BS
 router.get('/partial-eligibility', async (req, res) => {
