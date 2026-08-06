@@ -387,6 +387,24 @@ const DashboardBookingDetail = () => {
     finally { setVoidLoading(false); }
   };
 
+  const handleServiceRequest = async () => {
+    if (!booking || !serviceRequest) return;
+    setServiceLoading(true);
+    const label = serviceRequest === "refund" ? "REFUND" : "REISSUE";
+    try {
+      await api.post(`/dashboard/ticket-issue-request`, {
+        bookingId: booking.rawId,
+        notes: `${label} REQUEST: ${serviceNote || "No additional note"}`,
+      });
+      toast({ title: `${label} Request Sent`, description: "Our team will process it shortly." });
+      setServiceRequest(null); setServiceNote(""); refetch();
+    } catch (e: any) {
+      toast({ title: "Failed", description: e.message || "Error", variant: "destructive" });
+    } finally { setServiceLoading(false); }
+  };
+
+
+
   const handlePayWithBalance = async () => {
     if (!booking || hasIssuedWithBalance) return;
     const amount = booking.rawAmount;
