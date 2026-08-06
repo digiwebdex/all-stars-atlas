@@ -107,6 +107,12 @@ const AdminSettings = () => {
   const [searchTabs, setSearchTabs] = useState<SearchTabConfig>({ ...DEFAULT_SEARCH_TABS });
   const [providerStatus, setProviderStatus] = useState<Array<{ id: string; name: string; group?: string; paused: boolean }>>([]);
   const [providerBusy, setProviderBusy] = useState<string | null>(null);
+  const [apiLogs, setApiLogs] = useState<ApiLogEntry[]>([]);
+  const [logsLoading, setLogsLoading] = useState(false);
+  const [logsProvider, setLogsProvider] = useState('all');
+  const [logsErrorsOnly, setLogsErrorsOnly] = useState(false);
+  const [expandedLog, setExpandedLog] = useState<number | null>(null);
+
 
 
 
