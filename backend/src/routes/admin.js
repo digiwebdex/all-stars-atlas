@@ -724,6 +724,36 @@ router.put('/provider-status', async (req, res) => {
   }
 });
 
+// ── Supplier API request/response logs ──
+// GET /admin/api-logs?provider=triplover&onlyErrors=true&limit=50
+router.get('/api-logs', (req, res) => {
+  try {
+    const { getApiLogs } = require('../utils/api-logger');
+    const logs = getApiLogs({
+      provider: req.query.provider || undefined,
+      operation: req.query.operation || undefined,
+      onlyErrors: req.query.onlyErrors === 'true',
+      limit: req.query.limit || 50,
+    });
+    res.json({ success: true, logs });
+  } catch (err) {
+    console.error('[Admin] api-logs error:', err.message);
+    res.status(500).json({ message: 'Failed to load API logs' });
+  }
+});
+
+// DELETE /admin/api-logs?provider=triplover
+router.delete('/api-logs', (req, res) => {
+  try {
+    const { clearApiLogs } = require('../utils/api-logger');
+    clearApiLogs(req.query.provider || undefined);
+    res.json({ success: true, message: 'API logs cleared' });
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to clear API logs' });
+  }
+});
+
+
 // GET /admin/settings — returns all settings including API keys (masked)
 
 router.get('/settings', async (req, res) => {

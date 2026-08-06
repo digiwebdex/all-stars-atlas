@@ -6,6 +6,8 @@
 //       (+ /api/Cancel, /api/FareRules, /api/pnr)
 
 const db = require('../config/db');
+const { logApiCall, describeFailure } = require('../utils/api-logger');
+
 
 let cachedConfig = null;
 let cacheTime = 0;
@@ -41,48 +43,111 @@ let tokenCache = { token: null, expiresAt: 0 };
 
 async function getToken(config) {
   if (tokenCache.token && Date.now() < tokenCache.expiresAt - 60_000) return tokenCache.token;
+  const url = `${config.baseUrl}/api/user/apiLogIn`;
+  const started = Date.now();
   try {
-    const res = await fetch(`${config.baseUrl}/api/user/apiLogIn`, {
+    const res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email: config.email, password: config.password }),
       signal: AbortSignal.timeout(20000),
     });
-    if (!res.ok) { console.error('[TripLover] Login HTTP', res.status); return null; }
-    const data = await res.json();
-    const token = data?.data?.token;
-    if (!token) { console.error('[TripLover] Login failed:', data?.message); return null; }
+    const text = await res.text();
+    let data = null;
+    try { data = text ? JSON.parse(text) : null; } catch (_) { data = { raw: text }; }
+    const token = res.ok ? data?.data?.token : null;
+    if (!token) {
+      const { error, hint } = describeFailure({
+        status: res.status,
+        message: data?.message || (res.ok ? 'Login response contained no token' : `HTTP ${res.status}`),
+        body: data,
+        operation: 'Login',
+      });
+      logApiCall({
+        provider: 'triplover', operation: 'Login', url, status: res.status, ok: false,
+        durationMs: Date.now() - started, request: { email: config.email }, response: data, error, hint,
+      });
+      return null;
+    }
     const exp = data?.data?.tokenExpieryTime ? Date.parse(data.data.tokenExpieryTime) : Date.now() + 25 * 60 * 1000;
     tokenCache = { token, expiresAt: Number.isFinite(exp) ? exp : Date.now() + 25 * 60 * 1000 };
+    logApiCall({
+      provider: 'triplover', operation: 'Login', url, status: res.status, ok: true,
+      durationMs: Date.now() - started, request: { email: config.email },
+      response: { tokenExpieryTime: data?.data?.tokenExpieryTime || null, token: '***redacted***' },
+    });
     return token;
   } catch (err) {
-    console.error('[TripLover] Auth error:', err.message);
+    const { error, hint } = describeFailure({ status: null, message: err.message, operation: 'Login' });
+    logApiCall({
+      provider: 'triplover', operation: 'Login', url, ok: false,
+      durationMs: Date.now() - started, request: { email: config.email }, error, hint,
+    });
     return null;
   }
 }
 
 async function tlPost(pathname, body, { useSearchBase = false, timeout = 45000 } = {}) {
+  const operation = pathname.replace(/^\/api\/?/, '') || pathname;
   const config = await getTripLoverConfig();
-  if (!config) throw new Error('TripLover API not configured');
+  if (!config) {
+    const { error, hint } = describeFailure({ message: 'TripLover API not configured or disabled', operation });
+    logApiCall({ provider: 'triplover', operation, ok: false, request: body, error, hint });
+    throw new Error(error);
+  }
   const token = await getToken(config);
-  if (!token) throw new Error('TripLover authentication failed');
+  if (!token) {
+    const { error, hint } = describeFailure({ message: 'TripLover authentication failed', operation });
+    logApiCall({ provider: 'triplover', operation, ok: false, request: body, error, hint });
+    throw new Error(error);
+  }
 
   const base = useSearchBase ? config.searchBaseUrl : config.baseUrl;
-  const res = await fetch(`${base}${pathname}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-    body: JSON.stringify(body),
-    signal: AbortSignal.timeout(timeout),
-  });
-  const text = await res.text();
+  const url = `${base}${pathname}`;
+  const started = Date.now();
+  let res;
+  let text = '';
+  try {
+    res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(timeout),
+    });
+    text = await res.text();
+  } catch (err) {
+    const isAbort = err.name === 'TimeoutError' || err.name === 'AbortError';
+    const { error, hint } = describeFailure({
+      message: isAbort ? `${operation} timed out after ${timeout}ms` : err.message,
+      operation,
+    });
+    logApiCall({
+      provider: 'triplover', operation, url, ok: false,
+      durationMs: Date.now() - started, request: body, error, hint,
+    });
+    throw new Error(`TripLover ${pathname}: ${error}`);
+  }
+
   let data = null;
   try { data = text ? JSON.parse(text) : null; } catch (_) { data = { raw: text }; }
+
   if (!res.ok) {
-    const msg = data?.message || data?.item1?.message || `HTTP ${res.status}`;
-    throw new Error(`TripLover ${pathname}: ${msg}`);
+    const msg = data?.message || data?.item1?.message || data?.item2?.message || `HTTP ${res.status}`;
+    const { error, hint } = describeFailure({ status: res.status, message: msg, body: data, operation });
+    logApiCall({
+      provider: 'triplover', operation, url, status: res.status, ok: false,
+      durationMs: Date.now() - started, request: body, response: data, error, hint,
+    });
+    throw new Error(`TripLover ${pathname}: ${error}`);
   }
+
+  logApiCall({
+    provider: 'triplover', operation, url, status: res.status, ok: true,
+    durationMs: Date.now() - started, request: body, response: data,
+  });
   return data;
 }
+
 
 const CABIN_MAP = { economy: 1, 'premium economy': 2, premiumeconomy: 2, business: 3, first: 4 };
 
@@ -324,8 +389,10 @@ async function createBooking({ uniqueTransID, itemCodeRef, priceCodeRef, segment
       const reason = r.message || data?.item2?.message
         || (typeof data?.raw === 'string' ? data.raw.split('\n')[0].trim() : null)
         || 'TripLover booking failed (no PNR)';
-      console.error('[TripLover] Booking rejected:', reason);
-      return { success: false, error: reason, pnr: null, rawResponse: data };
+      const { error, hint } = describeFailure({ message: reason, body: data, operation: 'Book' });
+      logApiCall({ provider: 'triplover', operation: 'Book (rejected)', ok: false, response: data, error, hint });
+      return { success: false, error, hint, pnr: null, rawResponse: data };
+
     }
 
     console.log('[TripLover] Booking created — PNR:', pnr);
