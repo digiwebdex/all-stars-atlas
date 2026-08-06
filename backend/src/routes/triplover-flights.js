@@ -19,11 +19,13 @@ async function getTripLoverConfig() {
     const cfg = typeof rows[0].setting_value === 'string' ? JSON.parse(rows[0].setting_value) : rows[0].setting_value;
     if (cfg.enabled !== 'true' && cfg.enabled !== true) return null;
 
-    const baseUrl = (cfg.base_url || 'http://18.138.98.64:215').replace(/\/$/, '');
-    const searchBaseUrl = (cfg.search_base_url || baseUrl).replace(/\/$/, '');
-    if (!cfg.email || !cfg.password) return null;
+    // UAT defaults (TripLover sandbox)
+    const baseUrl = (cfg.base_url || 'https://userapi-uat.triplover.com').replace(/\/$/, '');
+    const searchBaseUrl = (cfg.search_base_url || 'https://searchapi-uat.triplover.com').replace(/\/$/, '');
+    const email = cfg.email || 'testapi@mail.com';
+    const password = cfg.password || 'VTBkV2MySkhPVE5pTTBweldrVkJlQT09';
 
-    cachedConfig = { baseUrl, searchBaseUrl, email: cfg.email, password: cfg.password };
+    cachedConfig = { baseUrl, searchBaseUrl, email, password };
     cacheTime = Date.now();
     return cachedConfig;
   } catch (err) {
