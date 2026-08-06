@@ -604,47 +604,8 @@ const DashboardBookingDetail = () => {
                 duration: booking.duration, originTerminal: null, destinationTerminal: null,
               }]).map((leg: any, i: number, arr: any[]) => (
                 <div key={i}>
-                  {/* Airline row */}
-                  <div className="px-5 py-3 flex flex-wrap items-center gap-3 bg-card">
-                    {airlineLogo(leg.airlineCode || booking.airlineCode) && (
-                      <img src={airlineLogo(leg.airlineCode || booking.airlineCode)!} alt="" className="w-6 h-6 object-contain" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-                    )}
-                    <span className="font-bold text-primary">{leg.airline || booking.airline}</span>
-                    <Separator orientation="vertical" className="h-4" />
-                    <span className="text-sm text-muted-foreground">{leg.airlineCode || booking.airlineCode} - {leg.flightNumber || booking.flightNumber}</span>
-                    <Separator orientation="vertical" className="h-4" />
-                    <span className="text-sm text-muted-foreground">{leg.aircraft || booking.aircraft || "—"}</span>
-                  </div>
+                  <LegTimeline leg={leg} airline={booking.airline} airlineCode={booking.airlineCode} flightNumber={booking.flightNumber} cabinClass={booking.cabinClass} />
 
-                  {/* Departure ←→ Arrival visual */}
-                  <div className="px-5 pb-5 pt-2">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-2xl font-black">{fmtTime(leg.departureTime)}</p>
-                        <p className="text-xs text-muted-foreground mt-1">{fmtDate(leg.departureTime)}</p>
-                        <p className="text-xs text-muted-foreground">{airportName(leg.origin)}</p>
-                        {leg.originTerminal && <p className="text-xs text-muted-foreground">Terminal: {leg.originTerminal}</p>}
-                        <p className="text-xs text-muted-foreground">{booking.cabinClass}</p>
-                      </div>
-                      <div className="flex-1 flex flex-col items-center justify-center pt-3 px-2">
-                        <p className="text-[11px] text-muted-foreground mb-2">⏱ {leg.duration || booking.duration}</p>
-                        <div className="w-full flex items-center">
-                          <div className="w-3 h-3 rounded-full border-2 border-muted-foreground/40 flex-shrink-0" />
-                          <div className="flex-1 border-t-2 border-dashed border-muted-foreground/30 relative mx-1">
-                            {leg.distance && <span className="absolute -bottom-5 left-1/2 -translate-x-1/2 text-[10px] text-muted-foreground whitespace-nowrap">📍 {leg.distance}</span>}
-                          </div>
-                          <Plane className="w-4 h-4 text-muted-foreground/60 flex-shrink-0" />
-                        </div>
-                      </div>
-                      <div className="flex-1 min-w-0 text-right">
-                        <p className="text-2xl font-black">{fmtTime(leg.arrivalTime)}</p>
-                        <p className="text-xs text-muted-foreground mt-1">{fmtDate(leg.arrivalTime)}</p>
-                        <p className="text-xs text-muted-foreground">{airportName(leg.destination)}</p>
-                        {leg.destinationTerminal && <p className="text-xs text-muted-foreground">Terminal: {leg.destinationTerminal}</p>}
-                        <p className="text-xs text-muted-foreground">{booking.cabinClass}</p>
-                      </div>
-                    </div>
-                  </div>
 
                   {/* Layover with duration */}
                   {i < arr.length - 1 && (() => {
