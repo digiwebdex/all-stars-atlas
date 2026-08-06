@@ -197,6 +197,36 @@ const AdminSettings = () => {
     }
   };
 
+  const loadApiLogs = async (opts?: { provider?: string; errorsOnly?: boolean }) => {
+    const provider = opts?.provider ?? logsProvider;
+    const errorsOnly = opts?.errorsOnly ?? logsErrorsOnly;
+    setLogsLoading(true);
+    try {
+      const qs = new URLSearchParams({ limit: '50' });
+      if (provider && provider !== 'all') qs.set('provider', provider);
+      if (errorsOnly) qs.set('onlyErrors', 'true');
+      const res = await api.get<any>(`/admin/api-logs?${qs.toString()}`);
+      setApiLogs(res?.logs || []);
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to load API logs');
+    } finally {
+      setLogsLoading(false);
+    }
+  };
+
+  const clearApiLogs = async () => {
+    try {
+      const qs = logsProvider && logsProvider !== 'all' ? `?provider=${logsProvider}` : '';
+      await api.delete(`/admin/api-logs${qs}`);
+      setApiLogs([]);
+      toast.success('API logs cleared');
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to clear logs');
+    }
+  };
+
+  useEffect(() => { loadApiLogs(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
 
   const toggleNotification = async (key: string) => {
     const next = { ...notifications, [key]: !notifications[key] };
