@@ -441,7 +441,7 @@ const DashboardWallet = () => {
 
           <DialogFooter>
             <Button variant="outline" onClick={resetAddFunds}>Cancel</Button>
-            <Button onClick={handleAddFunds} disabled={fundLoading || !fundAmount || (fundMethod === "bank" && !depositTxnId.trim())} className="gap-1.5">
+            <Button onClick={handleAddFunds} disabled={fundLoading || !fundAmount || (fundMethod === "bank" && !depositTxnId.trim() && !depositNotes.trim())} className="gap-1.5">
               {fundLoading ? "Processing..." : fundMethod === "bank" ? `Submit Deposit ৳${Number(fundAmount || 0).toLocaleString()}` : `Pay ৳${Number(fundAmount || 0).toLocaleString()}`}
             </Button>
           </DialogFooter>
