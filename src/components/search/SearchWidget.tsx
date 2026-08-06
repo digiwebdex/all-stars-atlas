@@ -1430,6 +1430,9 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
               >
                 <tab.icon className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${activeTab === tab.id ? 'text-primary' : ''}`} />
                 <span>{tab.label}</span>
+                {tab.id !== "flight" && (
+                  <span className="ml-0.5 px-1.5 py-0.5 rounded-md bg-muted text-[9px] font-bold uppercase tracking-wide text-muted-foreground">Soon</span>
+                )}
               </button>
             ))}
           </div>
