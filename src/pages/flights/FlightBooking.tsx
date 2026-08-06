@@ -408,14 +408,6 @@ const FlightBooking = () => {
     currency?: string;
   } | null>(null);
   const [pendingPayLater, setPendingPayLater] = useState(true);
-  // Values must match the backend payment_method enum (bkash|nagad|card|bank_transfer)
-  const PAY_METHODS = [
-    { value: "bkash", label: "bKash" },
-    { value: "nagad", label: "Nagad" },
-    { value: "card", label: "Visa/Master Card" },
-    { value: "bank_transfer", label: "Bank Transfer" },
-  ];
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("");
 
 
   // ── Coupon / Reward Points ──
@@ -999,7 +991,7 @@ const FlightBooking = () => {
         returnFlightData: returnFlight,
         multiCityFlights: isMultiCity ? multiCityFlights : undefined,
         passengers, isRoundTrip, isMultiCity, isDomestic: domestic, payLater,
-        paymentMethod: payLater ? "pay_later" : (selectedPaymentMethod || "card"),
+        paymentMethod: "pay_later",
         totalAmount: finalTotal, baseFare: finalBaseFare, taxes: finalTaxes, serviceCharge,
         discount: overrideFare ? Math.round((finalBaseFare * DISCOUNT_PCT) / 100) : totalDiscount,
         aitVat: overrideFare ? Math.round((finalBaseFare * AIT_VAT_PCT) / 100) : totalAitVat,
@@ -1040,11 +1032,10 @@ const FlightBooking = () => {
       setBookingResult(result);
       setBookingComplete(true);
       toast({
-        title: payLater ? "Booking Confirmed — Pay Later" : "Reservation Created — Payment Pending",
-        description: payLater
-          ? `Booking Ref: ${result.bookingRef}`
-          : `Booking Ref: ${result.bookingRef}. Complete the payment to issue the ticket.`,
+        title: "Booking Confirmed — No Payment Required",
+        description: `Booking Ref: ${result.bookingRef}. Deposit later and submit an issue request to get your ticket.`,
       });
+
 
     } catch (err: any) {
       toast({ title: "Booking Failed", description: err.message || "Something went wrong", variant: "destructive" });
@@ -1182,19 +1173,14 @@ const FlightBooking = () => {
 
     // Travel documents are now verified at payment time from the dashboard — not required at booking
 
-    if (isBiman || !partialEligible) {
-      if (!selectedPaymentMethod) {
-        toast({ title: "Payment Required", description: isBiman ? "Biman Bangladesh Airlines requires immediate payment." : "Pay Later is unavailable for this flight — please choose a payment method.", variant: "destructive" });
-        return;
-      }
-      revalidateBeforeBooking(false);
-    } else { revalidateBeforeBooking(true); }
+    // Booking never collects payment — always create the reservation only.
+    revalidateBeforeBooking(true);
   };
 
   const handlePayNow = () => {
-    if (!selectedPaymentMethod) { toast({ title: "Select Payment", description: "Please select a payment method.", variant: "destructive" }); return; }
     navigate("/dashboard/payments", { state: { bookingRef: bookingResult?.bookingRef, amount: grandTotal } });
   };
+
 
   if (isLoading) return <div className="min-h-screen bg-muted/30 pt-36 lg:pt-48 pb-10"><div className="container mx-auto px-4"><Skeleton className="h-96 w-full rounded-xl" /></div></div>;
 
@@ -1210,11 +1196,9 @@ const FlightBooking = () => {
               <div className="w-16 h-16 rounded-full bg-accent/10 flex items-center justify-center mx-auto">
                 <CheckCircle2 className="w-8 h-8 text-accent" />
               </div>
-              <h2 className="text-xl sm:text-2xl font-black">Reservation {bookingResult.payLater ? "On Hold" : "Created"} ✓</h2>
+              <h2 className="text-xl sm:text-2xl font-black">Booking Confirmed ✓</h2>
               <p className="text-sm text-muted-foreground">
-                {bookingResult.payLater
-                  ? "Your booking has been placed on hold. Complete payment before the deadline."
-                  : "Your seat is reserved. The ticket is issued once your payment is confirmed."}
+                Your seat is reserved. No payment was taken — deposit the fare and submit an issue request to get your ticket.
               </p>
               <div className="bg-muted/50 rounded-xl p-4 text-left space-y-2">
                 <div className="flex justify-between text-sm"><span className="text-muted-foreground">Booking ID</span><span className="font-bold font-mono">{bookingResult.bookingRef}</span></div>
@@ -1222,10 +1206,9 @@ const FlightBooking = () => {
                   <div className="flex justify-between text-sm"><span className="text-muted-foreground">Airlines PNR</span><span className="font-bold font-mono text-accent">{bookingResult.airlinePnr}</span></div>
                 )}
                 <div className="flex justify-between text-sm"><span className="text-muted-foreground">Status</span>
-                  <Badge className="bg-warning/10 text-warning border-warning/20">
-                    {bookingResult.payLater ? "On Hold" : "Payment Pending"}
-                  </Badge>
+                  <Badge className="bg-warning/10 text-warning border-warning/20">Reserved — Not Issued</Badge>
                 </div>
+
 
                 <div className="flex justify-between text-sm"><span className="text-muted-foreground">Total Amount</span><span className="font-bold text-accent">৳{grandTotal.toLocaleString()}</span></div>
                 {bookingResult.payLater && bookingResult.paymentDeadline && (
@@ -1263,26 +1246,17 @@ const FlightBooking = () => {
               )}
               <Separator />
               <div className="flex flex-col sm:flex-row gap-3">
-                <Button className="flex-1 font-bold bg-accent text-accent-foreground hover:bg-accent/90" onClick={handlePayNow}>
-                  <CreditCard className="w-4 h-4 mr-1.5" /> Pay Now ৳{grandTotal.toLocaleString()}
+                <Button className="flex-1 font-bold bg-accent text-accent-foreground hover:bg-accent/90" onClick={() => navigate("/dashboard/bookings")}>
+                  <Plane className="w-4 h-4 mr-1.5" /> View My Bookings
                 </Button>
-                <Button variant="outline" className="flex-1" onClick={() => navigate("/dashboard/bookings")}>
-                  <Timer className="w-4 h-4 mr-1.5" /> Pay Later — Dashboard
+                <Button variant="outline" className="flex-1" onClick={handlePayNow}>
+                  <CreditCard className="w-4 h-4 mr-1.5" /> Deposit & Request Issue
                 </Button>
               </div>
-              <div className="mt-4 space-y-3 text-left">
-                <p className="text-sm font-semibold">Select Payment Method</p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {PAY_METHODS.map(m => (
-                    <label key={m.value} className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${
-                      selectedPaymentMethod === m.value ? "border-accent bg-accent/5" : "border-border hover:border-accent/40"
-                    }`}>
-                      <input type="radio" name="payMethod" className="accent-[hsl(var(--accent))]" checked={selectedPaymentMethod === m.value} onChange={() => setSelectedPaymentMethod(m.value)} />
-                      <span className="text-sm font-medium">{m.label}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
+              <p className="text-xs text-muted-foreground text-left">
+                Deposit ৳{grandTotal.toLocaleString()} to your account balance, then submit an <strong>Issue Request</strong> from Dashboard → Bookings. The status will show <strong>In Progress</strong> until the ticket is issued.
+              </p>
+
 
             </CardContent>
           </Card>
@@ -1974,44 +1948,21 @@ const FlightBooking = () => {
                   </div>
                 )}
 
-                {isBiman || !partialEligible ? (
-                  <Card>
-                    <CardHeader><CardTitle className="text-sm sm:text-base flex items-center gap-2"><CreditCard className="w-5 h-5 text-accent" /> Payment (Required)</CardTitle></CardHeader>
-                    <CardContent className="space-y-4">
-                      {!isBiman && (
-                        <div className="text-xs rounded-lg border border-warning/30 bg-warning/5 p-2 text-muted-foreground">
-                          Pay-Later is not available for this flight ({BD_AIRPORTS.includes((bookingFlightData?.origin || '').toUpperCase()) && BD_AIRPORTS.includes((bookingFlightData?.destination || '').toUpperCase()) ? 'domestic route' : bookingFlightData?.refundable === false ? 'non-refundable fare' : `within ${partialRules.minHours}h of departure`}).
-                        </div>
-                      )}
-                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        {PAY_METHODS.map((m) => (
-                          <label key={m.value} className={`flex items-center gap-3 p-3 sm:p-4 rounded-xl border cursor-pointer transition-colors ${
-                            selectedPaymentMethod === m.value ? "border-accent bg-accent/5" : "border-border hover:border-accent/40"
-                          }`}>
-                            <input type="radio" name="payMethod" className="accent-[hsl(var(--accent))]" checked={selectedPaymentMethod === m.value} onChange={() => setSelectedPaymentMethod(m.value)} />
-                            <span className="text-xs sm:text-sm font-medium">{m.label}</span>
-                          </label>
-                        ))}
+                <Card className="border-accent/20 bg-accent/[0.02]">
+                  <CardContent className="pt-5 pb-5">
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center shrink-0"><Timer className="w-5 h-5 text-accent" /></div>
+                      <div>
+                        <p className="font-bold text-sm">Book now — no payment required</p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Your seat is reserved instantly. Deposit the fare to your account balance later, then submit an <strong>Issue Request</strong> from <strong>Dashboard → Bookings</strong> — it will show as <strong>In Progress</strong> until our team issues the ticket.
+                          {deadlineInfo && <span className="text-destructive font-semibold"> {deadlineInfo.label}.</span>}
+                        </p>
                       </div>
+                    </div>
+                  </CardContent>
+                </Card>
 
-                    </CardContent>
-                  </Card>
-                ) : (
-                  <Card className="border-accent/20 bg-accent/[0.02]">
-                    <CardContent className="pt-5 pb-5">
-                      <div className="flex items-start gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center shrink-0"><Timer className="w-5 h-5 text-accent" /></div>
-                        <div>
-                          <p className="font-bold text-sm">Book Now, Pay {partialRules.upfrontPct}% Now / {100 - partialRules.upfrontPct}% Later</p>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            International refundable fare ≥ {partialRules.minHours}h before departure. Pay the balance from your dashboard before the deadline.
-                            {deadlineInfo && <span className="text-destructive font-semibold"> {deadlineInfo.label}.</span>}
-                          </p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
 
                 {/* ── Coupon / Reward Points Section ── */}
                 <Card className="border-warning/20 bg-warning/[0.02]">
@@ -2111,15 +2062,12 @@ const FlightBooking = () => {
               {step > 1 && <Button variant="outline" onClick={() => setStep(step - 1)} className="shrink-0">Back</Button>}
               {step < totalSteps ? (
                 <Button onClick={handleContinue} className="font-bold bg-accent text-accent-foreground hover:bg-accent/90 shrink-0">Continue <ArrowRight className="w-4 h-4 ml-1" /></Button>
-              ) : (isBiman || !partialEligible) ? (
-                <Button className="font-bold bg-accent text-accent-foreground hover:bg-accent/90 shadow-lg shrink-0 text-xs sm:text-sm" onClick={handleConfirmBooking} disabled={bookingLoading}>
-                  {bookingLoading ? "Processing..." : <><Shield className="w-4 h-4 mr-1 shrink-0" /> <span className="truncate">Confirm & Pay ৳{grandTotal.toLocaleString()}</span></>}
-                </Button>
               ) : (
-              <Button className="font-bold bg-accent text-accent-foreground hover:bg-accent/90 shadow-lg shrink-0 text-xs sm:text-sm" onClick={handleConfirmBooking} disabled={bookingLoading}>
-                  {bookingLoading ? "Processing..." : <><CheckCircle2 className="w-4 h-4 mr-1 shrink-0" /> Book Now for Free</>}
+                <Button className="font-bold bg-accent text-accent-foreground hover:bg-accent/90 shadow-lg shrink-0 text-xs sm:text-sm" onClick={handleConfirmBooking} disabled={bookingLoading}>
+                  {bookingLoading ? "Processing..." : <><CheckCircle2 className="w-4 h-4 mr-1 shrink-0" /> <span className="truncate">Confirm Booking — No Payment Now</span></>}
                 </Button>
               )}
+
             </div>
           </div>
 
