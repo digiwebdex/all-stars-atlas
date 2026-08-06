@@ -2714,15 +2714,16 @@ const FlightCard = ({
                               {legLogo && <img src={legLogo} alt="" className="w-8 h-8 object-contain mt-0.5" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />}
                               <div className="flex flex-col gap-0.5">
                                 <span className="text-sm font-semibold">{flight.airline} - {String(leg.flightNumber || flightNo).replace(/^[A-Z0-9]{2}/, '').trim() || (leg.flightNumber || flightNo)}</span>
-                                {(leg.operatingAirline || flight.operatingAirline) && (leg.operatingAirline || flight.operatingAirline) !== (leg.airlineCode || flight.airlineCode) && (
-                                  <span className="text-xs text-muted-foreground">Operated by : {leg.operatingAirline || flight.operatingAirline}</span>
+                                {(leg.operatingAirline || flight.operatingAirline || leg.airlineCode || flight.airlineCode) && (
+                                  <span className="text-xs text-muted-foreground">Operated by : {leg.operatingAirline || flight.operatingAirline || leg.airlineCode || flight.airlineCode}</span>
                                 )}
                                 {(leg.aircraft || aircraft) && (
                                   <span className="text-xs text-muted-foreground">Aircraft : {leg.aircraft || aircraft}</span>
                                 )}
                                 <span className="text-xs text-muted-foreground">
-                                  Class : {(leg.bookingClass || flight.bookingClass || '—')}{cabinDisplay ? ` - (${cabinDisplay})` : ''}
+                                  Class : {(leg.bookingClass || flight.bookingClass || '—')}{(leg.cabinClass || cabin) ? ` - (${leg.cabinClass || cabin})` : ''}
                                 </span>
+
                                 {availableSeats !== null && availableSeats <= 9 && (
                                   <span className="text-xs text-orange-500 font-bold">{availableSeats} Seat{availableSeats !== 1 ? "s" : ""} Left</span>
                                 )}

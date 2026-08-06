@@ -133,8 +133,9 @@ const LegTimeline = ({ leg, airline, airlineCode, flightNumber, cabinClass }: {
 }) => {
   const dist = distanceKm(leg.origin, leg.destination);
   const fno = String(leg.flightNumber || flightNumber || "").replace(/^[A-Z0-9]{2}/, "").trim() || (leg.flightNumber || flightNumber);
-  const opBy = leg.operatingAirline || leg.operatingCarrier || "";
+  const opBy = leg.operatingAirline || leg.operatingCarrier || leg.airlineCode || airlineCode || "";
   const cls = leg.bookingClass || leg.classOfService || "";
+
   return (
     <div className="px-5 py-4">
       <p className="text-sm font-bold mb-4">
@@ -178,7 +179,8 @@ const LegTimeline = ({ leg, airline, airlineCode, flightNumber, cabinClass }: {
             <p className="text-sm font-semibold">{leg.airline || airline} - {fno}</p>
             {opBy && <p className="text-[11px] text-muted-foreground">Operated by : {opBy}</p>}
             {(leg.aircraft) && <p className="text-[11px] text-muted-foreground">Aircraft : {leg.aircraft}</p>}
-            <p className="text-[11px] text-muted-foreground">Class : {cls || "—"}{cabinClass ? ` - (${cabinClass})` : ""}</p>
+            <p className="text-[11px] text-muted-foreground">Class : {cls || "—"}{(leg.cabinClass || cabinClass) ? ` - (${leg.cabinClass || cabinClass})` : ""}</p>
+
           </div>
         </div>
       </div>
