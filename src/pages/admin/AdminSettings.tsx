@@ -6,7 +6,7 @@ import { Switch } from "@/components/ui/switch";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { Settings, Globe, Mail, CreditCard, Shield, Bell, Database, Plug, Eye, EyeOff, Plus, Trash2, Building2, CloudUpload, ExternalLink, Info, Users, Loader2, Search, Plane, Palmtree, FileText, Stethoscope, Car, Smartphone, PhoneCall, Receipt, Image, Upload, RotateCcw } from "lucide-react";
+import { Settings, Globe, Mail, CreditCard, Shield, Bell, Database, Plug, Eye, EyeOff, Plus, Trash2, Building2, CloudUpload, ExternalLink, Info, Users, Loader2, Search, Plane, Palmtree, FileText, Stethoscope, Car, Smartphone, PhoneCall, Receipt, Image, Upload, RotateCcw, Power } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -21,6 +21,8 @@ import { SEARCH_TAB_LABELS, DEFAULT_SEARCH_TABS, type SearchTabConfig } from "@/
 // ── API Integrations Config ──
 const apiIntegrations = [
   // ── Travel GDS & Suppliers ──
+  { id: 'triplover', name: 'TripLover (Flight Aggregator)', description: 'TripLover / Online Travel Agency common API — Search, Reprice, Book, NewTicket, Cancel, FareRules & PNR retrieve', fields: [{ key: 'enabled', label: 'Enabled', placeholder: '', type: 'select', options: ['true', 'false'] }, { key: 'base_url', label: 'Base URL', placeholder: 'http://18.138.98.64:215', type: 'text' }, { key: 'search_base_url', label: 'Search Base URL (optional)', placeholder: 'Leave blank to use Base URL', type: 'text' }, { key: 'email', label: 'API Email', placeholder: 'testapi@mail.com', type: 'text' }, { key: 'password', label: 'API Password', placeholder: 'API password', type: 'password' }], docs: '', category: 'travel' },
+
   { id: 'tti_astra', name: 'Air Astra TTI/ZENITH (Flight GDS)', description: 'Air Astra reservation system — real-time flight search, pricing & booking via TTI ZENITH API. Airline code: 2A', fields: [{ key: 'environment', label: 'Environment', placeholder: 'preproduction', type: 'select', options: ['preproduction', 'production'] }, { key: 'agency_id', label: 'Agency ID', placeholder: '10000240', type: 'text' }, { key: 'agency_name', label: 'Agency Name', placeholder: 'API for Evan International (10000240)', type: 'text' }, { key: 'preprod_url', label: 'Preproduction API URL', placeholder: 'http://tstws2.ttinteractive.com/Zenith/TTI.PublicApi.Services/JsonSaleEngineService.svc', type: 'text' }, { key: 'preprod_key', label: 'Preproduction API Key', placeholder: 'Preproduction API key', type: 'password' }, { key: 'prod_url', label: 'Production API URL', placeholder: 'https://emea.ttinteractive.com/Zenith/TTI.PublicApi.Services/JsonSaleEngineService.svc', type: 'text' }, { key: 'prod_key', label: 'Production API Key', placeholder: 'Production API key', type: 'password' }], docs: 'https://emea.ttinteractive.com/Contenu/Documentation/PublicApi/Html/Default.html', category: 'travel' },
   { id: 'bdfare', name: 'BDFare (Flight GDS)', description: 'Bangladesh flight aggregator — Biman (BG), US-Bangla (BS), NovoAir (VQ) + international carriers', fields: [{ key: 'enabled', label: 'Enabled', placeholder: '', type: 'select', options: ['true', 'false'] }, { key: 'environment', label: 'Environment', placeholder: 'sandbox', type: 'select', options: ['sandbox', 'production'] }, { key: 'username', label: 'Username/Agent ID', placeholder: 'Your BDFare agent ID', type: 'text' }, { key: 'sandbox_url', label: 'Sandbox URL', placeholder: 'https://sandbox.bdfares.com/v1', type: 'text' }, { key: 'sandbox_key', label: 'Sandbox API Key', placeholder: 'Sandbox key', type: 'password' }, { key: 'prod_url', label: 'Production URL', placeholder: 'https://api.bdfares.com/v1', type: 'text' }, { key: 'prod_key', label: 'Production API Key', placeholder: 'Production key', type: 'password' }], docs: 'https://developer.bdfares.com', category: 'travel' },
   { id: 'flyhub', name: 'FlyHub (Flight GDS)', description: 'Alternative flight GDS — covers 450+ airlines worldwide with BD-optimized pricing', fields: [{ key: 'enabled', label: 'Enabled', placeholder: '', type: 'select', options: ['true', 'false'] }, { key: 'environment', label: 'Environment', placeholder: 'sandbox', type: 'select', options: ['sandbox', 'production'] }, { key: 'sandbox_url', label: 'Sandbox URL', placeholder: 'https://api.sandbox.flyhub.com/api/v1', type: 'text' }, { key: 'sandbox_key', label: 'Sandbox API Key', placeholder: 'Sandbox key', type: 'password' }, { key: 'prod_url', label: 'Production URL', placeholder: 'https://api.flyhub.com/api/v1', type: 'text' }, { key: 'prod_key', label: 'Production API Key', placeholder: 'Production key', type: 'password' }], docs: 'https://developer.flyhub.com', category: 'travel' },
@@ -103,6 +105,10 @@ const AdminSettings = () => {
   const [appearance, setAppearance] = useState({ admin_theme_primary: '#2563eb', admin_theme_accent: '#0ea5e9', admin_theme_sidebar_bg: '#0f172a' });
   const [appearanceSaving, setAppearanceSaving] = useState(false);
   const [searchTabs, setSearchTabs] = useState<SearchTabConfig>({ ...DEFAULT_SEARCH_TABS });
+  const [providerStatus, setProviderStatus] = useState<Array<{ id: string; name: string; group?: string; paused: boolean }>>([]);
+  const [providerBusy, setProviderBusy] = useState<string | null>(null);
+
+
 
   // Load logo + all settings from backend on mount
   useEffect(() => {
@@ -110,6 +116,10 @@ const AdminSettings = () => {
       if (d?.url) setLogoUrl(d.url);
       if (d?.sizes) setLogoSizes(prev => ({ ...prev, ...d.sizes }));
     }).catch(() => {});
+    api.get<any>('/admin/provider-status').then(d => {
+      if (d?.providers) setProviderStatus(d.providers);
+    }).catch(() => {});
+
     (async () => {
       try {
         const data = await api.get<any>('/admin/settings');
@@ -150,6 +160,22 @@ const AdminSettings = () => {
   const updateApiKey = (apiId: string, fieldKey: string, value: string) => {
     setApiKeyValues(prev => ({ ...prev, [apiId]: { ...(prev[apiId] || {}), [fieldKey]: value } }));
   };
+
+  const toggleProviderPaused = async (id: string, name: string, paused: boolean) => {
+    setProviderBusy(id);
+    setProviderStatus(prev => prev.map(p => p.id === id ? { ...p, paused } : p));
+    try {
+      const res = await api.put<any>('/admin/provider-status', { id, paused });
+      if (res?.providers) setProviderStatus(res.providers);
+      toast.success(`${name} ${paused ? 'paused' : 'resumed'}`);
+    } catch (err: any) {
+      setProviderStatus(prev => prev.map(p => p.id === id ? { ...p, paused: !paused } : p));
+      toast.error(err?.message || 'Failed to update API status');
+    } finally {
+      setProviderBusy(null);
+    }
+  };
+
 
   const toggleNotification = async (key: string) => {
     const next = { ...notifications, [key]: !notifications[key] };
@@ -592,7 +618,52 @@ const AdminSettings = () => {
         </CardContent>
       </Card>
 
+      {/* API Control — Pause / Resume any provider */}
+      <Card className="border-primary/20">
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center"><Power className="w-5 h-5 text-primary" /></div>
+            <div>
+              <CardTitle className="text-lg">API Control (Pause / Resume)</CardTitle>
+              <CardDescription>Temporarily pause any supplier or service API without deleting its credentials. Paused APIs are skipped instantly across search, booking and payments.</CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {providerStatus.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Loading API list…</p>
+          ) : (
+            Array.from(new Set(providerStatus.map(p => p.group || 'Other'))).map(group => (
+              <div key={group} className="space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{group}</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {providerStatus.filter(p => (p.group || 'Other') === group).map(p => (
+                    <div key={p.id} className="flex items-center justify-between gap-3 border rounded-lg px-3 py-2">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium truncate">{p.name}</p>
+                        <Badge variant={p.paused ? 'secondary' : 'default'} className="text-[10px] h-5 mt-0.5">
+                          {p.paused ? 'Paused' : 'Live'}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        {providerBusy === p.id && <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground" />}
+                        <Switch
+                          checked={!p.paused}
+                          disabled={providerBusy === p.id}
+                          onCheckedChange={(v) => toggleProviderPaused(p.id, p.name, !v)}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))
+          )}
+        </CardContent>
+      </Card>
+
       {/* API Integrations */}
+
       <Card>
         <CardHeader>
           <div className="flex items-center gap-3">

@@ -13,6 +13,9 @@ const sabreFlights = require('./sabre-flights');
 const galileoFlights = require('./galileo-flights');
 const ndcFlights = require('./ndc-flights');
 const lccFlights = require('./lcc-flights');
+const triploverFlights = require('./triplover-flights');
+const { getProviderStatuses, setProviderPaused } = require('../utils/provider-status');
+
 
 const router = express.Router();
 router.use(authenticate, requireAdmin);
@@ -695,7 +698,34 @@ function normalizeSabreSettings(input = {}, existing = {}) {
   };
 }
 
+// ── API pause / resume control ──
+// GET /admin/provider-status — list every pausable API and its paused state
+router.get('/provider-status', async (_req, res) => {
+  try {
+    const providers = await getProviderStatuses();
+    res.json({ success: true, providers });
+  } catch (err) {
+    console.error('[Admin] provider-status error:', err.message);
+    res.status(500).json({ message: 'Failed to load API status' });
+  }
+});
+
+// PUT /admin/provider-status — { id, paused }
+router.put('/provider-status', async (req, res) => {
+  try {
+    const { id, paused } = req.body || {};
+    if (!id) return res.status(400).json({ message: 'Provider id is required' });
+    await setProviderPaused(id, !!paused);
+    const providers = await getProviderStatuses();
+    res.json({ success: true, message: `${id} ${paused ? 'paused' : 'resumed'}`, providers });
+  } catch (err) {
+    console.error('[Admin] set provider-status error:', err.message);
+    res.status(400).json({ message: err.message });
+  }
+});
+
 // GET /admin/settings — returns all settings including API keys (masked)
+
 router.get('/settings', async (req, res) => {
   try {
     const [rows] = await db.query('SELECT * FROM system_settings');
@@ -795,6 +825,8 @@ router.put('/settings', async (req, res) => {
       // Clear provider config caches when API settings change
       const cacheClears = {
         tti_astra: () => { try { ttiFlights.clearTTIConfigCache?.(); } catch {} },
+        triplover: () => { try { triploverFlights.clearTripLoverConfigCache?.(); } catch {} },
+
         bdfare: () => { try { bdfFlights.clearBDFareConfigCache?.(); } catch {} },
         flyhub: () => { try { flyhubFlights.clearFlyHubConfigCache?.(); } catch {} },
         sabre: () => { try { sabreFlights.clearSabreConfigCache?.(); } catch {} },
