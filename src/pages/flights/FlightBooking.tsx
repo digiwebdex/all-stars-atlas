@@ -1270,7 +1270,8 @@ const FlightBooking = () => {
                   <Timer className="w-4 h-4 mr-1.5" /> Pay Later — Dashboard
                 </Button>
               </div>
-              {(
+              {
+
 
                 <div className="mt-4 space-y-3 text-left">
                   <p className="text-sm font-semibold">Select Payment Method</p>
