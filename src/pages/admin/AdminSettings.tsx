@@ -116,6 +116,10 @@ const AdminSettings = () => {
       if (d?.url) setLogoUrl(d.url);
       if (d?.sizes) setLogoSizes(prev => ({ ...prev, ...d.sizes }));
     }).catch(() => {});
+    api.get<any>('/admin/provider-status').then(d => {
+      if (d?.providers) setProviderStatus(d.providers);
+    }).catch(() => {});
+
     (async () => {
       try {
         const data = await api.get<any>('/admin/settings');
