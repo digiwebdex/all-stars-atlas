@@ -27,13 +27,28 @@ mysql -u root -N -B seventrip -e \
   || echo "(could not read provider_pause — run as root or check DB name)"
 
 echo
-echo "── 2. TripLover direct probe (login + search) ─"
-TL_START=$(date +%s%3N)
-curl -s -o /tmp/tl-login.json -w "login HTTP %{http_code} in %{time_total}s\n" \
-  -X POST "https://userapi-uat.triplover.com/api/Authenticate/Login" \
-  -H 'Content-Type: application/json' \
-  -d '{"email":"testapi@mail.com","password":"testapi@123"}'
-head -c 300 /tmp/tl-login.json; echo
+echo "── 2. TripLover direct integration probe ──────"
+# Uses the exact configured credentials, login endpoint and search payload from
+# the application without printing any credential or bearer token.
+ROUTE_FROM="$ROUTE_FROM" ROUTE_TO="$ROUTE_TO" DATE="$DATE" node - <<'NODE'
+const { searchFlights } = require('./src/routes/triplover-flights');
+const started = Date.now();
+searchFlights({
+  origin: process.env.ROUTE_FROM,
+  destination: process.env.ROUTE_TO,
+  departDate: process.env.DATE,
+  adults: 1,
+  cabinClass: 'economy',
+}).then(rows => {
+  const airlines = [...new Set(rows.map(row => `${row.airlineCode || '??'} ${row.airline || ''}`.trim()))];
+  console.log(`direct TripLover: ${rows.length} fares in ${((Date.now() - started) / 1000).toFixed(2)}s`);
+  console.log(`direct airlines (${airlines.length}): ${airlines.join(', ') || 'none'}`);
+  process.exit(0);
+}).catch(error => {
+  console.error('direct TripLover failed:', error.message);
+  process.exit(1);
+});
+NODE
 
 echo
 echo "── 3. Aggregated search through our API ──────"
