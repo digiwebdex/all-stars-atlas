@@ -219,13 +219,15 @@ function normalizeSearch(response, originCode, destinationCode) {
       legs: outboundLegs,
       returnLegs: returnLegs.length ? returnLegs : undefined,
       isRoundTrip: returnLegs.length > 0,
-      fareDetails: Object.entries(item.passengerFares || {}).map(([ptc, f]) => ({
-        passengerType: ptc.toUpperCase(),
-        basePrice: f.basePrice,
-        taxes: f.taxes,
-        totalPrice: f.totalPrice,
-        ait: f.ait,
-      })),
+      fareDetails: Object.entries(item.passengerFares || {})
+        .filter(([, f]) => f && typeof f === 'object')
+        .map(([ptc, f]) => ({
+          passengerType: ptc.toUpperCase(),
+          basePrice: f.basePrice ?? 0,
+          taxes: f.taxes ?? 0,
+          totalPrice: f.totalPrice ?? 0,
+          ait: f.ait ?? 0,
+        })),
       passengerCounts: item.passengerCounts || null,
       bookable: item.bookable !== false,
       validatingAirline: item.platingCarrier || '',
