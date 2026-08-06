@@ -279,6 +279,7 @@ const SearchWidget = ({ flightOnly, initialFlightValues, compact }: SearchWidget
   const [fareType, setFareType] = useState("regular");
   const [flightScope, setFlightScope] = useState<"domestic" | "international">(initScope);
   const [preferredCarrier, setPreferredCarrier] = useState("any");
+  const [carrierOpen, setCarrierOpen] = useState(false);
 
   // Multi-city segments
   interface FlightSegment {
