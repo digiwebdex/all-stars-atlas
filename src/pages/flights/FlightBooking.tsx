@@ -1480,8 +1480,8 @@ const FlightBooking = () => {
                         </div>
                       </div>
 
-                      {/* Row 3: Document info */}
-                      <div className="grid sm:grid-cols-3 gap-3 sm:gap-4">
+                      {/* Row 3: Document info — international only */}
+                      <div className={`grid gap-3 sm:gap-4 ${domestic ? "sm:grid-cols-1" : "sm:grid-cols-3"}`}>
                         <div className="space-y-1.5">
                           <Label className="text-xs sm:text-sm">Document Issue Country</Label>
                           <Select value={pax.documentCountry || "BD"} onValueChange={(v) => { const updated = [...passengers]; updated[pi].documentCountry = v; setPassengers(updated); }}>
@@ -1491,20 +1491,24 @@ const FlightBooking = () => {
                             </SelectContent>
                           </Select>
                         </div>
-                        <div className="space-y-1.5">
-                          <Label className={`text-xs sm:text-sm ${fieldErrors[`passport_${pi}`] ? "text-destructive" : ""}`}>Document Number *</Label>
-                          <Input value={pax.passport} onChange={(e) => {
-                            const updated = [...passengers]; updated[pi].passport = e.target.value; setPassengers(updated);
-                            setFieldErrors(prev => { const n = {...prev}; delete n[`passport_${pi}`]; return n; });
-                          }} placeholder="e.g. A0123456789" className={`h-10 sm:h-11 ${fieldErrors[`passport_${pi}`] ? "border-destructive ring-destructive/20 ring-2" : ""}`} />
-                        </div>
-                        <div className="space-y-1.5">
-                          <Label className={`text-xs sm:text-sm ${fieldErrors[`passportExpiry_${pi}`] ? "text-destructive" : ""}`}>Expiration Date *</Label>
-                          <Input type="date" value={pax.passportExpiry} onChange={(e) => {
-                            const updated = [...passengers]; updated[pi].passportExpiry = e.target.value; setPassengers(updated);
-                            setFieldErrors(prev => { const n = {...prev}; delete n[`passportExpiry_${pi}`]; return n; });
-                          }} className={`h-10 sm:h-11 ${fieldErrors[`passportExpiry_${pi}`] ? "border-destructive ring-destructive/20 ring-2" : ""}`} />
-                        </div>
+                        {!domestic && (
+                          <>
+                            <div className="space-y-1.5">
+                              <Label className={`text-xs sm:text-sm ${fieldErrors[`passport_${pi}`] ? "text-destructive" : ""}`}>Document Number *</Label>
+                              <Input value={pax.passport} onChange={(e) => {
+                                const updated = [...passengers]; updated[pi].passport = e.target.value; setPassengers(updated);
+                                setFieldErrors(prev => { const n = {...prev}; delete n[`passport_${pi}`]; return n; });
+                              }} placeholder="e.g. A0123456789" className={`h-10 sm:h-11 ${fieldErrors[`passport_${pi}`] ? "border-destructive ring-destructive/20 ring-2" : ""}`} />
+                            </div>
+                            <div className="space-y-1.5">
+                              <Label className={`text-xs sm:text-sm ${fieldErrors[`passportExpiry_${pi}`] ? "text-destructive" : ""}`}>Expiration Date *</Label>
+                              <Input type="date" value={pax.passportExpiry} onChange={(e) => {
+                                const updated = [...passengers]; updated[pi].passportExpiry = e.target.value; setPassengers(updated);
+                                setFieldErrors(prev => { const n = {...prev}; delete n[`passportExpiry_${pi}`]; return n; });
+                              }} className={`h-10 sm:h-11 ${fieldErrors[`passportExpiry_${pi}`] ? "border-destructive ring-destructive/20 ring-2" : ""}`} />
+                            </div>
+                          </>
+                        )}
                       </div>
 
                       {/* Travel Document Uploads moved to Review & Pay step */}
