@@ -1522,13 +1522,17 @@ async function ensureTransactionEnums() {
 router.post('/wallet/deposit', paymentSlipUpload.single('depositSlip'), async (req, res) => {
   try {
     const userId = req.user.sub || req.user.id;
-    const { amount, method, notes } = req.body;
+    const { amount, method, notes, transactionId } = req.body;
     const amt = parseFloat(amount);
     if (!amt || amt < 10) {
       return res.status(400).json({ message: 'Minimum deposit is ৳10' });
     }
     if (amt > 500000) {
       return res.status(400).json({ message: 'Maximum single deposit is ৳500,000' });
+    }
+    const txnRef = String(transactionId || '').trim();
+    if (!txnRef || txnRef.length < 4) {
+      return res.status(400).json({ message: 'Transaction ID is required (minimum 4 characters)' });
     }
 
     const txnId = uuidv4();
@@ -1539,8 +1543,10 @@ router.post('/wallet/deposit', paymentSlipUpload.single('depositSlip'), async (r
       source: 'wallet_deposit',
       receiptUrl,
       originalFileName: req.file?.originalname || null,
+      transactionId: txnRef,
       notes: notes || null,
     });
+
 
     const sql = `INSERT INTO transactions (id, user_id, type, amount, description, status, payment_method, reference, meta, created_at)
        VALUES (?, ?, 'deposit', ?, ?, 'pending', ?, ?, ?, NOW())`;
