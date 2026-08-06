@@ -77,6 +77,8 @@ const AdminPaymentApprovals = () => {
     method: p.method || "—",
     status: p.status,
     note: p.note || "",
+    notes: p.notes || "",
+    transactionId: p.transactionId || "",
     receiptUrl: p.receiptUrl,
     date: p.date ? new Date(p.date).toLocaleDateString('en-GB') : "—",
   })) : [];
