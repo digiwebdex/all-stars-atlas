@@ -95,6 +95,7 @@ function mapBooking(b: any) {
     pax: pax.length || 1, paxNames: pax.map((p: any) => `${p.firstName||""} ${p.lastName||""}`.trim()).filter(Boolean),
     ticketNo: resolvedTicketNo, paymentMethod: b.paymentMethod || "—", paymentStatus: b.paymentStatus || "—",
     paymentDeadline: b.paymentDeadline || null,
+    ticketedAt: d.ticketedAt || b.ticketedAt || b.ticketed_at || null,
     airline, airlineCode: ac, flightNumber: fn, cabinClass: cabin, aircraft, departureTime: depTime, arrivalTime: arrTime,
     duration: dur, stops, baggage: bag, refundable, legs, returnFlight: ret, isRoundTrip: rt, source: src,
     origin, destination: dest, details: d, passengers: pax, contactInfo: b.contactInfo || {}, addOns: d.addOns || {},
