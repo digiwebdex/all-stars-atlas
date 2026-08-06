@@ -1182,19 +1182,14 @@ const FlightBooking = () => {
 
     // Travel documents are now verified at payment time from the dashboard — not required at booking
 
-    if (isBiman || !partialEligible) {
-      if (!selectedPaymentMethod) {
-        toast({ title: "Payment Required", description: isBiman ? "Biman Bangladesh Airlines requires immediate payment." : "Pay Later is unavailable for this flight — please choose a payment method.", variant: "destructive" });
-        return;
-      }
-      revalidateBeforeBooking(false);
-    } else { revalidateBeforeBooking(true); }
+    // Booking never collects payment — always create the reservation only.
+    revalidateBeforeBooking(true);
   };
 
   const handlePayNow = () => {
-    if (!selectedPaymentMethod) { toast({ title: "Select Payment", description: "Please select a payment method.", variant: "destructive" }); return; }
     navigate("/dashboard/payments", { state: { bookingRef: bookingResult?.bookingRef, amount: grandTotal } });
   };
+
 
   if (isLoading) return <div className="min-h-screen bg-muted/30 pt-36 lg:pt-48 pb-10"><div className="container mx-auto px-4"><Skeleton className="h-96 w-full rounded-xl" /></div></div>;
 
