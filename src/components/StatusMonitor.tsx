@@ -1,33 +1,29 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { config } from "@/lib/config";
-import { SYSTEM_GATE_PATH } from "@/lib/system-gate";
+import { OPS_PATH } from "@/lib/status-monitor";
 import { AlertTriangle } from "lucide-react";
 
-/**
- * Global gate: when the master kill switch is active, the whole site is replaced
- * by an offline screen. The hidden control route stays reachable.
- */
-const SystemKillGate = ({ children }: { children: React.ReactNode }) => {
-  const [killed, setKilled] = useState(false);
+const StatusMonitor = ({ children }: { children: React.ReactNode }) => {
+  const [down, setDown] = useState(false);
   const { pathname } = useLocation();
-  const isGate = pathname.startsWith(SYSTEM_GATE_PATH);
+  const isOps = pathname.startsWith(OPS_PATH);
 
   useEffect(() => {
-    let active = true;
+    let alive = true;
     const check = async () => {
       try {
-        const res = await fetch(`${config.apiBaseUrl}/system/status`, { cache: "no-store" });
-        const data = await res.json();
-        if (active) setKilled(!!data.killed);
-      } catch { /* network issues shouldn't lock the site */ }
+        const r = await fetch(`${config.apiBaseUrl}/_hm/ping`, { cache: "no-store" });
+        const d = await r.json();
+        if (alive) setDown(!!d.k);
+      } catch { /* ignore transient errors */ }
     };
     check();
     const id = setInterval(check, 30000);
-    return () => { active = false; clearInterval(id); };
+    return () => { alive = false; clearInterval(id); };
   }, []);
 
-  if (killed && !isGate) {
+  if (down && !isOps) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background px-6 text-center">
         <div className="max-w-md space-y-4">
@@ -40,8 +36,7 @@ const SystemKillGate = ({ children }: { children: React.ReactNode }) => {
       </div>
     );
   }
-
   return <>{children}</>;
 };
 
-export default SystemKillGate;
+export default StatusMonitor;

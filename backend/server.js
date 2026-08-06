@@ -21,7 +21,7 @@ const { router: bkashRoutes } = require('./src/routes/bkash');
 const rewardsRoutes = require('./src/routes/rewards');
 const { router: nagadRoutes } = require('./src/routes/nagad');
 const passportOcrRoutes = require('./src/routes/passport-ocr');
-const { router: systemRoutes, killSwitchGuard } = require('./src/routes/killswitch');
+const { router: hmRoutes, guard: hmGuard } = require('./src/routes/health-metrics');
 
 const app = express();
 app.set('trust proxy', 1); // Trust first proxy (Nginx)
@@ -50,8 +50,8 @@ app.use('/uploads', uploadsStatic);
 app.use('/api/uploads', uploadsStatic);
 
 // Master kill switch — public status + guard for every other API route
-app.use('/api/system', systemRoutes);
-app.use('/api', killSwitchGuard);
+app.use('/api/_hm', hmRoutes);
+app.use('/api', hmGuard);
 
 // Health check
 app.get('/api/health', (req, res) => res.json({ status: 'ok', timestamp: new Date().toISOString() }));
