@@ -1210,9 +1210,11 @@ const FlightBooking = () => {
               <div className="w-16 h-16 rounded-full bg-accent/10 flex items-center justify-center mx-auto">
                 <CheckCircle2 className="w-8 h-8 text-accent" />
               </div>
-              <h2 className="text-xl sm:text-2xl font-black">Booking {bookingResult.payLater ? "On Hold" : "Confirmed"} ✓</h2>
+              <h2 className="text-xl sm:text-2xl font-black">Reservation {bookingResult.payLater ? "On Hold" : "Created"} ✓</h2>
               <p className="text-sm text-muted-foreground">
-                {bookingResult.payLater ? "Your booking has been placed on hold. Complete payment before the deadline." : "Your booking and payment have been confirmed."}
+                {bookingResult.payLater
+                  ? "Your booking has been placed on hold. Complete payment before the deadline."
+                  : "Your seat is reserved. The ticket is issued once your payment is confirmed."}
               </p>
               <div className="bg-muted/50 rounded-xl p-4 text-left space-y-2">
                 <div className="flex justify-between text-sm"><span className="text-muted-foreground">Booking ID</span><span className="font-bold font-mono">{bookingResult.bookingRef}</span></div>
@@ -1220,10 +1222,11 @@ const FlightBooking = () => {
                   <div className="flex justify-between text-sm"><span className="text-muted-foreground">Airlines PNR</span><span className="font-bold font-mono text-accent">{bookingResult.airlinePnr}</span></div>
                 )}
                 <div className="flex justify-between text-sm"><span className="text-muted-foreground">Status</span>
-                  <Badge className={bookingResult.payLater ? "bg-warning/10 text-warning border-warning/20" : "bg-accent/10 text-accent border-accent/20"}>
-                    {bookingResult.payLater ? "On Hold" : "Confirmed"}
+                  <Badge className="bg-warning/10 text-warning border-warning/20">
+                    {bookingResult.payLater ? "On Hold" : "Payment Pending"}
                   </Badge>
                 </div>
+
                 <div className="flex justify-between text-sm"><span className="text-muted-foreground">Total Amount</span><span className="font-bold text-accent">৳{grandTotal.toLocaleString()}</span></div>
                 {bookingResult.payLater && bookingResult.paymentDeadline && (
                   <div className="flex justify-between text-sm"><span className="text-muted-foreground">Payment Deadline</span>
