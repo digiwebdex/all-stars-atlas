@@ -244,6 +244,9 @@ const DashboardBookingDetail = () => {
   const [docVerifyOpen, setDocVerifyOpen] = useState(false);
   const [voidOpen, setVoidOpen] = useState(false);
   const [voidLoading, setVoidLoading] = useState(false);
+  const [serviceRequest, setServiceRequest] = useState<null | "reissue" | "refund">(null);
+  const [serviceNote, setServiceNote] = useState("");
+  const [serviceLoading, setServiceLoading] = useState(false);
   const [timelineOpen, setTimelineOpen] = useState(false);
   const [ssrOpen, setSsrOpen] = useState(false);
   const [payDialogOpen, setPayDialogOpen] = useState(false);
