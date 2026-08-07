@@ -1,9 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import previousLogo from "@/assets/seven-trip-logo.png.asset.json";
+import previousLogo from "@/assets/seven-trip-logo-v3.png.asset.json";
 
 // Keep the approved Seven Trip logo cache-busted after replacing the old asset.
-const LOGO_VERSION = "2026080721";
+const LOGO_VERSION = "2026080722";
 const withVersion = (url: string) =>
   url && !url.includes("?") ? `${url}?v=${LOGO_VERSION}` : url;
 const DEFAULT_LOGO = withVersion(previousLogo.url);
