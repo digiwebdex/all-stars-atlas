@@ -2203,7 +2203,7 @@ router.post('/book', authenticate, async (req, res) => {
     // Airline PNR is best-effort (often only available after ticketing for Sabre)
     if (isGdsFlight && !gdsPnr) {
       return res.status(422).json({
-        message: 'GDS booking failed: no PNR was returned from the provider',
+        message: `Booking failed: ${gdsBookingResult?.error || 'the provider did not return a PNR'}`,
         gdsBooked: false,
         gdsError: gdsBookingResult?.error || 'Booking failed - no GDS PNR generated',
         gdsPnr: null,
