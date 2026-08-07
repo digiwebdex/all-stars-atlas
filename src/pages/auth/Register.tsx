@@ -183,7 +183,7 @@ const Register = () => {
           <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wMyI+PHBhdGggZD0iTTM2IDE0VjBoLTJWMTRIMjBWMGgtMnYxNEgwdjJoMTR2MTRIMHYyaDE0djE0aDJ2LTE0aDE0djE0aDJ2LTE0aDE0di0ySDM2VjE2aDEydi0ySDM2eiIvPjwvZz48L2c+PC9zdmc+')] opacity-40" />
           <div className="relative text-white max-w-md">
             <Link to="/" className="flex items-center gap-3 mb-8">
-              <img src={logoUrl} alt="Seven Trip" style={{ height: `${logoSizes.auth}px` }} className="w-auto brightness-0 invert drop-shadow-[0_0_12px_rgba(29,106,229,0.5)]" />
+              <img src={logoUrl} alt="Seven Trip" style={{ height: `${logoSizes.auth}px` }} className="w-auto logo-3d-inverted" />
             </Link>
 
             {isAgency ? (
@@ -225,7 +225,7 @@ const Register = () => {
           <Card className={`w-full border-0 shadow-none bg-transparent ${isAgency ? "max-w-2xl" : "max-w-md"}`}>
             <CardHeader className="text-center pb-2">
               <Link to="/" className="flex items-center justify-center gap-2 mb-4 lg:hidden">
-                <img src={logoUrl} alt="Seven Trip" style={{ height: `${Math.round(logoSizes.auth * 0.67)}px` }} className="w-auto" />
+                <img src={logoUrl} alt="Seven Trip" style={{ height: `${Math.round(logoSizes.auth * 0.67)}px` }} className="w-auto logo-3d" />
               </Link>
 
               <CardTitle className="text-2xl">Create Account</CardTitle>

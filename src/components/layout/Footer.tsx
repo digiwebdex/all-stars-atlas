@@ -52,7 +52,7 @@ const Footer = React.forwardRef<HTMLElement>((_, ref) => {
           {/* Brand — full width on mobile */}
           <div className="col-span-2 sm:col-span-2 lg:col-span-2 space-y-4 sm:space-y-5">
             <Link to="/" className="flex items-center gap-2.5">
-              <img src={logoUrl} alt="Seven Trip" style={{ height: `${logoSizes.footer}px` }} className="w-auto brightness-0 invert drop-shadow-[0_0_12px_rgba(29,106,229,0.5)]" />
+              <img src={logoUrl} alt="Seven Trip" style={{ height: `${logoSizes.footer}px` }} className="w-auto logo-3d-inverted" />
             </Link>
             <p className="text-[13px] sm:text-sm text-white/45 leading-relaxed max-w-sm">
               A concern of Evan International. Bangladesh's most trusted travel platform. Book flights, hotels, visa & holidays with best prices, instant confirmation, and 24/7 customer support.

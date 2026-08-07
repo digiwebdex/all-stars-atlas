@@ -66,7 +66,7 @@ const ForgotPassword = () => {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <Link to="/" className="flex justify-center mb-4">
-            <img src={logoUrl} alt="Seven Trip" style={{ height: `${logoSizes.auth}px` }} className="w-auto" />
+            <img src={logoUrl} alt="Seven Trip" style={{ height: `${logoSizes.auth}px` }} className="w-auto logo-3d" />
           </Link>
           <CardTitle className="text-xl">Forgot Password?</CardTitle>
           <p className="text-sm text-muted-foreground mt-1">Enter your email and we'll send you a verification code</p>
