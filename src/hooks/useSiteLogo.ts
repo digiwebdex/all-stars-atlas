@@ -1,7 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 
-const DEFAULT_LOGO = "/images/seven-trip-logo.png";
+// Bump LOGO_VERSION whenever the logo file is replaced so browsers/CDN refetch it
+const LOGO_VERSION = "2026080701";
+const withVersion = (url: string) =>
+  url && !url.includes("?") ? `${url}?v=${LOGO_VERSION}` : url;
+const DEFAULT_LOGO = withVersion("/images/seven-trip-logo.png");
 
 export interface LogoSizes {
   homepage: number;  // px height
@@ -32,7 +36,7 @@ export function useSiteLogo() {
     meta: { suppressError: true },
   });
 
-  return data?.url || DEFAULT_LOGO;
+  return data?.url ? withVersion(data.url) : DEFAULT_LOGO;
 }
 
 export function useLogoSizes(): LogoSizes {
