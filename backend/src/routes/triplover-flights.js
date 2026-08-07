@@ -398,7 +398,11 @@ function normalizeSearch(response, originCode, destinationCode) {
       bookingClass: first.bookingClass || '',
       availableSeats: Number.isFinite(seatCount) ? seatCount : null,
       price: item.totalPrice || 0,
-      baseFare: item.basePrice || 0,
+      // Some suppliers (e.g. SV via Galileo) return basePrice 0 with only totalPrice —
+      // derive the base so fare breakdowns and markups stay correct.
+      baseFare: item.basePrice || item.eqivqlBasePrice
+        || Math.max(0, (item.totalPrice || 0) - (item.taxes || 0)) || 0,
+
       taxes: item.taxes || 0,
       currency: 'BDT',
       refundable: !!item.refundable,
