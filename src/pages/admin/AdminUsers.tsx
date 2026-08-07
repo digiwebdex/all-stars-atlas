@@ -420,7 +420,7 @@ const AdminUsers = () => {
           <div className="grid gap-3 py-2">
             <p className="text-xs text-muted-foreground">Leave blank to use global defaults. Per-user values override per-airline and global settings.</p>
             <div className="grid grid-cols-3 gap-3">
-              <div className="space-y-1.5"><Label>Discount %</Label><Input type="number" step="0.01" value={commissionForm.discountPct} onChange={e => setCommissionForm(p => ({ ...p, discountPct: e.target.value }))} placeholder="6.30" /></div>
+              <div className="space-y-1.5"><Label>Discount %</Label><Input type="number" step="0.01" value={commissionForm.discountPct} onChange={e => setCommissionForm(p => ({ ...p, discountPct: e.target.value }))} placeholder="0" /></div>
               <div className="space-y-1.5"><Label>AIT VAT %</Label><Input type="number" step="0.01" value={commissionForm.aitPct} onChange={e => setCommissionForm(p => ({ ...p, aitPct: e.target.value }))} placeholder="0.30" /></div>
               <div className="space-y-1.5"><Label>Markup %</Label><Input type="number" step="0.01" value={commissionForm.markupPct} onChange={e => setCommissionForm(p => ({ ...p, markupPct: e.target.value }))} placeholder="0" /></div>
             </div>
