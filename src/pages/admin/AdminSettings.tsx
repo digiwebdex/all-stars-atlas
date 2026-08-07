@@ -67,7 +67,9 @@ const apiIntegrations = [
 
   // ── Communication ──
   { id: 'sms_bulksmsbd', name: 'BulkSMSBD (SMS Gateway)', description: 'OTP, booking & transactional SMS delivery to BD numbers', fields: [{ key: 'enabled', label: 'Enabled', placeholder: '', type: 'select', options: ['true', 'false'] }, { key: 'api_key', label: 'API Key', placeholder: 'Your BulkSMSBD API key', type: 'password' }, { key: 'sender_id', label: 'Sender ID', placeholder: 'SevenTrip', type: 'text' }], docs: 'https://bulksmsbd.com/developer/sms-api', category: 'communication' },
+  { id: 'email_smtp', name: 'Own Mail Server (SMTP — seventrip.net)', description: 'Send all system emails (OTP, password reset, bookings, invoices) from your own domain mailbox. Takes priority over Resend when enabled.', fields: [{ key: 'enabled', label: 'Enabled', placeholder: '', type: 'select', options: ['true', 'false'] }, { key: 'host', label: 'SMTP Host', placeholder: 'mail.seventrip.net', type: 'text' }, { key: 'port', label: 'SMTP Port', placeholder: '587', type: 'text' }, { key: 'secure', label: 'SSL (port 465)', placeholder: '', type: 'select', options: ['false', 'true'] }, { key: 'user', label: 'Mailbox / Username', placeholder: 'noreply@seventrip.net', type: 'text' }, { key: 'password', label: 'Mailbox Password', placeholder: 'Mailbox password', type: 'password' }, { key: 'from_email', label: 'From Address', placeholder: 'Seven Trip <noreply@seventrip.net>', type: 'text' }, { key: 'allow_self_signed', label: 'Allow Self-Signed TLS', placeholder: '', type: 'select', options: ['false', 'true'] }], docs: '', category: 'communication' },
   { id: 'email_resend', name: 'Resend (Email API)', description: 'Transactional emails — booking confirmations, OTP, invoices', fields: [{ key: 'enabled', label: 'Enabled', placeholder: '', type: 'select', options: ['true', 'false'] }, { key: 'api_key', label: 'API Key', placeholder: 're_xxxxxxxxxxxx', type: 'password' }, { key: 'from_email', label: 'From Address', placeholder: 'Seven Trip <noreply@seventrip.net>', type: 'text' }], docs: 'https://resend.com/docs', category: 'communication' },
+
   { id: 'whatsapp_business', name: 'WhatsApp Business API', description: 'Send booking confirmations, updates & support via WhatsApp', fields: [{ key: 'enabled', label: 'Enabled', placeholder: '', type: 'select', options: ['true', 'false'] }, { key: 'phone_number_id', label: 'Phone Number ID', placeholder: 'Your WhatsApp phone number ID', type: 'text' }, { key: 'access_token', label: 'Access Token', placeholder: 'Your permanent access token', type: 'password' }, { key: 'verify_token', label: 'Webhook Verify Token', placeholder: 'Custom verify token', type: 'text' }], docs: 'https://developers.facebook.com/docs/whatsapp', category: 'communication' },
 
   // ── Maps & Location ──
@@ -225,7 +227,49 @@ const AdminSettings = () => {
     }
   };
 
-  useEffect(() => { loadApiLogs(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  // ===== Email server =====
+  const [emailStatus, setEmailStatus] = useState<any>(null);
+  const [emailChecking, setEmailChecking] = useState(false);
+  const [emailSending, setEmailSending] = useState(false);
+  const [testEmail, setTestEmail] = useState('');
+  const [emailLogs, setEmailLogs] = useState<any[]>([]);
+
+  const loadEmailStatus = async () => {
+    setEmailChecking(true);
+    try {
+      const res = await api.get<any>('/admin/email/status');
+      setEmailStatus(res?.status || res);
+    } catch (err: any) {
+      setEmailStatus({ mode: 'none' });
+    } finally {
+      setEmailChecking(false);
+    }
+  };
+
+  const sendTestEmail = async () => {
+    setEmailSending(true);
+    try {
+      await api.post('/admin/email/test', { to: testEmail });
+      toast.success(`Test email sent to ${testEmail}`);
+      loadEmailLogs();
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to send test email');
+    } finally {
+      setEmailSending(false);
+    }
+  };
+
+  const loadEmailLogs = async () => {
+    try {
+      const res = await api.get<any>('/admin/email/logs?limit=30');
+      setEmailLogs(res?.logs || []);
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to load email logs');
+    }
+  };
+
+  useEffect(() => { loadApiLogs(); loadEmailStatus(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
 
 
   const toggleNotification = async (key: string) => {
@@ -632,20 +676,70 @@ const AdminSettings = () => {
         <CardHeader>
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center"><Mail className="w-5 h-5 text-primary" /></div>
-            <div><CardTitle className="text-lg">Email & SMS Configuration</CardTitle><CardDescription>Transactional email via Resend, SMS via BulkSMSBD</CardDescription></div>
+            <div><CardTitle className="text-lg">Email Server</CardTitle><CardDescription>Own-domain SMTP mail server, delivery test & email logs</CardDescription></div>
           </div>
         </CardHeader>
-        <CardContent className="space-y-3">
+        <CardContent className="space-y-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant={emailStatus?.mode === 'smtp' ? 'default' : emailStatus?.mode === 'resend' ? 'secondary' : 'destructive'} className="text-[11px]">
+              {emailStatus ? (emailStatus.mode === 'none' ? 'Not configured' : `Active: ${emailStatus.mode.toUpperCase()}`) : 'Checking…'}
+            </Badge>
+            {emailStatus?.host && <span className="text-xs text-muted-foreground font-mono">{emailStatus.host}:{emailStatus.port}</span>}
+            {emailStatus?.connection && (
+              <Badge variant={emailStatus.connection.success ? 'default' : 'destructive'} className="text-[11px]">
+                {emailStatus.connection.success ? 'SMTP connection OK' : `SMTP error: ${emailStatus.connection.reason}`}
+              </Badge>
+            )}
+            <Button variant="outline" size="sm" onClick={loadEmailStatus} disabled={emailChecking}>
+              {emailChecking ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RotateCcw className="w-3.5 h-3.5" />}
+              <span className="ml-1.5">Re-check</span>
+            </Button>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-2">
+            <Input placeholder="Send test email to…" value={testEmail} onChange={e => setTestEmail(e.target.value)} className="sm:max-w-xs" />
+            <Button size="sm" onClick={sendTestEmail} disabled={emailSending || !testEmail}>
+              {emailSending ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" /> : <Mail className="w-3.5 h-3.5 mr-1.5" />}
+              Send Test Email
+            </Button>
+            <Button size="sm" variant="outline" onClick={loadEmailLogs}>View Logs</Button>
+          </div>
+
+          {emailLogs.length > 0 && (
+            <div className="border rounded-lg overflow-x-auto max-h-72 overflow-y-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow><TableHead>Time</TableHead><TableHead>Recipient</TableHead><TableHead className="hidden md:table-cell">Subject</TableHead><TableHead>Status</TableHead></TableRow>
+                </TableHeader>
+                <TableBody>
+                  {emailLogs.map((l: any) => (
+                    <TableRow key={l.id}>
+                      <TableCell className="text-xs whitespace-nowrap">{new Date(l.created_at).toLocaleString()}</TableCell>
+                      <TableCell className="text-xs">{l.recipient}</TableCell>
+                      <TableCell className="hidden md:table-cell text-xs text-muted-foreground">{l.subject}</TableCell>
+                      <TableCell>
+                        <Badge variant={l.status === 'sent' ? 'default' : 'destructive'} className="text-[10px]">{l.status}</Badge>
+                        {l.error_message && <p className="text-[10px] text-destructive mt-1 max-w-[220px] truncate">{l.error_message}</p>}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+
           <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4 space-y-2">
             <p className="text-sm font-semibold flex items-center gap-1.5"><Info className="w-4 h-4 text-blue-600" /> Where to configure:</p>
             <ul className="text-xs text-muted-foreground space-y-1 list-disc list-inside">
-              <li><strong>Email:</strong> Scroll to API Integrations → Communication → Resend (Email API)</li>
-              <li><strong>SMS:</strong> Scroll to API Integrations → Communication → BulkSMSBD</li>
+              <li><strong>Own mail server:</strong> API Integrations → Communication → Own Mail Server (SMTP — seventrip.net)</li>
+              <li><strong>Fallback email API:</strong> API Integrations → Communication → Resend (Email API)</li>
+              <li><strong>SMS:</strong> API Integrations → Communication → BulkSMSBD</li>
             </ul>
-            <p className="text-[11px] text-muted-foreground mt-1">All API keys are stored encrypted in the database — never in browser storage or code.</p>
+            <p className="text-[11px] text-muted-foreground mt-1">Forgot Password / OTP emails use whichever provider is active above.</p>
           </div>
         </CardContent>
       </Card>
+
 
       {/* Notifications */}
       <Card>

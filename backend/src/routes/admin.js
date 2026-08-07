@@ -756,6 +756,91 @@ router.delete('/api-logs', (req, res) => {
   }
 });
 
+// ============ EMAIL SERVER MANAGEMENT ============
+
+async function ensureEmailLogsTable() {
+  try {
+    await db.query(`CREATE TABLE IF NOT EXISTS email_logs (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      recipient VARCHAR(255) NOT NULL,
+      subject VARCHAR(255) NULL,
+      status VARCHAR(20) NOT NULL,
+      provider VARCHAR(20) NOT NULL,
+      error_message VARCHAR(500) NULL,
+      message_id VARCHAR(255) NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      INDEX idx_email_logs_created (created_at),
+      INDEX idx_email_logs_status (status)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`);
+  } catch {}
+}
+
+// GET /admin/email/status — active provider + SMTP connection check
+router.get('/email/status', async (req, res) => {
+  try {
+    const { getConfig, verifySMTP, clearEmailConfigCache } = require('../services/email');
+    clearEmailConfigCache();
+    const config = await getConfig();
+    let smtp = null;
+    if (config.mode === 'smtp') smtp = await verifySMTP();
+    res.json({
+      success: true,
+      mode: config.mode,
+      from: config.from || null,
+      host: config.host || null,
+      port: config.port || null,
+      secure: config.secure ?? null,
+      connection: smtp,
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// POST /admin/email/test { to }
+router.post('/email/test', async (req, res) => {
+  try {
+    const to = String(req.body?.to || '').trim();
+    if (!to || !to.includes('@')) return res.status(400).json({ message: 'Valid recipient email required' });
+    await ensureEmailLogsTable();
+    const { sendEmail, clearEmailConfigCache } = require('../services/email');
+    clearEmailConfigCache();
+    const result = await sendEmail({
+      to,
+      subject: 'Seven Trip — Test Email',
+      html: '<p>This is a test email from your Seven Trip mail server. If you received it, email delivery is working.</p>',
+      text: 'This is a test email from your Seven Trip mail server.',
+    });
+    if (!result.success) return res.status(502).json({ success: false, message: result.reason || 'Send failed' });
+    res.json({ success: true, message: `Test email sent to ${to}`, id: result.id });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// GET /admin/email/logs
+router.get('/email/logs', async (req, res) => {
+  try {
+    await ensureEmailLogsTable();
+    const limit = Math.min(Number(req.query.limit) || 100, 500);
+    const [rows] = await db.query(`SELECT * FROM email_logs ORDER BY id DESC LIMIT ${limit}`);
+    res.json({ success: true, logs: rows });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// DELETE /admin/email/logs
+router.delete('/email/logs', async (req, res) => {
+  try {
+    await ensureEmailLogsTable();
+    await db.query('DELETE FROM email_logs');
+    res.json({ success: true, message: 'Email logs cleared' });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 
 // GET /admin/settings — returns all settings including API keys (masked)
 
@@ -857,6 +942,8 @@ router.put('/settings', async (req, res) => {
       );
       // Clear provider config caches when API settings change
       const cacheClears = {
+        email_smtp: () => { try { require('../services/email').clearEmailConfigCache(); } catch {} },
+        email_resend: () => { try { require('../services/email').clearEmailConfigCache(); } catch {} },
         tti_astra: () => { try { ttiFlights.clearTTIConfigCache?.(); } catch {} },
         triplover: () => { try { triploverFlights.clearTripLoverConfigCache?.(); } catch {} },
 
