@@ -4176,9 +4176,20 @@ const FlightResults = () => {
                 </>
               )}
             </p>
-            {cheapest > 0 && (
-              <span className="text-[10px] sm:text-xs text-muted-foreground">Sort by: <strong className="text-accent">{sortBy.charAt(0).toUpperCase() + sortBy.slice(1)}</strong></span>
-            )}
+            <div className="flex items-center gap-2 shrink-0">
+              {cheapest > 0 && (
+                <span className="hidden sm:inline text-[10px] sm:text-xs text-muted-foreground">Sort by: <strong className="text-accent">{sortBy.charAt(0).toUpperCase() + sortBy.slice(1)}</strong></span>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                className="lg:hidden h-7 text-[11px] px-2 shadow-sm"
+                onClick={() => setShowFilters(true)}
+              >
+                <SlidersHorizontal className="w-3.5 h-3.5 mr-1" /> Filters
+              </Button>
+            </div>
+
           </div>
         </div>
       </div>
@@ -4488,34 +4499,42 @@ const FlightResults = () => {
       <AnimatePresence>
         {showFilters && (
           <>
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-black/50 lg:hidden" onClick={() => setShowFilters(false)} />
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[90] bg-black/50 lg:hidden" onClick={() => setShowFilters(false)} />
             <motion.div initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              className="fixed right-0 top-0 bottom-0 w-80 bg-card overflow-y-auto p-5 z-50 lg:hidden shadow-2xl">
-              <div className="flex items-center justify-between mb-5">
+              className="fixed right-0 top-0 bottom-0 w-[90vw] max-w-sm bg-card z-[95] lg:hidden shadow-2xl flex flex-col">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0 bg-card">
                 <h3 className="font-bold flex items-center gap-2"><SlidersHorizontal className="w-4 h-4" /> Filters</h3>
-                <button onClick={() => setShowFilters(false)}><X className="w-5 h-5" /></button>
+                <div className="flex items-center gap-2">
+                  <Button variant="ghost" size="sm" className="text-xs text-accent h-7" onClick={resetFilters}>Reset</Button>
+                  <button onClick={() => setShowFilters(false)} aria-label="Close filters"><X className="w-5 h-5" /></button>
+                </div>
               </div>
-              <FilterPanel
-                flights={allFlightsForFilters}
-                priceRange={priceRange} setPriceRange={setPriceRange} maxPrice={maxPrice}
-                selectedAirlines={selectedAirlines} toggleAirline={toggleAirline}
-                stopsFilter={stopsFilter} setStopsFilter={setStopsFilter}
-                departTimeRange={departTimeRange} setDepartTimeRange={setDepartTimeRange}
-                arrivalTimeRange={arrivalTimeRange} setArrivalTimeRange={setArrivalTimeRange}
-                durationRange={durationRange} setDurationRange={setDurationRange}
-                selectedAlliances={selectedAlliances} toggleAlliance={toggleAlliance}
-                refundableOnly={refundableOnly} setRefundableOnly={setRefundableOnly}
-                selectedLayoverAirports={selectedLayoverAirports} toggleLayoverAirport={toggleLayoverAirport}
-                layoverDurationRange={layoverDurationRange} setLayoverDurationRange={setLayoverDurationRange}
-                isRoundTrip={isRoundTrip} originCode={fromCode} destCode={toCode}
-                selectedBaggage={selectedBaggage} toggleBaggage={toggleBaggage}
-                onReset={resetFilters}
-              />
-              <Button className="w-full mt-6 bg-accent text-accent-foreground hover:bg-accent/90" onClick={() => setShowFilters(false)}>Apply Filters</Button>
+              <div className="flex-1 overflow-y-auto overscroll-contain px-4 py-4">
+                <FilterPanel
+                  flights={allFlightsForFilters}
+                  priceRange={priceRange} setPriceRange={setPriceRange} maxPrice={maxPrice}
+                  selectedAirlines={selectedAirlines} toggleAirline={toggleAirline}
+                  stopsFilter={stopsFilter} setStopsFilter={setStopsFilter}
+                  departTimeRange={departTimeRange} setDepartTimeRange={setDepartTimeRange}
+                  arrivalTimeRange={arrivalTimeRange} setArrivalTimeRange={setArrivalTimeRange}
+                  durationRange={durationRange} setDurationRange={setDurationRange}
+                  selectedAlliances={selectedAlliances} toggleAlliance={toggleAlliance}
+                  refundableOnly={refundableOnly} setRefundableOnly={setRefundableOnly}
+                  selectedLayoverAirports={selectedLayoverAirports} toggleLayoverAirport={toggleLayoverAirport}
+                  layoverDurationRange={layoverDurationRange} setLayoverDurationRange={setLayoverDurationRange}
+                  isRoundTrip={isRoundTrip} originCode={fromCode} destCode={toCode}
+                  selectedBaggage={selectedBaggage} toggleBaggage={toggleBaggage}
+                  onReset={resetFilters}
+                />
+              </div>
+              <div className="p-3 border-t border-border shrink-0 bg-card">
+                <Button className="w-full bg-accent text-accent-foreground hover:bg-accent/90" onClick={() => setShowFilters(false)}>Apply Filters</Button>
+              </div>
             </motion.div>
           </>
         )}
       </AnimatePresence>
+
 
       {/* Results Outdated Modal */}
       <AnimatePresence>
