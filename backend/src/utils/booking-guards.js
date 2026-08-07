@@ -80,8 +80,10 @@ async function isAirlineRouteBlocked({ airlineCode, originCountry, destCountry }
  * Precedence: user override > airline-specific > global.
  */
 async function resolveCommission({ userId, airlineCode }) {
-  let globalDiscount = 6.30;
-  let globalAit = 0.3;
+  // No hardcoded defaults — 100% admin-configured (Admin → Markup & Revenue).
+  let globalDiscount = 0;
+  let globalAit = 0;
+
   let airlineMarkup = 0;
   let airlineCommission = null;
   try {
