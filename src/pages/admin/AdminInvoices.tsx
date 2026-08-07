@@ -254,7 +254,7 @@ const AdminInvoices = () => {
           {viewInvoice && (
             <div className="space-y-4 py-2">
               <div className="flex justify-between items-start">
-                <div><p className="text-lg font-black">Seven Trip</p><p className="text-xs text-muted-foreground">A concern of Evan International</p></div>
+                <div><p className="text-lg font-black">Seven Trip</p><p className="text-xs text-muted-foreground">Book Flight</p></div>
                 <div className="text-right"><p className="text-sm font-bold font-mono">{viewInvoice.invoiceNo}</p><p className="text-xs text-muted-foreground">{viewInvoice.date}</p></div>
               </div>
               <Separator />

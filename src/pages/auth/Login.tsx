@@ -85,7 +85,7 @@ const Login = () => {
                <img src={logoUrl} alt="Seven Trip" style={{ height: `${logoSizes.auth}px` }} className="w-auto logo-3d-inverted" />
              </Link>
              <h2 className="text-3xl font-black mb-4 leading-tight">Welcome back to Bangladesh's #1 Travel Platform</h2>
-             <p className="text-auth-foreground/60 text-sm mb-8 leading-relaxed">Book flights, hotels, holidays & visa services with the best prices and 24/7 support.</p>
+             <p className="text-auth-foreground/60 text-sm mb-8 leading-relaxed">Book Flight with Seven Trip.</p>
              <div className="space-y-3">
                {["500K+ happy travellers", "Best price guarantee", "24/7 customer support", "Instant confirmation"].map((f, i) => (
                  <div key={i} className="flex items-center gap-2 text-auth-foreground/80 text-sm">
