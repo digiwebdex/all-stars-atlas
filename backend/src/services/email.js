@@ -1,36 +1,129 @@
-// Email Service — Resend Integration
-// Reads API key from: 1) system_settings DB table, 2) .env fallback
+// Email Service — supports own-domain SMTP mail server (primary) + Resend API (fallback)
+// Config priority: system_settings 'api_email_smtp' -> 'api_email_resend' -> .env
 
 const db = require('../config/db');
+const nodemailer = require('nodemailer');
 const RESEND_API = 'https://api.resend.com/emails';
 
 let cachedConfig = null;
 let cacheTime = 0;
 const CACHE_TTL = 60000;
+let transporter = null;
+let transporterKey = '';
+
+function clearEmailConfigCache() { cachedConfig = null; cacheTime = 0; transporter = null; transporterKey = ''; }
+
+async function readSetting(key) {
+  try {
+    const [rows] = await db.query('SELECT setting_value FROM system_settings WHERE setting_key = ? LIMIT 1', [key]);
+    if (rows.length && rows[0].setting_value) return JSON.parse(rows[0].setting_value);
+  } catch {}
+  return null;
+}
 
 async function getConfig() {
   if (cachedConfig && Date.now() - cacheTime < CACHE_TTL) return cachedConfig;
-  try {
-    const [rows] = await db.query("SELECT setting_value FROM system_settings WHERE setting_key = 'api_email_resend'");
-    if (rows.length > 0 && rows[0].setting_value) {
-      const parsed = JSON.parse(rows[0].setting_value);
-      if (parsed.api_key) {
-        cachedConfig = { apiKey: parsed.api_key, from: parsed.from_email || 'Seven Trip <noreply@seventrip.net>' };
-        cacheTime = Date.now();
-        return cachedConfig;
-      }
-    }
-  } catch {}
-  cachedConfig = { apiKey: process.env.RESEND_API_KEY || '', from: process.env.EMAIL_FROM || 'Seven Trip <noreply@seventrip.net>' };
+
+  const smtp = await readSetting('api_email_smtp');
+  const resend = await readSetting('api_email_resend');
+
+  const smtpEnabled = smtp && String(smtp.enabled) !== 'false' && smtp.host && smtp.user;
+  if (smtpEnabled) {
+    cachedConfig = {
+      mode: 'smtp',
+      host: smtp.host,
+      port: Number(smtp.port || 587),
+      secure: String(smtp.secure ?? (Number(smtp.port) === 465)) === 'true',
+      user: smtp.user,
+      pass: smtp.password || '',
+      from: smtp.from_email || `Seven Trip <${smtp.user}>`,
+      rejectUnauthorized: String(smtp.allow_self_signed) === 'true' ? false : true,
+    };
+  } else if (resend && resend.api_key && String(resend.enabled) !== 'false') {
+    cachedConfig = { mode: 'resend', apiKey: resend.api_key, from: resend.from_email || 'Seven Trip <noreply@seventrip.net>' };
+  } else if (process.env.SMTP_HOST && process.env.SMTP_USER) {
+    cachedConfig = {
+      mode: 'smtp',
+      host: process.env.SMTP_HOST,
+      port: Number(process.env.SMTP_PORT || 587),
+      secure: String(process.env.SMTP_SECURE || (Number(process.env.SMTP_PORT) === 465)) === 'true',
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS || '',
+      from: process.env.EMAIL_FROM || `Seven Trip <${process.env.SMTP_USER}>`,
+      rejectUnauthorized: true,
+    };
+  } else if (process.env.RESEND_API_KEY) {
+    cachedConfig = { mode: 'resend', apiKey: process.env.RESEND_API_KEY, from: process.env.EMAIL_FROM || 'Seven Trip <noreply@seventrip.net>' };
+  } else {
+    cachedConfig = { mode: 'none' };
+  }
   cacheTime = Date.now();
   return cachedConfig;
 }
 
+function getTransporter(config) {
+  const key = `${config.host}:${config.port}:${config.user}:${config.secure}`;
+  if (transporter && transporterKey === key) return transporter;
+  transporter = nodemailer.createTransport({
+    host: config.host,
+    port: config.port,
+    secure: config.secure,
+    auth: config.pass ? { user: config.user, pass: config.pass } : undefined,
+    tls: { rejectUnauthorized: config.rejectUnauthorized, servername: config.host },
+    connectionTimeout: 15000,
+    greetingTimeout: 10000,
+    socketTimeout: 20000,
+  });
+  transporterKey = key;
+  return transporter;
+}
+
+async function logEmail({ to, subject, status, provider, error, messageId }) {
+  try {
+    await db.query(
+      'INSERT INTO email_logs (recipient, subject, status, provider, error_message, message_id, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())',
+      [Array.isArray(to) ? to.join(', ') : String(to || ''), String(subject || '').slice(0, 250), status, provider, error ? String(error).slice(0, 500) : null, messageId || null]
+    );
+  } catch {}
+}
+
+async function verifySMTP() {
+  const config = await getConfig();
+  if (config.mode !== 'smtp') return { success: false, reason: 'SMTP not configured' };
+  try {
+    await getTransporter(config).verify();
+    return { success: true, host: config.host, port: config.port };
+  } catch (err) {
+    return { success: false, reason: err.message };
+  }
+}
+
 async function sendEmail({ to, subject, html, text }) {
   const config = await getConfig();
-  if (!config.apiKey) {
-    console.warn('[EMAIL] No API key configured — skipping email to', to);
+
+  if (config.mode === 'none') {
+    console.warn('[EMAIL] Not configured — skipping email to', to);
+    await logEmail({ to, subject, status: 'skipped', provider: 'none', error: 'not_configured' });
     return { success: false, reason: 'not_configured' };
+  }
+
+  if (config.mode === 'smtp') {
+    try {
+      const info = await getTransporter(config).sendMail({
+        from: config.from,
+        to: Array.isArray(to) ? to.join(', ') : to,
+        subject,
+        html: html || undefined,
+        text: text || undefined,
+      });
+      console.log(`[EMAIL/SMTP] Sent to ${to}: ${subject}`);
+      await logEmail({ to, subject, status: 'sent', provider: 'smtp', messageId: info.messageId });
+      return { success: true, id: info.messageId };
+    } catch (err) {
+      console.error('[EMAIL/SMTP] Error:', err.message);
+      await logEmail({ to, subject, status: 'failed', provider: 'smtp', error: err.message });
+      return { success: false, reason: err.message };
+    }
   }
 
   try {
@@ -41,17 +134,20 @@ async function sendEmail({ to, subject, html, text }) {
     });
     const data = await res.json();
     if (res.ok) {
-      console.log(`[EMAIL] Sent to ${to}: ${subject}`);
+      console.log(`[EMAIL/Resend] Sent to ${to}: ${subject}`);
+      await logEmail({ to, subject, status: 'sent', provider: 'resend', messageId: data.id });
       return { success: true, id: data.id };
-    } else {
-      console.error('[EMAIL] Failed:', data);
-      return { success: false, reason: data.message || 'unknown' };
     }
+    console.error('[EMAIL/Resend] Failed:', data);
+    await logEmail({ to, subject, status: 'failed', provider: 'resend', error: data.message || JSON.stringify(data) });
+    return { success: false, reason: data.message || 'unknown' };
   } catch (err) {
-    console.error('[EMAIL] Error:', err.message);
+    console.error('[EMAIL/Resend] Error:', err.message);
+    await logEmail({ to, subject, status: 'failed', provider: 'resend', error: err.message });
     return { success: false, reason: err.message };
   }
 }
+
 
 // ============ TEMPLATES ============
 const FRONTEND = () => process.env.FRONTEND_URL || 'https://seventrip.net';
