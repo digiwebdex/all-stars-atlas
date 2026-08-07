@@ -1340,7 +1340,9 @@ router.get('/search', authenticateOptional, async (req, res) => {
       const routeDest = isMultiCity ? multiCitySegments[multiCitySegments.length - 1].to : destCode;
       const originBD = BD_ROUTE_AIRPORTS.has(routeOrigin);
       const destBD = BD_ROUTE_AIRPORTS.has(routeDest);
-      const scopeKey = originBD && destBD ? 'FLIGHT_DOM' : (originBD || destBD ? 'FLIGHT_INT' : 'FLIGHT_SOTO');
+      // SOTO = journey does NOT start from Bangladesh (e.g. JED→DAC). Only BD-origin
+      // journeys count as Domestic / International.
+      const scopeKey = originBD ? (destBD ? 'FLIGHT_DOM' : 'FLIGHT_INT') : 'FLIGHT_SOTO';
 
       // SOTO has NO default commission — it must be configured explicitly for the SOTO scope.
       let globalDiscount = 0;
