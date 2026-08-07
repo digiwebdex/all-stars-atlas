@@ -3757,7 +3757,7 @@ const FlightResults = () => {
   return (
     <div className="min-h-screen bg-muted/30 overflow-x-hidden">
       {/* ─── Compact Pill Modification Bar with Full Features ─── */}
-      <div className="bg-card border-b border-border pt-14 sm:pt-24 lg:pt-32 pb-0">
+      <div className="bg-card border-b border-border pt-16 sm:pt-20 lg:pt-32 pb-0">
         <div className="container mx-auto px-2 sm:px-4">
           <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 py-2 sm:py-2.5 overflow-x-auto scrollbar-none">
             {/* Trip Type pill — clickable to switch */}
