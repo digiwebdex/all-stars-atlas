@@ -1047,7 +1047,6 @@ const FlightBooking = () => {
           : reason,
         variant: "destructive",
       });
-    }
     } finally { setBookingLoading(false); }
   };
 
