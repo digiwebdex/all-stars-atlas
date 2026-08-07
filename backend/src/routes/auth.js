@@ -238,26 +238,59 @@ router.post('/refresh', async (req, res) => {
   }
 });
 
+// Ensure password-reset columns exist (self-heal for older databases)
+let resetColumnsChecked = false;
+async function ensureResetColumns() {
+  if (resetColumnsChecked) return;
+  const cols = [
+    ['otp_code', 'VARCHAR(255) NULL'],
+    ['otp_expires', 'DATETIME NULL'],
+    ['reset_token', 'VARCHAR(100) NULL'],
+    ['reset_expires', 'DATETIME NULL'],
+  ];
+  for (const [name, type] of cols) {
+    try { await db.query(`ALTER TABLE users ADD COLUMN ${name} ${type}`); } catch {}
+  }
+  resetColumnsChecked = true;
+}
+
 // POST /auth/forgot-password
 router.post('/forgot-password', async (req, res) => {
   try {
-    const { email } = req.body;
-    const [rows] = await db.query('SELECT * FROM users WHERE email = ?', [email]);
+    const email = String(req.body?.email || '').trim().toLowerCase();
+    if (!email || !email.includes('@')) {
+      return res.status(400).json({ message: 'Valid email address required', status: 400 });
+    }
+    await ensureResetColumns();
+
+    const [rows] = await db.query('SELECT * FROM users WHERE LOWER(email) = ?', [email]);
+    let delivery = null;
     if (rows.length > 0) {
       const user = rows[0];
       const otp = String(Math.floor(100000 + Math.random() * 900000));
       const hash = await bcrypt.hash(otp, 10);
-      await db.query('UPDATE users SET otp_code = ?, otp_expires = DATE_ADD(NOW(), INTERVAL 10 MINUTE) WHERE email = ?', [hash, email]);
-      
-      // Send OTP via Email + SMS
-      const name = `${user.first_name} ${user.last_name}`.trim();
-      notifyPasswordReset(email, user.phone, name, otp).catch(err => console.error('Password reset notify error:', err));
+      await db.query('UPDATE users SET otp_code = ?, otp_expires = DATE_ADD(NOW(), INTERVAL 10 MINUTE) WHERE id = ?', [hash, user.id]);
+
+      const name = `${user.first_name || ''} ${user.last_name || ''}`.trim();
+      try {
+        const results = await notifyPasswordReset(user.email, user.phone, name, otp);
+        const ok = results.some(r => r.status === 'fulfilled' && r.value?.success);
+        delivery = ok ? 'sent' : 'failed';
+        if (!ok) console.error('Password reset delivery failed:', JSON.stringify(results));
+      } catch (err) {
+        delivery = 'failed';
+        console.error('Password reset notify error:', err);
+      }
+    }
+    if (delivery === 'failed') {
+      return res.status(503).json({ message: 'Email service is not configured yet. Please contact support.', status: 503 });
     }
     res.json({ message: 'If the email exists, an OTP has been sent.' });
   } catch (err) {
     console.error('Forgot password error:', err);
     res.status(500).json({ message: 'Something went wrong', status: 500 });
   }
+
 });
 
 // POST /auth/verify-otp
