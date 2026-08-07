@@ -85,13 +85,13 @@ function mapBooking(b: any) {
   // Older bookings only stored base/tax/total, so fareRules can be missing even though the payable fare used 6.30% discount + 0.30% AIT.
   const fareRules = o.fareRules || d.fareRules || fareObj.fareRules || {};
   const parsedDiscountPct = pickAmt(fareRules.discount, d.fareRules?.discount, fareObj.discountPct, d.discountPct, d.discountPercentage, o.discountPct);
-  const discountPct = parsedDiscountPct && parsedDiscountPct > 0 ? parsedDiscountPct : 6.30;
+  const discountPct = parsedDiscountPct && parsedDiscountPct > 0 ? parsedDiscountPct : 0;
   let discount = pickAmt(d.discount, d.totalDiscount, d.discountAmount, o.discount, fareObj.discount) || 0;
   if (discount <= 0 && discountPct > 0 && base > 0) {
     discount = Math.round(((base * discountPct) / 100) * 100) / 100;
   }
   const parsedAitPct = pickAmt(fareRules.aitVat, d.fareRules?.aitVat, fareObj.aitVatPct, d.aitVatPct, d.aitVatPercentage, o.aitVatPct);
-  const aitPct = parsedAitPct && parsedAitPct > 0 ? parsedAitPct : 0.3;
+  const aitPct = parsedAitPct && parsedAitPct > 0 ? parsedAitPct : 0;
   let ait = pickAmt(d.ait, d.aitVat, d.totalAitVat, d.aitVatAmount, fareObj.aitVat) || 0;
   if (ait <= 0 && aitPct > 0 && base > 0) {
     ait = Math.round(((base * aitPct) / 100) * 100) / 100;

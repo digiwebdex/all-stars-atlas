@@ -747,8 +747,8 @@ const FlightBooking = () => {
     const gross = f.price || 0;
     const tx = f.taxes ?? 0;
     const bf = Math.max(0, Math.round(gross - tx));
-    const discPct = f.fareRules?.discount ?? 6.30;
-    const aitPct = f.fareRules?.aitVat ?? 0.3;
+    const discPct = f.fareRules?.discount ?? 0;
+    const aitPct = f.fareRules?.aitVat ?? 0;
     const disc = Math.round(bf * discPct / 100);
     const ait = Math.round(bf * aitPct / 100);
     return { grossPrice: gross, baseFare: bf, taxes: tx, discount: disc, aitVat: ait, payable: bf - disc + tx + ait, discPct, aitPct };
@@ -785,8 +785,8 @@ const FlightBooking = () => {
   const grandTotal = (perPaxPayable * totalPaxCount) + serviceCharge + addOnTotal - couponDiscount;
 
   // Discount/AIT percentages for display
-  const DISCOUNT_PCT = outboundFlight?.fareRules?.discount ?? 6.30;
-  const AIT_VAT_PCT = outboundFlight?.fareRules?.aitVat ?? 0.3;
+  const DISCOUNT_PCT = outboundFlight?.fareRules?.discount ?? 0;
+  const AIT_VAT_PCT = outboundFlight?.fareRules?.aitVat ?? 0;
 
   const deadlineInfo = resolveDeadlineInfo(bookingFlightData);
 
@@ -1130,8 +1130,8 @@ const FlightBooking = () => {
       }
 
       // MISMATCH detected — self-heal: apply discount/AIT to revalidated fare
-      const discPct = outboundFlight?.fareRules?.discount ?? 6.30;
-      const aitPct = outboundFlight?.fareRules?.aitVat ?? 0.3;
+      const discPct = outboundFlight?.fareRules?.discount ?? 0;
+      const aitPct = outboundFlight?.fareRules?.aitVat ?? 0;
       const adjustedDiscount = Math.round(revalBaseFare * discPct / 100);
       const adjustedAit = Math.round(revalBaseFare * aitPct / 100);
       const adjustedPayablePerPax = revalBaseFare - adjustedDiscount + revalTaxes + adjustedAit;
