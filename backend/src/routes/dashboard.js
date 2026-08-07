@@ -85,9 +85,11 @@ function normalizeBookingFareDetails(details, bookingRow = {}) {
   const fareRules = outbound.fareRules || safeDetails.fareRules || fare.fareRules || {};
   const baseFare = firstAmount(safeDetails.baseFare, safeDetails.base_fare, fare.baseFare, firstPaxFare.baseFare, outbound.baseFare, bookingRow.base_fare, safeDetails.fareDetails?.baseFare) || 0;
   const parsedDiscountPct = firstAmount(fareRules.discount, safeDetails.fareRules?.discount, fare.discountPct, safeDetails.discountPct, safeDetails.discountPercentage, outbound.discountPct);
-  const discountPct = parsedDiscountPct && parsedDiscountPct > 0 ? parsedDiscountPct : 6.30;
+  // No platform default — commission/AIT come only from what admin configured at booking time.
+  const discountPct = parsedDiscountPct && parsedDiscountPct > 0 ? parsedDiscountPct : 0;
   const parsedAitPct = firstAmount(fareRules.aitVat, safeDetails.fareRules?.aitVat, fare.aitVatPct, safeDetails.aitVatPct, safeDetails.aitVatPercentage, outbound.aitVatPct);
-  const aitPct = parsedAitPct && parsedAitPct > 0 ? parsedAitPct : 0.3;
+  const aitPct = parsedAitPct && parsedAitPct > 0 ? parsedAitPct : 0;
+
   let discount = firstAmount(safeDetails.discount, safeDetails.totalDiscount, safeDetails.discountAmount, outbound.discount, fare.discount) || 0;
   let aitVat = firstAmount(safeDetails.ait, safeDetails.aitVat, safeDetails.totalAitVat, safeDetails.aitVatAmount, fare.aitVat) || 0;
   if (discount <= 0 && baseFare > 0) discount = Math.round(((baseFare * discountPct) / 100) * 100) / 100;
