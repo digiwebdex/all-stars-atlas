@@ -57,7 +57,7 @@ const LoginOTP = () => {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <Link to="/" className="flex items-center justify-center mb-4">
-            <img src={logoUrl} alt="Seven Trip" className="h-10 w-auto" />
+            <img src={logoUrl} alt="Seven Trip" className="h-10 w-auto logo-3d" />
           </Link>
           <CardTitle>Sign in with OTP</CardTitle>
           <CardDescription>Passwordless login via {channel === "email" ? "email" : "SMS"}</CardDescription>

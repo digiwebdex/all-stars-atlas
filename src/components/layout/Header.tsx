@@ -75,7 +75,7 @@ const Header = () => {
                   src={logoUrl}
                   alt="Seven Trip"
                   style={{ height: `${logoSizes.header}px` }}
-                  className="w-auto drop-shadow-[0_0_12px_rgba(29,106,229,0.5)]"
+                  className="w-auto logo-3d"
                   onError={() => setLogoFailed(true)}
                 />
               ) : (
@@ -139,7 +139,7 @@ const Header = () => {
                 <div className="flex flex-col h-full">
                   <div className="p-5 border-b border-border">
                     <Link to="/" className="flex items-center gap-2.5" onClick={() => setMobileOpen(false)}>
-                      <img src={logoUrl} alt="Seven Trip" className="h-10 w-auto drop-shadow-[0_0_12px_rgba(29,106,229,0.5)]" />
+                      <img src={logoUrl} alt="Seven Trip" className="h-10 w-auto logo-3d" />
                     </Link>
                   </div>
 

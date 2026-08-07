@@ -311,7 +311,7 @@ const DashboardLayout = () => {
             <img
               src={logoUrl}
               alt="Seven Trip"
-              className="h-9 w-auto"
+              className="h-9 w-auto logo-3d"
             />
           </Link>
 
