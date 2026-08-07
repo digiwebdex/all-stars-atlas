@@ -318,7 +318,7 @@ const AdminMarkup = () => {
         <AirlineMarkupConfig
           key={activeSegment}
           airlineMarkups={airlineByScope[activeSegment] || {}}
-          globalDiscount={current.fareSummaryDiscount ?? 0}
+          globalDiscount={activeSegment === "FLIGHT_SOTO" && current.sotoCommissionEnabled !== true ? 0 : (current.fareSummaryDiscount ?? 0)}
           globalAitVat={current.fareSummaryAitVat ?? 0}
           onChange={(next) => setAirlineByScope(prev => ({
             ...prev,
