@@ -31,6 +31,8 @@ interface MarkupConfig {
   penaltyMarkup: number;
   fareSummaryDiscount: number;
   fareSummaryAitVat: number;
+  sotoCommissionEnabled?: boolean;
+
 }
 
 const defaultMarkup: MarkupConfig = {
