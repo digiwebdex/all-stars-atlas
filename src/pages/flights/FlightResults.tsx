@@ -3757,7 +3757,7 @@ const FlightResults = () => {
   return (
     <div className="min-h-screen bg-muted/30 overflow-x-hidden">
       {/* ─── Compact Pill Modification Bar with Full Features ─── */}
-      <div className="bg-card border-b border-border pt-14 sm:pt-24 lg:pt-32 pb-0">
+      <div className="bg-card border-b border-border pt-16 sm:pt-20 lg:pt-32 pb-0">
         <div className="container mx-auto px-2 sm:px-4">
           <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 py-2 sm:py-2.5 overflow-x-auto scrollbar-none">
             {/* Trip Type pill — clickable to switch */}
@@ -4376,21 +4376,16 @@ const FlightResults = () => {
                     </div>
                   </div>
                 )}
-                {/* Cabin class guide info */}
+                {/* Cabin class guide info — single compact line */}
                 {!hasCabinMismatch && searchedCabinNorm && (
-                  <div className="flex items-start gap-2.5 p-3 rounded-lg border border-border/60 bg-muted/30 mb-3">
-                    <Info className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
-                    <div>
-                      <p className="text-xs font-medium text-foreground">
-                        Showing {searchedCabinNorm.charAt(0).toUpperCase() + searchedCabinNorm.slice(1)} class results
-                      </p>
-                      <p className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed">
-                        Your searched cabin appears first in fare options. Airlines may also offer upgrade fares (e.g., Business on an Economy search). 
-                        Each card shows the <strong>actual cabin</strong> from the airline — <span className="font-medium">Economy</span> (V, H, Q, L), <span className="font-medium">Business</span> (C, J, D), <span className="font-medium">First</span> (F, A), <span className="font-medium">Premium Economy</span> (W).
-                      </p>
-                    </div>
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-border/50 bg-muted/20 mb-2.5">
+                    <Info className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                    <p className="text-[11px] text-muted-foreground truncate">
+                      Showing <span className="font-semibold text-foreground">{searchedCabinNorm.charAt(0).toUpperCase() + searchedCabinNorm.slice(1)}</span> class results — each card shows the actual cabin from the airline.
+                    </p>
                   </div>
                 )}
+
                 {isRoundTrip && hasDirections ? (
                   <div className="space-y-2">
                     {/* Header: showing X round-trip combinations */}

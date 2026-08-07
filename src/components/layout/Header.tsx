@@ -25,6 +25,8 @@ const Header = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [loginOpen, setLoginOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [logoFailed, setLogoFailed] = useState(false);
+
   const location = useLocation();
   const isHome = location.pathname === "/";
   const { isAuthenticated, user, logout } = useAuth();
@@ -68,8 +70,22 @@ const Header = () => {
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-16 sm:h-20 lg:h-24">
             <Link to="/" className="flex items-center gap-2 lg:gap-2.5 group -ml-2 lg:-ml-4">
-              <img src={logoUrl} alt="Seven Trip" style={{ height: `${logoSizes.header}px` }} className="w-auto drop-shadow-[0_0_12px_rgba(29,106,229,0.5)]" />
+              {!logoFailed ? (
+                <img
+                  src={logoUrl}
+                  alt="Seven Trip"
+                  style={{ height: `${logoSizes.header}px` }}
+                  className="w-auto drop-shadow-[0_0_12px_rgba(29,106,229,0.5)]"
+                  onError={() => setLogoFailed(true)}
+                />
+              ) : (
+                <span className={`text-lg sm:text-xl font-extrabold tracking-tight ${transparent ? "text-primary-foreground" : "text-primary"}`}>
+                  Seven<span className="text-accent">Trip</span>
+                </span>
+              )}
             </Link>
+
+
 
             {/* Navigation removed — search widget handles service tabs */}
 
