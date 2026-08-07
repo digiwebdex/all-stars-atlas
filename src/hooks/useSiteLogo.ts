@@ -36,7 +36,7 @@ export function useSiteLogo() {
     meta: { suppressError: true },
   });
 
-  return data?.url || DEFAULT_LOGO;
+  return data?.url ? withVersion(data.url) : DEFAULT_LOGO;
 }
 
 export function useLogoSizes(): LogoSizes {
