@@ -1343,8 +1343,8 @@ router.get('/search', authenticateOptional, async (req, res) => {
       const scopeKey = originBD && destBD ? 'FLIGHT_DOM' : (originBD || destBD ? 'FLIGHT_INT' : 'FLIGHT_SOTO');
 
       // SOTO has NO default commission — it must be configured explicitly for the SOTO scope.
-      let globalDiscount = scopeKey === 'FLIGHT_SOTO' ? 0 : 6.30;
-      let globalAitVat = scopeKey === 'FLIGHT_SOTO' ? 0 : 0.3;
+      let globalDiscount = 0;
+      let globalAitVat = 0;
       let scopeMarkupPct = 0;
       let scopeFixedMarkup = 0;
       let airlineOverrides = {};
@@ -1432,7 +1432,7 @@ router.get('/search', authenticateOptional, async (req, res) => {
       console.error('Fare rule loading failed (using defaults):', fareRuleErr.message);
       // Attach default rules so frontend always has them
       flights = flights.map(f => {
-        f.fareRules = { discount: 6.30, aitVat: 0.3, markup: 0, fixedMarkup: 0, isGlobal: true };
+        f.fareRules = { discount: 0, aitVat: 0, markup: 0, fixedMarkup: 0, isGlobal: true };
         return f;
       });
     }
@@ -1945,7 +1945,7 @@ router.post('/book', authenticate, async (req, res) => {
       baseFare, taxes, serviceCharge,
       discount,
       aitVat,
-      fareRules: fareRules || flightData?.fareRules || { discount: 6.30, aitVat: 0.3 },
+      fareRules: fareRules || flightData?.fareRules || { discount: 0, aitVat: 0 },
       travelDocuments: travelDocuments || [],
     };
 

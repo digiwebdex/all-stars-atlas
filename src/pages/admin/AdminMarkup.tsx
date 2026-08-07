@@ -39,7 +39,7 @@ const defaultMarkup: MarkupConfig = {
   minMarkupEnabled: false, minMarkup: 0,
   maxMarkupEnabled: false, maxMarkup: 0,
   ticketIssueCharge: 0, penaltyMarkup: 0,
-  fareSummaryDiscount: 6.30, fareSummaryAitVat: 0.3,
+  fareSummaryDiscount: 0, fareSummaryAitVat: 0,
 };
 
 const SEGMENTS = [
@@ -252,12 +252,12 @@ const AdminMarkup = () => {
             <div className="grid sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label className="text-xs">Discount on Base Fare (%)</Label>
-                <Input type="number" step="0.01" value={current.fareSummaryDiscount ?? 6.30} onChange={(e) => updateField("fareSummaryDiscount", parseFloat(e.target.value) || 0)} className="h-9" />
+                <Input type="number" step="0.01" value={current.fareSummaryDiscount ?? 0} onChange={(e) => updateField("fareSummaryDiscount", parseFloat(e.target.value) || 0)} className="h-9" />
                 <p className="text-[10px] text-muted-foreground">Default discount for all airlines unless overridden below</p>
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs">AIT VAT on Base Fare after Discount (%)</Label>
-                <Input type="number" step="0.01" value={current.fareSummaryAitVat ?? 0.3} onChange={(e) => updateField("fareSummaryAitVat", parseFloat(e.target.value) || 0)} className="h-9" />
+                <Input type="number" step="0.01" value={current.fareSummaryAitVat ?? 0} onChange={(e) => updateField("fareSummaryAitVat", parseFloat(e.target.value) || 0)} className="h-9" />
                 <p className="text-[10px] text-muted-foreground">Universal AIT VAT — applies to all airlines</p>
               </div>
             </div>
@@ -284,8 +284,8 @@ const AdminMarkup = () => {
         <AirlineMarkupConfig
           key={activeSegment}
           airlineMarkups={airlineByScope[activeSegment] || {}}
-          globalDiscount={current.fareSummaryDiscount ?? 6.30}
-          globalAitVat={current.fareSummaryAitVat ?? 0.3}
+          globalDiscount={current.fareSummaryDiscount ?? 0}
+          globalAitVat={current.fareSummaryAitVat ?? 0}
           onChange={(next) => setAirlineByScope(prev => ({
             ...prev,
             [activeSegment]: typeof next === 'function' ? (next as any)(prev[activeSegment] || {}) : next,

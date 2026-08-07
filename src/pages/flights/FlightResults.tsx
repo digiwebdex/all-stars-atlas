@@ -964,7 +964,7 @@ function calcRewardPoints(price: number): number {
 }
 
 /* ─── Payable Price from gross — applies discount + AIT VAT ─── */
-function calcPayableFromGross(grossPrice: number, taxes: number, discountPct = 6.30, aitVatPct = 0.3, markupPct = 0, fixedMarkup = 0): number {
+function calcPayableFromGross(grossPrice: number, taxes: number, discountPct = 0, aitVatPct = 0, markupPct = 0, fixedMarkup = 0): number {
   const baseFare = Math.max(0, Math.round(grossPrice - taxes));
   // Discount is always a deduction; markup is always an addition (guard bad admin input like -7%)
   const discount = Math.round(baseFare * Math.abs(discountPct) / 100);
@@ -1105,7 +1105,7 @@ function getApiFareTotals(f: any): { grossPrice: number; taxes: number } {
 /* ─── Shortcut: payable from a flight object ─── */
 function flightPayable(f: any): number {
   const apiFare = getApiFareTotals(f);
-  return calcPayableFromGross(apiFare.grossPrice, apiFare.taxes, f?.fareRules?.discount ?? 6.30, f?.fareRules?.aitVat ?? 0.3, f?.fareRules?.markup ?? 0, f?.fareRules?.fixedMarkup ?? 0);
+  return calcPayableFromGross(apiFare.grossPrice, apiFare.taxes, f?.fareRules?.discount ?? 0, f?.fareRules?.aitVat ?? 0, f?.fareRules?.markup ?? 0, f?.fareRules?.fixedMarkup ?? 0);
 }
 
 /* ─── Build fare rows from real API per-pax pricing (no fabricated multipliers) ─── */
@@ -1624,8 +1624,8 @@ const RoundTripFlightCard = ({
             const combinedBase = obBase + retBase;
             const combinedTax = outboundFare.taxes + returnFare.taxes;
 
-            const DISCOUNT_PCT = outbound.fareRules?.discount ?? 6.30;
-            const AIT_VAT_PCT = outbound.fareRules?.aitVat ?? 0.3;
+            const DISCOUNT_PCT = outbound.fareRules?.discount ?? 0;
+            const AIT_VAT_PCT = outbound.fareRules?.aitVat ?? 0;
 
             const fareRows = buildFareRows(
               outbound.paxPricing, combinedBase, combinedTax,
@@ -1901,8 +1901,8 @@ const MultiCityExpandedDetails = ({ flight, segments }: { flight: any; segments:
   const paxAdults = parseInt(cardSearchParams.get("adults") || "1");
   const paxChildren = parseInt(cardSearchParams.get("children") || "0");
   const paxInfants = parseInt(cardSearchParams.get("infants") || "0");
-  const DISCOUNT_PCT = flight.fareRules?.discount ?? 6.3;
-  const AIT_VAT_PCT = flight.fareRules?.aitVat ?? 0.3;
+  const DISCOUNT_PCT = flight.fareRules?.discount ?? 0;
+  const AIT_VAT_PCT = flight.fareRules?.aitVat ?? 0;
 
   const fareRows = buildFareRows(
     flight.paxPricing, baseFare, taxes,
@@ -2406,8 +2406,8 @@ const FlightCard = ({
   // Always derive baseFare in BDT as (price - taxes) to ensure the breakdown sums correctly.
   const baseFare = Math.max(0, Math.round(grossPrice - taxes));
   // Calculate payable price (with discount and AIT VAT applied)
-  const DISCOUNT_PCT = Math.abs(flight.fareRules?.discount ?? 6.30);
-  const AIT_VAT_PCT = Math.abs(flight.fareRules?.aitVat ?? 0.3);
+  const DISCOUNT_PCT = Math.abs(flight.fareRules?.discount ?? 0);
+  const AIT_VAT_PCT = Math.abs(flight.fareRules?.aitVat ?? 0);
   const MARKUP_PCT = Math.max(0, flight.fareRules?.markup ?? 0);
   const FIXED_MARKUP = Math.max(0, flight.fareRules?.fixedMarkup ?? 0);
   const discount = Math.round(baseFare * DISCOUNT_PCT / 100);
@@ -2813,8 +2813,8 @@ const FlightCard = ({
                     const paxChildren = parseInt(cardSearchParams.get("children") || "0");
                     const paxInfants = parseInt(cardSearchParams.get("infants") || "0");
                     // Discount and AIT VAT percentages from server-side per-airline fare rules
-                    const DISCOUNT_PCT = flight.fareRules?.discount ?? 6.30;
-                    const AIT_VAT_PCT = flight.fareRules?.aitVat ?? 0.3;
+                    const DISCOUNT_PCT = flight.fareRules?.discount ?? 0;
+                    const AIT_VAT_PCT = flight.fareRules?.aitVat ?? 0;
 
                     const fareRows = buildFareRows(
                       flight.paxPricing, baseFare, taxes,
@@ -3078,7 +3078,7 @@ const FlightResults = () => {
   const [sortBy, setSortBy] = useState("best");
 
   // Fetch admin markup settings for fare calculation
-  const [markupSettings, setMarkupSettings] = useState<{ discount: number; aitVat: number; airlineMarkups?: Record<string, any> }>({ discount: 6.30, aitVat: 0.3 });
+  const [markupSettings, setMarkupSettings] = useState<{ discount: number; aitVat: number; airlineMarkups?: Record<string, any> }>({ discount: 0, aitVat: 0 });
   useEffect(() => {
     api.get<any>("/admin/settings").then(res => {
       const settings = res?.settings || res?.data || res || {};
@@ -3093,8 +3093,8 @@ const FlightResults = () => {
       if (settings.airline_markup_config) try { airlineMarkupConfig = typeof settings.airline_markup_config === 'string' ? JSON.parse(settings.airline_markup_config) : settings.airline_markup_config; } catch {}
       const flightConfig = markupConfig?.flight || markupConfig || {};
       setMarkupSettings({
-        discount: flightConfig.fareSummaryDiscount ?? 6.30,
-        aitVat: flightConfig.fareSummaryAitVat ?? 0.3,
+        discount: flightConfig.fareSummaryDiscount ?? 0,
+        aitVat: flightConfig.fareSummaryAitVat ?? 0,
         airlineMarkups: airlineMarkupConfig || {},
       });
     }).catch(() => {});

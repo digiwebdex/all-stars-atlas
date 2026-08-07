@@ -30,7 +30,7 @@ interface AirlineMarkupConfigProps {
 
 const defaultAirlineEntry: AirlineMarkupEntry = {
   useGlobal: true,
-  discount: 6.30,
+  discount: 0,
   markup: 0,
   fixedMarkup: 0,
   commission: 0,
