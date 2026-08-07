@@ -227,7 +227,49 @@ const AdminSettings = () => {
     }
   };
 
-  useEffect(() => { loadApiLogs(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  // ===== Email server =====
+  const [emailStatus, setEmailStatus] = useState<any>(null);
+  const [emailChecking, setEmailChecking] = useState(false);
+  const [emailSending, setEmailSending] = useState(false);
+  const [testEmail, setTestEmail] = useState('');
+  const [emailLogs, setEmailLogs] = useState<any[]>([]);
+
+  const loadEmailStatus = async () => {
+    setEmailChecking(true);
+    try {
+      const res = await api.get<any>('/admin/email/status');
+      setEmailStatus(res?.status || res);
+    } catch (err: any) {
+      setEmailStatus({ mode: 'none' });
+    } finally {
+      setEmailChecking(false);
+    }
+  };
+
+  const sendTestEmail = async () => {
+    setEmailSending(true);
+    try {
+      await api.post('/admin/email/test', { to: testEmail });
+      toast.success(`Test email sent to ${testEmail}`);
+      loadEmailLogs();
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to send test email');
+    } finally {
+      setEmailSending(false);
+    }
+  };
+
+  const loadEmailLogs = async () => {
+    try {
+      const res = await api.get<any>('/admin/email/logs?limit=30');
+      setEmailLogs(res?.logs || []);
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to load email logs');
+    }
+  };
+
+  useEffect(() => { loadApiLogs(); loadEmailStatus(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
 
 
   const toggleNotification = async (key: string) => {
