@@ -193,4 +193,4 @@ function passwordResetEmail(name, otp) {
   return { subject: 'Password Reset — Seven Trip', html: wrap(`<p>Hi ${name || 'there'},</p><p>Your password reset code:</p><div style="text-align:center;margin:30px 0;"><span style="font-size:32px;font-weight:bold;letter-spacing:8px;color:#0ea5e9;background:#f0f9ff;padding:15px 30px;border-radius:8px;">${otp}</span></div><p>Expires in <strong>10 minutes</strong>.</p><p style="color:#6b7280;font-size:13px;">If you didn't request this, ignore this email.</p>`) };
 }
 
-module.exports = { sendEmail, otpEmail, welcomeEmail, bookingConfirmEmail, bookingStatusEmail, paymentReceivedEmail, visaStatusEmail, contactAutoReplyEmail, adminNotifyEmail, passwordResetEmail };
+module.exports = { sendEmail, verifySMTP, clearEmailConfigCache, getConfig, otpEmail, welcomeEmail, bookingConfirmEmail, bookingStatusEmail, paymentReceivedEmail, visaStatusEmail, contactAutoReplyEmail, adminNotifyEmail, passwordResetEmail };
