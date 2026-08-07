@@ -1429,6 +1429,13 @@ router.get('/search', authenticateOptional, async (req, res) => {
         markup = Math.max(0, Number(markup) || 0);
         fixedMarkup = Math.max(0, Number(fixedMarkup) || 0);
 
+        // Hard guard: SOTO tickets carry NO commission/discount unless explicitly enabled
+        // for the SOTO scope. Legacy per-airline entries must never leak 6.30% here.
+        if (scopeKey === 'FLIGHT_SOTO' && !sotoCommissionEnabled) {
+          discount = 0;
+        }
+
+
         // Attach fare rule params for frontend fare summary display
         f.fareRules = {
           discount, aitVat, markup, fixedMarkup,
