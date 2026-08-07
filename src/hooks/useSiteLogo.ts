@@ -1,11 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import previousLogo from "@/assets/seven-trip-logo.png.asset.json";
 
-// Bump LOGO_VERSION whenever the logo file is replaced so browsers/CDN refetch it
-const LOGO_VERSION = "2026080701";
+// Keep the approved Seven Trip logo cache-busted after replacing the old asset.
+const LOGO_VERSION = "2026080721";
 const withVersion = (url: string) =>
   url && !url.includes("?") ? `${url}?v=${LOGO_VERSION}` : url;
-const DEFAULT_LOGO = withVersion("/images/seven-trip-logo.png");
+const DEFAULT_LOGO = withVersion(previousLogo.url);
 
 export interface LogoSizes {
   homepage: number;  // px height

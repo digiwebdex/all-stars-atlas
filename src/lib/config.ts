@@ -28,8 +28,8 @@ const resolveApiBaseUrl = (): string => {
 export const config = {
   apiBaseUrl: resolveApiBaseUrl(),
   appName: 'Seven Trip',
-  parentCompany: 'Evan International',
-  legalName: 'Evan International',
+  parentCompany: 'Seven Trip',
+  legalName: 'Seven Trip',
   currency: 'BDT',
   currencySymbol: '৳',
   defaultLanguage: 'en',

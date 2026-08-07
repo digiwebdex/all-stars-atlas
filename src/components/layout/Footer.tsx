@@ -55,7 +55,7 @@ const Footer = React.forwardRef<HTMLElement>((_, ref) => {
               <img src={logoUrl} alt="Seven Trip" style={{ height: `${logoSizes.footer}px` }} className="w-auto logo-3d-inverted" />
             </Link>
             <p className="text-[13px] sm:text-sm text-white/45 leading-relaxed max-w-sm">
-              A concern of Evan International. Bangladesh's most trusted travel platform. Book flights, hotels, visa & holidays with best prices, instant confirmation, and 24/7 customer support.
+              Book Flight with Seven Trip — best prices, instant confirmation, and 24/7 customer support.
             </p>
             <div className="flex gap-2">
               {[
@@ -76,7 +76,7 @@ const Footer = React.forwardRef<HTMLElement>((_, ref) => {
             <h4 className="font-bold text-[12px] sm:text-[13px] mb-4 sm:mb-5 uppercase tracking-wider text-white/70">Services</h4>
             <ul className="space-y-2.5 sm:space-y-3 text-[13px] sm:text-sm text-white/45">
               {[
-                { label: "Flight Booking", href: "/flights" },
+                { label: "Book Flight", href: "/flights" },
                 { label: "Hotel Reservation", href: "/hotels" },
                 { label: "Visa Processing", href: "/visa" },
                 { label: "Holiday Packages", href: "/holidays" },
@@ -151,7 +151,7 @@ const Footer = React.forwardRef<HTMLElement>((_, ref) => {
 
       <div className="border-t border-white/6">
         <div className="container mx-auto px-4 py-4 sm:py-5 flex flex-col sm:flex-row items-center justify-between gap-2 sm:gap-3 text-[10px] sm:text-[11px] text-white/25">
-          <p>© {new Date().getFullYear()} Seven Trip — A concern of Evan International. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} Seven Trip. All rights reserved.</p>
           <div className="flex items-center gap-3 sm:gap-5 flex-wrap justify-center">
             <span className="flex items-center gap-1.5">✈️ IATA Accredited</span>
             <span className="flex items-center gap-1.5">🏆 ATAB Member</span>

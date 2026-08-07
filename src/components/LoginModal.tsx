@@ -80,7 +80,7 @@ const LoginModal = ({ open, onOpenChange }: LoginModalProps) => {
             <span className="text-muted-foreground text-sm">Welcome to</span>
             <img src={logoUrl} alt="Seven Trip" className="h-8 w-auto logo-3d" />
           </div>
-          <h2 className="text-xl font-extrabold text-foreground">Seven Trip Ltd.</h2>
+          <h2 className="text-xl font-extrabold text-foreground">Book Flight</h2>
         </div>
 
         <div className="px-6 pb-6 pt-2">

@@ -146,7 +146,7 @@ const DashboardInvoices = () => {
                                 <div className="flex justify-between items-start">
                                 <div>
                                   <p className="text-lg font-black">Seven Trip</p>
-                                  <p className="text-xs text-muted-foreground">A concern of Evan International</p>
+                                  <p className="text-xs text-muted-foreground">Book Flight</p>
                                 </div>
                                 <div className="text-right">
                                   <p className="text-sm font-bold">{inv.invoiceNo}</p>
