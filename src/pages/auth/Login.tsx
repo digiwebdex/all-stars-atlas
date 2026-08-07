@@ -77,24 +77,24 @@ const Login = () => {
 
   return (
     <>
-      <div className="min-h-screen flex bg-muted/30">
-        <div className="hidden lg:flex lg:w-1/2 relative bg-gradient-to-br from-[hsl(222,60%,18%)] via-[hsl(223,64%,14%)] to-[hsl(224,70%,10%)] items-start justify-center p-12 pt-32">
-          <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wMyI+PHBhdGggZD0iTTM2IDE0VjBoLTJWMTRIMjBWMGgtMnYxNEgwdjJoMTR2MTRIMHYyaDE0djE0aDJ2LTE0aDE0djE0aDJ2LTE0aDE0di0ySDM2VjE2aDEydi0ySDM2eiIvPjwvZz48L2c+PC9zdmc+')] opacity-40" />
-          <div className="relative text-white max-w-md">
-            <Link to="/" className="flex items-center gap-3 mb-8">
-              <img src={logoUrl} alt="Seven Trip" style={{ height: `${logoSizes.auth}px` }} className="w-auto brightness-0 invert drop-shadow-[0_0_12px_rgba(29,106,229,0.5)]" />
-            </Link>
-            <h2 className="text-3xl font-black mb-4 leading-tight">Welcome back to Bangladesh's #1 Travel Platform</h2>
-            <p className="text-white/60 text-sm mb-8 leading-relaxed">Book flights, hotels, holidays & visa services with the best prices and 24/7 support.</p>
-            <div className="space-y-3">
-              {["500K+ happy travellers", "Best price guarantee", "24/7 customer support", "Instant confirmation"].map((f, i) => (
-                <div key={i} className="flex items-center gap-2 text-white/80 text-sm">
-                  <CheckCircle2 className="w-4 h-4 text-accent" />{f}
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
+       <div className="min-h-screen flex bg-muted/30">
+         <div className="hidden lg:flex lg:w-1/2 relative bg-gradient-to-br from-auth-sky via-auth-sky-deep to-primary items-start justify-center p-12 pt-32">
+           <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wMyI+PHBhdGggZD0iTTM2IDE0VjBoLTJWMTRIMjBWMGgtMnYxNEgwdjJoMTR2MTRIMHYyaDE0djE0aDJ2LTE0aDE0djE0aDJ2LTE0aDE0di0ySDM2VjE2aDEydi0ySDM2eiIvPjwvZz48L2c+PC9zdmc+')] opacity-40" />
+           <div className="relative text-auth-foreground max-w-md">
+             <Link to="/" className="flex items-center gap-3 mb-8">
+               <img src={logoUrl} alt="Seven Trip" style={{ height: `${logoSizes.auth}px` }} className="w-auto brightness-0 invert drop-shadow-[0_0_12px_hsl(var(--auth-sky)/0.5)]" />
+             </Link>
+             <h2 className="text-3xl font-black mb-4 leading-tight">Welcome back to Bangladesh's #1 Travel Platform</h2>
+             <p className="text-auth-foreground/60 text-sm mb-8 leading-relaxed">Book flights, hotels, holidays & visa services with the best prices and 24/7 support.</p>
+             <div className="space-y-3">
+               {["500K+ happy travellers", "Best price guarantee", "24/7 customer support", "Instant confirmation"].map((f, i) => (
+                 <div key={i} className="flex items-center gap-2 text-auth-foreground/80 text-sm">
+                   <CheckCircle2 className="w-4 h-4 text-accent" />{f}
+                 </div>
+               ))}
+             </div>
+           </div>
+         </div>
 
         <div className="flex-1 flex items-center justify-center px-4 py-12">
           <Card className="w-full max-w-md border-0 shadow-none bg-transparent">
@@ -117,19 +117,19 @@ const Login = () => {
                 <div className="space-y-1.5">
                   <div className="flex justify-between">
                     <Label>Password</Label>
-                    <Link to="/auth/forgot-password" className="text-xs text-primary hover:underline font-medium">Forgot Password?</Link>
-                  </div>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input type={showPassword ? "text" : "password"} placeholder="••••••••" className="pl-10 pr-10 h-11" value={password} onChange={e => setPassword(e.target.value)} />
-                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
-                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  </div>
-                </div>
-                <Button type="submit" className="w-full h-11 font-bold shadow-lg shadow-primary/20" disabled={loading}>
-                  {loading ? "Signing in..." : "Sign In"}
-                </Button>
+                     <Link to="/auth/forgot-password" className="text-xs text-auth-sky-deep hover:underline font-medium">Forgot Password?</Link>
+                   </div>
+                   <div className="relative">
+                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                     <Input type={showPassword ? "text" : "password"} placeholder="••••••••" className="pl-10 pr-10 h-11" value={password} onChange={e => setPassword(e.target.value)} />
+                     <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                       {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                     </button>
+                   </div>
+                 </div>
+                 <Button type="submit" className="w-full h-11 font-bold bg-auth-sky hover:bg-auth-sky-deep text-auth-foreground shadow-lg shadow-auth-sky/20" disabled={loading}>
+                   {loading ? "Signing in..." : "Sign In"}
+                 </Button>
               </form>
 
               <div className="relative my-4">

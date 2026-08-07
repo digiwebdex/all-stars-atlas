@@ -105,6 +105,9 @@ img, video {
 
     --primary: 217 91% 50%;
     --primary-foreground: 0 0% 100%;
+    --auth-sky: 198 92% 42%;
+    --auth-sky-deep: 199 90% 32%;
+    --auth-panel-foreground: 0 0% 100%;
     --flight-departure: 217 91% 50%;
     --flight-return: 263 83% 58%;
 
