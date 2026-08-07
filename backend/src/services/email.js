@@ -2,7 +2,12 @@
 // Config priority: system_settings 'api_email_smtp' -> 'api_email_resend' -> .env
 
 const db = require('../config/db');
-const nodemailer = require('nodemailer');
+let nodemailer = null;
+try {
+  nodemailer = require('nodemailer');
+} catch {
+  console.warn('[EMAIL] nodemailer is not installed; SMTP is temporarily unavailable');
+}
 const RESEND_API = 'https://api.resend.com/emails';
 
 let cachedConfig = null;
@@ -62,6 +67,7 @@ async function getConfig() {
 }
 
 function getTransporter(config) {
+  if (!nodemailer) return null;
   const key = `${config.host}:${config.port}:${config.user}:${config.secure}`;
   if (transporter && transporterKey === key) return transporter;
   transporter = nodemailer.createTransport({
@@ -90,8 +96,11 @@ async function logEmail({ to, subject, status, provider, error, messageId }) {
 async function verifySMTP() {
   const config = await getConfig();
   if (config.mode !== 'smtp') return { success: false, reason: 'SMTP not configured' };
+  if (!nodemailer) return { success: false, reason: 'SMTP dependency is not installed on the server' };
   try {
-    await getTransporter(config).verify();
+    const smtpTransporter = getTransporter(config);
+    if (!smtpTransporter) return { success: false, reason: 'SMTP dependency is not installed on the server' };
+    await smtpTransporter.verify();
     return { success: true, host: config.host, port: config.port };
   } catch (err) {
     return { success: false, reason: err.message };
@@ -108,8 +117,14 @@ async function sendEmail({ to, subject, html, text }) {
   }
 
   if (config.mode === 'smtp') {
+    if (!nodemailer) {
+      await logEmail({ to, subject, status: 'failed', provider: 'smtp', error: 'nodemailer_not_installed' });
+      return { success: false, reason: 'SMTP dependency is not installed on the server' };
+    }
     try {
-      const info = await getTransporter(config).sendMail({
+      const smtpTransporter = getTransporter(config);
+      if (!smtpTransporter) return { success: false, reason: 'SMTP dependency is not installed on the server' };
+      const info = await smtpTransporter.sendMail({
         from: config.from,
         to: Array.isArray(to) ? to.join(', ') : to,
         subject,
