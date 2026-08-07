@@ -41,7 +41,7 @@ const defaultMarkup: MarkupConfig = {
   minMarkupEnabled: false, minMarkup: 0,
   maxMarkupEnabled: false, maxMarkup: 0,
   ticketIssueCharge: 0, penaltyMarkup: 0,
-  fareSummaryDiscount: 0, fareSummaryAitVat: 0,
+  fareSummaryDiscount: 0, fareSummaryAitVat: 0, sotoCommissionEnabled: false,
 };
 
 const SEGMENTS = [
