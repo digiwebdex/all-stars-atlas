@@ -251,11 +251,34 @@ const AdminMarkup = () => {
           {/* Fare Summary Display Settings */}
           <div>
             <h4 className="text-sm font-bold mb-3">Fare Summary Display (Global Defaults)</h4>
+            {activeSegment === "FLIGHT_SOTO" && (
+              <div className="flex items-center justify-between rounded-lg border border-border bg-muted/40 px-3 py-2.5 mb-4">
+                <div>
+                  <p className="text-sm font-semibold">Give commission on SOTO tickets</p>
+                  <p className="text-[10px] text-muted-foreground">Off by default — SOTO fares carry markup only, no discount/commission.</p>
+                </div>
+                <Switch
+                  checked={current.sotoCommissionEnabled === true}
+                  onCheckedChange={(v) => updateField("sotoCommissionEnabled", v)}
+                />
+              </div>
+            )}
             <div className="grid sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label className="text-xs">Discount on Base Fare (%)</Label>
-                <Input type="number" step="0.01" value={current.fareSummaryDiscount ?? 0} onChange={(e) => updateField("fareSummaryDiscount", parseFloat(e.target.value) || 0)} className="h-9" />
-                <p className="text-[10px] text-muted-foreground">Default discount for all airlines unless overridden below</p>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={current.fareSummaryDiscount ?? 0}
+                  onChange={(e) => updateField("fareSummaryDiscount", parseFloat(e.target.value) || 0)}
+                  className="h-9"
+                  disabled={activeSegment === "FLIGHT_SOTO" && current.sotoCommissionEnabled !== true}
+                />
+                <p className="text-[10px] text-muted-foreground">
+                  {activeSegment === "FLIGHT_SOTO" && current.sotoCommissionEnabled !== true
+                    ? "Disabled — SOTO commission is turned off, so discount stays 0%."
+                    : "Default discount for all airlines unless overridden below"}
+                </p>
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs">AIT VAT on Base Fare after Discount (%)</Label>
@@ -264,6 +287,7 @@ const AdminMarkup = () => {
               </div>
             </div>
           </div>
+
 
           <Separator />
 
