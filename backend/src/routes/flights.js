@@ -1374,9 +1374,11 @@ router.get('/search', authenticateOptional, async (req, res) => {
             }
           }
           // SOTO never gives commission unless the admin explicitly enables it for SOTO.
-          if (scopeKey === 'FLIGHT_SOTO' && parsed.FLIGHT_SOTO?.sotoCommissionEnabled !== true) {
+          sotoCommissionEnabled = parsed.FLIGHT_SOTO?.sotoCommissionEnabled === true;
+          if (scopeKey === 'FLIGHT_SOTO' && !sotoCommissionEnabled) {
             globalDiscount = 0;
           }
+
         } else if (row.setting_key === 'airline_markup_config') {
 
 
