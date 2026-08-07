@@ -1342,8 +1342,9 @@ router.get('/search', authenticateOptional, async (req, res) => {
       const destBD = BD_ROUTE_AIRPORTS.has(routeDest);
       const scopeKey = originBD && destBD ? 'FLIGHT_DOM' : (originBD || destBD ? 'FLIGHT_INT' : 'FLIGHT_SOTO');
 
-      let globalDiscount = 6.30;
-      let globalAitVat = 0.3;
+      // SOTO has NO default commission — it must be configured explicitly for the SOTO scope.
+      let globalDiscount = scopeKey === 'FLIGHT_SOTO' ? 0 : 6.30;
+      let globalAitVat = scopeKey === 'FLIGHT_SOTO' ? 0 : 0.3;
       let scopeMarkupPct = 0;
       let scopeFixedMarkup = 0;
       let airlineOverrides = {};
@@ -1353,8 +1354,9 @@ router.get('/search', authenticateOptional, async (req, res) => {
         if (!parsed || typeof parsed !== 'object') continue;
 
         if (row.setting_key === 'markup_config') {
-          // Prefer the scope-specific config, fall back to the legacy FLIGHT key
-          const cfg = parsed[scopeKey] || parsed.FLIGHT || null;
+          // Use the scope-specific config. Legacy flat FLIGHT config is only a fallback
+          // for Domestic/International — never for SOTO (avoids leaking 6.30% into SOTO).
+          const cfg = parsed[scopeKey] || (scopeKey === 'FLIGHT_SOTO' ? null : parsed.FLIGHT) || null;
           if (cfg) {
             if (cfg.fareSummaryDiscount !== undefined) globalDiscount = parseFloat(cfg.fareSummaryDiscount) || 0;
             if (cfg.fareSummaryAitVat !== undefined) globalAitVat = parseFloat(cfg.fareSummaryAitVat) || 0;
@@ -1368,6 +1370,7 @@ router.get('/search', authenticateOptional, async (req, res) => {
             }
           }
         } else if (row.setting_key === 'airline_markup_config') {
+
           // Scoped per Domestic / International / SOTO; fall back to legacy flat config
           const scoped = parsed[scopeKey];
           const isScoped = ['FLIGHT_DOM', 'FLIGHT_INT', 'FLIGHT_SOTO'].some(
