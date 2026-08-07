@@ -942,6 +942,8 @@ router.put('/settings', async (req, res) => {
       );
       // Clear provider config caches when API settings change
       const cacheClears = {
+        email_smtp: () => { try { require('../services/email').clearEmailConfigCache(); } catch {} },
+        email_resend: () => { try { require('../services/email').clearEmailConfigCache(); } catch {} },
         tti_astra: () => { try { ttiFlights.clearTTIConfigCache?.(); } catch {} },
         triplover: () => { try { triploverFlights.clearTripLoverConfigCache?.(); } catch {} },
 
