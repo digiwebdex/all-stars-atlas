@@ -132,8 +132,15 @@ async function tlPost(pathname, body, { useSearchBase = false, timeout = 45000 }
   try { data = text ? JSON.parse(text) : null; } catch (_) { data = { raw: text }; }
 
   if (!res.ok) {
-    const msg = data?.message || data?.item1?.message || data?.item2?.message || `HTTP ${res.status}`;
+    // ASP.NET validation failures return { errors: { field: [msg] } } — surface those field messages,
+    // otherwise "Validation error occurred" tells nobody what is actually wrong.
+    const fieldErrors = data?.errors && typeof data.errors === 'object'
+      ? Object.entries(data.errors).map(([k, v]) => `${k}: ${[].concat(v).join(', ')}`).join(' | ')
+      : '';
+    const baseMsg = data?.message || data?.title || data?.item1?.message || data?.item2?.message || `HTTP ${res.status}`;
+    const msg = fieldErrors ? `${baseMsg} — ${fieldErrors}` : baseMsg;
     const { error, hint } = describeFailure({ status: res.status, message: msg, body: data, operation });
+
     logApiCall({
       provider: 'triplover', operation, url, status: res.status, ok: false,
       durationMs: Date.now() - started, request: body, response: data, error, hint,
