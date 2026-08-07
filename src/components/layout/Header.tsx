@@ -75,9 +75,10 @@ const Header = () => {
                   src={logoUrl}
                   alt="Seven Trip"
                   style={{ height: `${logoSizes.header}px` }}
-                  className="w-auto logo-3d"
+                  className={`w-auto ${isHome ? "logo-3d-hero" : "logo-3d"}`}
                   onError={() => setLogoFailed(true)}
                 />
+
               ) : (
                 <span className={`text-lg sm:text-xl font-extrabold tracking-tight ${transparent ? "text-primary-foreground" : "text-primary"}`}>
                   Seven<span className="text-accent">Trip</span>
