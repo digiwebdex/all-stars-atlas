@@ -82,7 +82,7 @@ const RegisterAgency = () => {
       <div className="hidden lg:flex lg:w-2/5 relative bg-gradient-to-br from-[hsl(217,91%,28%)] via-[hsl(217,91%,38%)] to-[hsl(167,72%,41%)] items-start justify-center p-12 pt-24">
         <div className="relative text-primary-foreground max-w-md">
           <Link to="/" className="flex items-center gap-3 mb-8">
-            <img src={logoUrl} alt="Seven Trip" style={{ height: `${logoSizes.auth}px` }} className="w-auto brightness-0 invert drop-shadow-[0_0_12px_rgba(29,106,229,0.5)]" />
+            <img src={logoUrl} alt="Seven Trip" style={{ height: `${logoSizes.auth}px` }} className="w-auto logo-3d-inverted" />
           </Link>
           <span className="inline-block px-3 py-1 rounded-full bg-white/10 backdrop-blur text-xs font-bold tracking-widest uppercase mb-4">B2B Travel Partner</span>
           <h2 className="text-3xl font-black mb-4 leading-tight">Grow your agency with Seven Trip.</h2>
@@ -107,7 +107,7 @@ const RegisterAgency = () => {
         <Card className="w-full max-w-2xl border-0 shadow-none bg-transparent">
           <CardHeader className="text-center pb-2">
             <Link to="/" className="flex items-center justify-center gap-2 mb-4 lg:hidden">
-              <img src={logoUrl} alt="Seven Trip" style={{ height: `${Math.round(logoSizes.auth * 0.67)}px` }} className="w-auto" />
+              <img src={logoUrl} alt="Seven Trip" style={{ height: `${Math.round(logoSizes.auth * 0.67)}px` }} className="w-auto logo-3d" />
             </Link>
 
             {/* ── Personal / Agency toggle ── */}
