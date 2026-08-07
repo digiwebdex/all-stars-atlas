@@ -91,7 +91,7 @@ function mapBooking(b: any) {
     discount = Math.round(((base * discountPct) / 100) * 100) / 100;
   }
   const parsedAitPct = pickAmt(fareRules.aitVat, d.fareRules?.aitVat, fareObj.aitVatPct, d.aitVatPct, d.aitVatPercentage, o.aitVatPct);
-  const aitPct = parsedAitPct && parsedAitPct > 0 ? parsedAitPct : 0.3;
+  const aitPct = parsedAitPct && parsedAitPct > 0 ? parsedAitPct : 0;
   let ait = pickAmt(d.ait, d.aitVat, d.totalAitVat, d.aitVatAmount, fareObj.aitVat) || 0;
   if (ait <= 0 && aitPct > 0 && base > 0) {
     ait = Math.round(((base * aitPct) / 100) * 100) / 100;
