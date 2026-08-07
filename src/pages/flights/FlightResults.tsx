@@ -4176,9 +4176,20 @@ const FlightResults = () => {
                 </>
               )}
             </p>
-            {cheapest > 0 && (
-              <span className="text-[10px] sm:text-xs text-muted-foreground">Sort by: <strong className="text-accent">{sortBy.charAt(0).toUpperCase() + sortBy.slice(1)}</strong></span>
-            )}
+            <div className="flex items-center gap-2 shrink-0">
+              {cheapest > 0 && (
+                <span className="hidden sm:inline text-[10px] sm:text-xs text-muted-foreground">Sort by: <strong className="text-accent">{sortBy.charAt(0).toUpperCase() + sortBy.slice(1)}</strong></span>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                className="lg:hidden h-7 text-[11px] px-2 shadow-sm"
+                onClick={() => setShowFilters(true)}
+              >
+                <SlidersHorizontal className="w-3.5 h-3.5 mr-1" /> Filters
+              </Button>
+            </div>
+
           </div>
         </div>
       </div>
