@@ -1358,7 +1358,9 @@ router.get('/search', authenticateOptional, async (req, res) => {
           // for Domestic/International — never for SOTO (avoids leaking 6.30% into SOTO).
           const cfg = parsed[scopeKey] || (scopeKey === 'FLIGHT_SOTO' ? null : parsed.FLIGHT) || null;
           if (cfg) {
-            if (cfg.fareSummaryDiscount !== undefined) globalDiscount = parseFloat(cfg.fareSummaryDiscount) || 0;
+            // Admin UI writes both `fareSummaryDiscount` and `baseFareDiscount` — accept either.
+            const cfgDiscount = cfg.fareSummaryDiscount ?? cfg.baseFareDiscount;
+            if (cfgDiscount !== undefined) globalDiscount = parseFloat(cfgDiscount) || 0;
             if (cfg.fareSummaryAitVat !== undefined) globalAitVat = parseFloat(cfg.fareSummaryAitVat) || 0;
             // AdminMarkup stores the current schema as baseFareMarkup/baseFareFixed.
             // Keep legacy markupValue support for previously saved configurations.
@@ -1369,7 +1371,12 @@ router.get('/search', authenticateOptional, async (req, res) => {
               scopeMarkupPct = 0;
             }
           }
+          // SOTO never gives commission unless the admin explicitly enables it for SOTO.
+          if (scopeKey === 'FLIGHT_SOTO' && parsed.FLIGHT_SOTO?.sotoCommissionEnabled !== true) {
+            globalDiscount = 0;
+          }
         } else if (row.setting_key === 'airline_markup_config') {
+
 
           // Scoped per Domestic / International / SOTO; fall back to legacy flat config
           const scoped = parsed[scopeKey];
