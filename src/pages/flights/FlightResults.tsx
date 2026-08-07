@@ -2563,8 +2563,8 @@ const FlightCard = ({
                   <div className="flex justify-between"><span className="text-muted-foreground">Gross Fare (Base + Tax)</span><span className="font-medium">BDT {grossPrice.toLocaleString()}</span></div>
                   <div className="flex justify-between"><span className="text-muted-foreground">Base Fare</span><span className="font-medium">BDT {baseFare.toLocaleString()}</span></div>
                   <div className="flex justify-between"><span className="text-muted-foreground">Taxes & Fees</span><span className="font-medium">BDT {taxes.toLocaleString()}</span></div>
-                  <div className="flex justify-between"><span className="text-muted-foreground">Commission ({DISCOUNT_PCT}%)</span><span className="font-medium text-accent">- BDT {discount.toLocaleString()}</span></div>
-                  <div className="flex justify-between"><span className="text-muted-foreground">AIT VAT ({AIT_VAT_PCT}%)</span><span className="font-medium">BDT {aitVat.toLocaleString()}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Discount</span><span className="font-medium text-accent">- BDT {discount.toLocaleString()}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">AIT VAT</span><span className="font-medium">BDT {aitVat.toLocaleString()}</span></div>
                   {markup > 0 && (
                     <div className="flex justify-between"><span className="text-muted-foreground">Markup{MARKUP_PCT > 0 ? ` (${MARKUP_PCT}%)` : ""}</span><span className="font-medium text-destructive">+ BDT {markup.toLocaleString()}</span></div>
                   )}
