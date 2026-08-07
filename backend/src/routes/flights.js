@@ -1348,6 +1348,8 @@ router.get('/search', authenticateOptional, async (req, res) => {
       let scopeMarkupPct = 0;
       let scopeFixedMarkup = 0;
       let airlineOverrides = {};
+      let sotoCommissionEnabled = false;
+
 
       for (const row of settingsRows) {
         const parsed = typeof row.setting_value === 'string' ? JSON.parse(row.setting_value) : (row.setting_value || {});
