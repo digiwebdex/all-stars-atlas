@@ -116,11 +116,19 @@ const AdminMarkup = () => {
   const handleSave = async () => {
     setSaving(true);
     try {
+      // SOTO carries no commission unless explicitly enabled — force discount to 0.
+      const payload: Record<string, MarkupConfig> = { ...markups };
+      const soto = payload.FLIGHT_SOTO;
+      if (soto && soto.sotoCommissionEnabled !== true) {
+        payload.FLIGHT_SOTO = { ...soto, fareSummaryDiscount: 0, baseFareDiscount: 0 };
+      }
       await api.put("/admin/settings", {
-        markup_config: markups,
+        markup_config: payload,
         airline_markup_config: airlineByScope,
       });
+      setMarkups(payload);
       toast({ title: "Saved", description: `Markup settings updated successfully.` });
+
     } catch (err: any) {
       toast({ title: "Error", description: err?.message || "Failed to save", variant: "destructive" });
     } finally {
