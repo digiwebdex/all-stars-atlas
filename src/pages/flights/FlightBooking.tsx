@@ -1038,7 +1038,16 @@ const FlightBooking = () => {
 
 
     } catch (err: any) {
-      toast({ title: "Booking Failed", description: err.message || "Something went wrong", variant: "destructive" });
+      const reason = err?.gdsError || err?.details || err?.message || "Something went wrong";
+      const stale = /reprice|no longer available|expired|uniqueTransID|session/i.test(String(reason));
+      toast({
+        title: "Booking Failed",
+        description: stale
+          ? `${reason}. Your search session has expired — please search again and re-select the flight.`
+          : reason,
+        variant: "destructive",
+      });
+    }
     } finally { setBookingLoading(false); }
   };
 
