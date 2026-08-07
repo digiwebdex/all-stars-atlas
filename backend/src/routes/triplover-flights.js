@@ -167,6 +167,52 @@ async function tlPost(pathname, body, { useSearchBase = false, timeout = 45000 }
 const CABIN_MAP = { economy: 1, 'premium economy': 2, premiumeconomy: 2, business: 3, first: 4 };
 
 // ── Search ──
+// TripLover returns only ONE PAGE (10 itineraries) per response, while the full
+// supplier set (SV, X1, RX, AI, MS, ET …) arrives progressively. Their own booking
+// site therefore: 1) opens /api/Search/Progressive (SSE) to collect the pagination
+// key + the complete airlineFilters list, then 2) pulls results per airline through
+// /api/Search/key=<paginationKey>. Doing a single /api/Search call silently drops
+// most airlines — that is why Saudia (SV) was missing from our results.
+async function tlRawPost(pathname, body, { timeout = 85000, accept = 'application/json' } = {}) {
+  const config = await getTripLoverConfig();
+  if (!config) throw new Error('TripLover API not configured');
+  const token = await getToken(config);
+  if (!token) throw new Error('TripLover authentication failed');
+  const url = `${config.searchBaseUrl}${pathname}`;
+  const started = Date.now();
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Accept: accept, Authorization: `Bearer ${token}` },
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(timeout),
+  });
+  const text = await res.text();
+  if (!res.ok) {
+    logApiCall({
+      provider: 'triplover', operation: pathname.replace(/^\/api\/?/, ''), url, status: res.status,
+      ok: false, durationMs: Date.now() - started, request: body,
+      response: { raw: text.slice(0, 800) }, error: `HTTP ${res.status}`,
+    });
+    throw new Error(`TripLover ${pathname}: HTTP ${res.status}`);
+  }
+  return { text, durationMs: Date.now() - started, url };
+}
+
+// Parses the SSE body of /api/Search/Progressive; returns the last (most complete) frame.
+function parseProgressiveStream(text) {
+  const frames = String(text).split(/\n?data:\s*/).map(s => s.trim()).filter(Boolean);
+  let last = null;
+  const items = [];
+  for (const frame of frames) {
+    let json;
+    try { json = JSON.parse(frame); } catch (_) { continue; }
+    const sr = json.searchResponse || json.item1 || json;
+    if (sr && (sr.searchPaginationKey || Array.isArray(sr.airSearchResponses))) last = sr;
+    for (const it of sr?.airSearchResponses || []) items.push(it);
+  }
+  return { summary: last, items };
+}
+
 async function searchFlights({ origin, destination, departDate, returnDate, adults = 1, children = 0, infants = 0, cabinClass, preferredAirline, childrenAges = [] }) {
   const config = await getTripLoverConfig();
   if (!config) return [];
@@ -183,21 +229,78 @@ async function searchFlights({ origin, destination, departDate, returnDate, adul
     preferredCarriers: preferredAirline ? [String(preferredAirline).toUpperCase()] : [],
     prohibitedCarriers: [],
     childrenAges: Array.isArray(childrenAges) ? childrenAges : [],
+    searchFilter: { page: 1, limit: 10 },
   };
 
+  const searchTimeout = parseInt(process.env.TRIPLOVER_SEARCH_TIMEOUT_MS) || 85000;
+  const perAirlineLimit = parseInt(process.env.TRIPLOVER_PER_AIRLINE_LIMIT) || 20;
+
+  // 1) Progressive stream → pagination key + full airline list
   try {
-    // TripLover UAT commonly needs 50–60 seconds for uncached international
-    // searches. Keep this just under the aggregator and reverse-proxy budgets.
-    const searchTimeout = parseInt(process.env.TRIPLOVER_SEARCH_TIMEOUT_MS) || 85000;
+    const { text, durationMs } = await tlRawPost('/api/Search/Progressive', payload, {
+      timeout: searchTimeout, accept: 'application/json, text/event-stream',
+    });
+    const { summary, items } = parseProgressiveStream(text);
+    const key = summary?.searchPaginationKey;
+    const airlines = (summary?.airlineFilters || []).map(a => a.airlineCode).filter(Boolean);
+
+    logApiCall({
+      provider: 'triplover', operation: 'Search/Progressive', ok: true, durationMs, request: payload,
+      response: { totalFlights: summary?.totalFlights ?? 0, airlines, paginationKey: key ? 'yes' : 'no' },
+    });
+
+    const flights = [];
+    const seen = new Set();
+    const push = (list) => {
+      for (const f of list) {
+        const k = f._tlItemCodeRef || f.id;
+        if (k && seen.has(k)) continue;
+        if (k) seen.add(k);
+        flights.push(f);
+      }
+    };
+    push(normalizeSearch({ item1: { airSearchResponses: items } }, origin, destination));
+
+    // 2) Pull each airline explicitly so no supplier (SV, X1, RX …) is lost
+    if (key && airlines.length) {
+      const results = await Promise.allSettled(airlines.map(code =>
+        tlRawPost(`/api/Search/key=${key}`, {
+          airlines: [code], sortBy: 1,
+          layoverTime: { maxLayoverTime: 60, minLayoverTime: 0 },
+          page: 1, limit: perAirlineLimit,
+        }, { timeout: 30000 })
+      ));
+      results.forEach((r, i) => {
+        if (r.status !== 'fulfilled') {
+          console.warn(`[TripLover] airline fetch failed ${airlines[i]}: ${r.reason?.message}`);
+          return;
+        }
+        let json = null;
+        try { json = JSON.parse(r.value.text); } catch (_) { return; }
+        const list = json?.airSearchResponse || json?.item1?.airSearchResponses || json?.airSearchResponses || [];
+        push(normalizeSearch({ item1: { airSearchResponses: list } }, origin, destination));
+      });
+    }
+
+    if (flights.length) {
+      const codes = [...new Set(flights.map(f => f.airlineCode))];
+      console.log(`[TripLover] ${flights.length} fares from ${codes.length} airlines: ${codes.join(',')}`);
+      return flights;
+    }
+  } catch (err) {
+    console.error('[TripLover] Progressive search failed, falling back:', err.message);
+  }
+
+  // 3) Fallback — legacy single-shot search
+  try {
     const data = await tlPost('/api/Search', payload, { useSearchBase: true, timeout: searchTimeout });
-
-
     return normalizeSearch(data, origin, destination);
   } catch (err) {
     console.error('[TripLover] Search error:', err.message);
     return [];
   }
 }
+
 
 function toIso(s) {
   if (!s) return null;
