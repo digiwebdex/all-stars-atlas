@@ -132,8 +132,15 @@ async function tlPost(pathname, body, { useSearchBase = false, timeout = 45000 }
   try { data = text ? JSON.parse(text) : null; } catch (_) { data = { raw: text }; }
 
   if (!res.ok) {
-    const msg = data?.message || data?.item1?.message || data?.item2?.message || `HTTP ${res.status}`;
+    // ASP.NET validation failures return { errors: { field: [msg] } } — surface those field messages,
+    // otherwise "Validation error occurred" tells nobody what is actually wrong.
+    const fieldErrors = data?.errors && typeof data.errors === 'object'
+      ? Object.entries(data.errors).map(([k, v]) => `${k}: ${[].concat(v).join(', ')}`).join(' | ')
+      : '';
+    const baseMsg = data?.message || data?.title || data?.item1?.message || data?.item2?.message || `HTTP ${res.status}`;
+    const msg = fieldErrors ? `${baseMsg} — ${fieldErrors}` : baseMsg;
     const { error, hint } = describeFailure({ status: res.status, message: msg, body: data, operation });
+
     logApiCall({
       provider: 'triplover', operation, url, status: res.status, ok: false,
       durationMs: Date.now() - started, request: body, response: data, error, hint,
@@ -347,39 +354,79 @@ async function revalidatePrice({ uniqueTransID, itemCodeRef, segmentCodeRefs = [
   };
 }
 
+// TripLover expects ISO-2 country codes. The booking form sends nationality labels
+// ("Bangladeshi"), which the supplier rejects with a generic "Validation error occurred".
+const NATIONALITY_TO_ISO2 = {
+  bangladeshi: 'BD', bangladesh: 'BD', indian: 'IN', india: 'IN', pakistani: 'PK', pakistan: 'PK',
+  nepali: 'NP', nepalese: 'NP', nepal: 'NP', srilankan: 'LK', 'sri lankan': 'LK', 'sri lanka': 'LK',
+  maldivian: 'MV', maldives: 'MV', bhutanese: 'BT', bhutan: 'BT', myanmar: 'MM', burmese: 'MM',
+  saudi: 'SA', 'saudi arabian': 'SA', 'saudi arabia': 'SA', emirati: 'AE', 'united arab emirates': 'AE',
+  qatari: 'QA', qatar: 'QA', kuwaiti: 'KW', kuwait: 'KW', omani: 'OM', oman: 'OM', bahraini: 'BH', bahrain: 'BH',
+  malaysian: 'MY', malaysia: 'MY', singaporean: 'SG', singapore: 'SG', thai: 'TH', thailand: 'TH',
+  indonesian: 'ID', indonesia: 'ID', filipino: 'PH', philippines: 'PH', chinese: 'CN', china: 'CN',
+  japanese: 'JP', japan: 'JP', korean: 'KR', 'south korea': 'KR', turkish: 'TR', turkey: 'TR',
+  british: 'GB', 'united kingdom': 'GB', american: 'US', 'united states': 'US', canadian: 'CA', canada: 'CA',
+  australian: 'AU', australia: 'AU', german: 'DE', germany: 'DE', french: 'FR', france: 'FR',
+  italian: 'IT', italy: 'IT', spanish: 'ES', spain: 'ES', egyptian: 'EG', egypt: 'EG',
+  jordanian: 'JO', jordan: 'JO', lebanese: 'LB', lebanon: 'LB', iraqi: 'IQ', iraq: 'IQ',
+  afghan: 'AF', afghanistan: 'AF', iranian: 'IR', iran: 'IR', 'south african': 'ZA', 'south africa': 'ZA',
+};
+
+function toIso2(value, fallback = 'BD') {
+  const raw = String(value || '').trim();
+  if (!raw) return fallback;
+  if (/^[A-Za-z]{2}$/.test(raw)) return raw.toUpperCase();
+  return NATIONALITY_TO_ISO2[raw.toLowerCase()] || fallback;
+}
+
+function toApiDate(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+  const d = new Date(raw);
+  return Number.isNaN(d.getTime()) ? '' : d.toISOString().slice(0, 10);
+}
+
 function mapPassenger(p, contactInfo) {
   const typeMap = { adult: 'ADT', child: 'CNN', children: 'CNN', infant: 'INF', ADT: 'ADT', CNN: 'CNN', CHD: 'CNN', INF: 'INF' };
-  const title = p.title || 'Mr';
+  const rawTitle = String(p.title || '').trim();
+  const title = /^(mr|mrs|ms|miss|mstr|master)$/i.test(rawTitle)
+    ? rawTitle.charAt(0).toUpperCase() + rawTitle.slice(1).toLowerCase()
+    : 'Mr';
+  const nationality = toIso2(p.nationality);
+  const documentNumber = String(p.passport || p.documentNumber || '').trim().toUpperCase();
+  const phone = String(contactInfo?.phone || p.phone || '').replace(/\D/g, '').replace(/^88/, '');
   return {
     nameElement: {
       title,
-      firstName: p.firstName || '',
-      lastName: p.lastName || '',
+      firstName: String(p.firstName || '').trim().toUpperCase(),
+      lastName: String(p.lastName || '').trim().toUpperCase(),
     },
-    gender: p.gender || (/^(mrs|ms|miss)$/i.test(title) ? 'Female' : 'Male'),
+    gender: /^(mrs|ms|miss)$/i.test(title) ? 'Female' : (/^female$/i.test(p.gender || '') ? 'Female' : 'Male'),
     passengerType: typeMap[p.type] || typeMap[String(p.type || '').toLowerCase()] || 'ADT',
-    dateOfBirth: p.dob || p.dateOfBirth || '',
+    dateOfBirth: toApiDate(p.dob || p.dateOfBirth),
     documentInfo: {
-      documentNumber: p.passport || p.documentNumber || '',
-      expireDate: p.passportExpiry || '',
-      documentType: '',
+      documentNumber,
+      expireDate: toApiDate(p.passportExpiry || p.documentExpiry),
+      documentType: documentNumber ? 'Passport' : '',
       frequentFlyerNumber: p.frequentFlyer || '',
-      issuingCountry: p.issuingCountry || p.nationality || 'BD',
-      nationality: p.nationality || 'BD',
+      issuingCountry: toIso2(p.issuingCountry || p.documentCountry || p.nationality),
+      nationality,
       passportCopy: '',
       visaCopy: '',
       postCode: '',
     },
     contactInfo: {
-      phone: (contactInfo?.phone || '').replace(/^\+?88/, ''),
-      email: contactInfo?.email || '',
+      phone,
+      email: String(contactInfo?.email || p.email || '').trim(),
       phoneCountryCode: contactInfo?.phoneCountryCode || '+88',
-      countryCode: contactInfo?.countryCode || 'BD',
+      countryCode: toIso2(contactInfo?.countryCode),
     },
     isLeadPassenger: !!p.isLeadPassenger,
     aCMExtraServices: [],
   };
 }
+
 
 // ── Book (creates PNR) ──
 async function createBooking({ uniqueTransID, itemCodeRef, priceCodeRef, segmentCodeRefs = [], passengers = [], contactInfo = {} }) {
