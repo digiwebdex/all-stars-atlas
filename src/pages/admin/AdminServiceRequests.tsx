@@ -160,7 +160,7 @@ const AdminServiceRequests = () => {
         </CardContent>
       </Card>
 
-      <Dialog open={!!selected} onOpenChange={(o) => { if (!o) { setSelected(null); setAdminNotes(""); setServiceCharge(""); setRefundAmount(""); } }}>
+      <Dialog open={!!selected} onOpenChange={(o) => { if (!o) { setSelected(null); setAdminNotes(""); setAirlineFee(""); setServiceCharge(""); setRefundAmount(""); } }}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>{TYPE_META[selected?.type]?.label || "Request"} — {selected?.booking_ref}</DialogTitle>
@@ -170,7 +170,7 @@ const AdminServiceRequests = () => {
               <div className="grid grid-cols-2 gap-3">
                 <div><span className="text-xs text-muted-foreground">PNR</span><p className="font-mono font-bold">{selected.pnr || selected.booking_pnr || "—"}</p></div>
                 <div><span className="text-xs text-muted-foreground">Booking Status</span><p className="font-bold">{selected.booking_status}</p></div>
-                <div><span className="text-xs text-muted-foreground">Amount</span><p className="font-bold">৳{ticketAmount.toLocaleString()}</p></div>
+                <div><span className="text-xs text-muted-foreground">Ticket Amount</span><p className="font-bold">৳{ticketAmount.toLocaleString()}</p></div>
                 <div><span className="text-xs text-muted-foreground">Requested</span><p>{fmt(selected.created_at)}</p></div>
               </div>
               {selected.notes && (
@@ -182,8 +182,20 @@ const AdminServiceRequests = () => {
 
               {isRefundable && (
                 <div className="rounded-lg border-2 border-emerald-500/30 p-3 space-y-3 bg-emerald-500/5">
-                  <p className="text-xs font-bold uppercase text-emerald-700">Refund Settlement</p>
+                  <p className="text-xs font-bold uppercase text-emerald-700">Refund Quotation</p>
                   <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label className="text-xs">Airlines Refund Fee (৳)</Label>
+                      <Input
+                        type="number" min={0} value={airlineFee}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          setAirlineFee(v);
+                          setRefundAmount(String(Math.max(0, ticketAmount - (Number(v) || 0) - (Number(serviceCharge) || 0))));
+                        }}
+                        placeholder="0"
+                      />
+                    </div>
                     <div>
                       <Label className="text-xs">Service Charge (৳)</Label>
                       <Input
@@ -191,13 +203,13 @@ const AdminServiceRequests = () => {
                         onChange={(e) => {
                           const v = e.target.value;
                           setServiceCharge(v);
-                          setRefundAmount(String(Math.max(0, ticketAmount - (Number(v) || 0))));
+                          setRefundAmount(String(Math.max(0, ticketAmount - (Number(airlineFee) || 0) - (Number(v) || 0))));
                         }}
                         placeholder="0"
                       />
                     </div>
-                    <div>
-                      <Label className="text-xs">Main Tk Back (৳)</Label>
+                    <div className="col-span-2">
+                      <Label className="text-xs">Refundable Amount (৳)</Label>
                       <Input
                         type="number" min={0} value={refundAmount}
                         onChange={(e) => setRefundAmount(e.target.value)}
@@ -206,7 +218,13 @@ const AdminServiceRequests = () => {
                     </div>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Customer will receive <strong>৳{computedRefund.toLocaleString()}</strong> in their wallet balance immediately on submit.
+                    Quotation: ৳{ticketAmount.toLocaleString()} − ৳{(Number(airlineFee) || 0).toLocaleString()} (airline) − ৳{(Number(serviceCharge) || 0).toLocaleString()} (service) ={" "}
+                    <strong>৳{computedRefund.toLocaleString()}</strong>
+                  </p>
+                  <p className={`text-xs font-semibold ${customerAccepted ? "text-emerald-600" : "text-warning"}`}>
+                    {customerAccepted
+                      ? `Customer accepted on ${fmt(selected.customer_accepted_at)} — you can approve now.`
+                      : "Send the quotation first; approval unlocks after the customer agrees."}
                   </p>
                 </div>
               )}
@@ -217,15 +235,21 @@ const AdminServiceRequests = () => {
               </div>
             </div>
           )}
-          <DialogFooter className="gap-2">
+          <DialogFooter className="gap-2 flex-wrap">
+            {isRefundable && (
+              <Button variant="secondary" onClick={() => act("quote")} disabled={!!busy}>
+                {busy === "quote" ? <><Loader2 className="w-4 h-4 mr-1 animate-spin" /> Sending…</> : "Send Quotation"}
+              </Button>
+            )}
             <Button variant="outline" onClick={() => act("processing")} disabled={!!busy}>Mark Processing</Button>
             <Button variant="destructive" onClick={() => act("rejected")} disabled={!!busy}>Reject</Button>
-            <Button onClick={() => act("completed")} disabled={!!busy}>
-              {busy === "completed" ? <><Loader2 className="w-4 h-4 mr-1 animate-spin" /> Saving…</> : isRefundable ? "Submit & Refund" : "Mark Completed"}
+            <Button onClick={() => act("completed")} disabled={!!busy || (isRefundable && !customerAccepted)}>
+              {busy === "completed" ? <><Loader2 className="w-4 h-4 mr-1 animate-spin" /> Saving…</> : isRefundable ? "Approve & Refund" : "Mark Completed"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
 
     </div>
   );
