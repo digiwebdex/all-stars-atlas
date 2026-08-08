@@ -412,8 +412,32 @@ const DashboardPayments = () => {
                 {viewPayment.channel && <div><p className="text-xs text-muted-foreground">Channel</p><p className="font-bold">{viewPayment.channel}</p></div>}
                 {viewPayment.createdBy && <div><p className="text-xs text-muted-foreground">Created By</p><p className="font-bold">{viewPayment.createdBy}</p></div>}
               </div>
+              {viewPayment.notes && (
+                <div><p className="text-xs text-muted-foreground">Notes</p><p className="text-sm bg-muted/50 p-2 rounded">{viewPayment.notes}</p></div>
+              )}
               <Separator />
+              {viewPayment.receiptUrl ? (
+                <div className="space-y-2">
+                  <p className="text-xs text-muted-foreground font-medium">Bank / Payment Slip</p>
+                  <div className="border rounded-lg overflow-hidden bg-muted/30">
+                    {/\.pdf$/i.test(viewPayment.receiptUrl) ? (
+                      <iframe src={fileUrl(viewPayment.receiptUrl)} title="Payment slip" className="w-full h-64 bg-background" />
+                    ) : (
+                      <img src={fileUrl(viewPayment.receiptUrl)} alt="Bank payment slip" className="w-full max-h-64 object-contain cursor-pointer" onClick={() => window.open(fileUrl(viewPayment.receiptUrl), "_blank")} />
+                    )}
+                  </div>
+                  <div className="flex gap-2">
+                    <Button size="sm" variant="outline" className="text-xs" onClick={() => window.open(fileUrl(viewPayment.receiptUrl), "_blank")}><Eye className="w-3 h-3 mr-1" /> View Full</Button>
+                    <a href={fileUrl(viewPayment.receiptUrl)} download target="_blank" rel="noreferrer">
+                      <Button size="sm" variant="outline" className="text-xs"><Download className="w-3 h-3 mr-1" /> Download</Button>
+                    </a>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground">No payment slip uploaded.</p>
+              )}
               <Badge variant="outline" className={`${statusColors[viewPayment.status] || ''}`}>{viewPayment.status}</Badge>
+
             </div>
           )}
         </DialogContent>
