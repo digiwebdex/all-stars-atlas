@@ -40,13 +40,17 @@ const AdminServiceRequests = () => {
   const [adminNotes, setAdminNotes] = useState("");
   const [airlineFee, setAirlineFee] = useState("");
   const [serviceCharge, setServiceCharge] = useState("");
+  const [noShowCharge, setNoShowCharge] = useState("");
   const [refundAmount, setRefundAmount] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
 
   const ticketAmount = Number(selected?.total_amount || 0);
   const isRefundable = ["void", "refund", "cancel"].includes(String(selected?.type));
+  // Reissue also gets a quotation (fees only, no wallet credit)
+  const isQuotable = isRefundable || String(selected?.type) === "reissue";
+  const deductions = (Number(airlineFee) || 0) + (Number(serviceCharge) || 0) + (Number(noShowCharge) || 0);
   const computedRefund = refundAmount === ""
-    ? Math.max(0, ticketAmount - (Number(airlineFee) || 0) - (Number(serviceCharge) || 0))
+    ? Math.max(0, ticketAmount - deductions)
     : Math.max(0, Number(refundAmount) || 0);
   const customerAccepted = !!selected?.customer_accepted_at;
 
@@ -55,6 +59,7 @@ const AdminServiceRequests = () => {
     setAdminNotes(r?.admin_notes || "");
     setAirlineFee(r?.airline_fee != null ? String(Number(r.airline_fee)) : "");
     setServiceCharge(r?.service_charge != null ? String(Number(r.service_charge)) : "");
+    setNoShowCharge(r?.no_show_charge != null ? String(Number(r.no_show_charge)) : "");
     setRefundAmount(r?.refund_amount != null ? String(Number(r.refund_amount)) : "");
   };
 
@@ -70,10 +75,11 @@ const AdminServiceRequests = () => {
     setBusy(action);
     try {
       const payload: any = { action, adminNotes };
-      if (isRefundable && (action === "quote" || action === "completed")) {
+      if (isQuotable && (action === "quote" || action === "completed")) {
         payload.airlineFee = Number(airlineFee) || 0;
         payload.serviceCharge = Number(serviceCharge) || 0;
-        payload.refundAmount = computedRefund;
+        payload.noShowCharge = Number(noShowCharge) || 0;
+        if (isRefundable) payload.refundAmount = computedRefund;
       }
       const res: any = await api.put(`/admin/service-requests/${selected.id}`, payload);
       toast({
@@ -81,10 +87,12 @@ const AdminServiceRequests = () => {
         description: res?.credited
           ? `Approved. ৳${Number(res.refundAmount || 0).toLocaleString()} credited to the customer balance.`
           : action === "quote"
-            ? `Customer will see the ৳${computedRefund.toLocaleString()} refund quotation for approval.`
+            ? isRefundable
+              ? `Customer will see the ৳${computedRefund.toLocaleString()} refund quotation for approval.`
+              : `Customer will see the ৳${deductions.toLocaleString()} reissue charge quotation for approval.`
             : `Marked as ${action}.`,
       });
-      setSelected(null); setAdminNotes(""); setAirlineFee(""); setServiceCharge(""); setRefundAmount("");
+      setSelected(null); setAdminNotes(""); setAirlineFee(""); setServiceCharge(""); setNoShowCharge(""); setRefundAmount("");
       queryClient.invalidateQueries({ queryKey: ["admin", "service-requests"] });
     } catch (e: any) {
       toast({ title: "Failed", description: e.message || "Error", variant: "destructive" });
