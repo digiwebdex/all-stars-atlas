@@ -35,7 +35,16 @@ const AdminServiceRequests = () => {
   const [status, setStatus] = useState("pending");
   const [selected, setSelected] = useState<any>(null);
   const [adminNotes, setAdminNotes] = useState("");
+  const [serviceCharge, setServiceCharge] = useState("");
+  const [refundAmount, setRefundAmount] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
+
+  const ticketAmount = Number(selected?.total_amount || 0);
+  const isRefundable = ["void", "refund", "cancel"].includes(String(selected?.type));
+  const computedRefund = refundAmount === ""
+    ? Math.max(0, ticketAmount - (Number(serviceCharge) || 0))
+    : Math.max(0, Number(refundAmount) || 0);
+
 
   const { data, isLoading } = useQuery({
     queryKey: ["admin", "service-requests", status],
