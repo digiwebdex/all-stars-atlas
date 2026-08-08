@@ -90,7 +90,7 @@ const DashboardPayments = () => {
     if (receiptFile) formData.append('receipt', receiptFile);
 
     try {
-      await submitPayment.mutateAsync(Object.fromEntries(formData));
+      await submitPayment.mutateAsync(formData);
       toast({ title: "Payment Submitted", description: "Your payment request has been submitted for review" });
       setShowMakePayment(false);
       setAmount(""); setPaymentDate(""); setBookingRef(""); setReceiptFile(null); setSelectedBank("");
