@@ -342,45 +342,52 @@ async function searchFlights({ origin, destination, departDate, returnDate, adul
           page: 1, limit: perAirlineLimit,
         };
         if (codes && codes.length) body.airlines = codes;
-        const { text: t } = await tlRawPost(`/api/Search/key=${key}`, body, { timeout: 30000 });
+        const { text: t } = await tlRawPost(`/api/Search/key=${key}`, body, { timeout: keyedTimeout });
         let json = null;
         try { json = JSON.parse(t); } catch (_) { return { list: [], json: null }; }
         const list = json?.airSearchResponse || json?.item1?.airSearchResponses || json?.airSearchResponses || [];
         return { list, json };
       };
 
+      const fetched = new Set();
+      const collect = async (codes) => {
+        const label = codes ? codes.join(',') : 'all';
+        try {
+          return await keyedFetch(codes);
+        } catch (err) {
+          try { return await keyedFetch(codes); } catch (e2) {
+            console.warn(`[TripLover] keyed fetch failed (${label}): ${e2.message}`);
+            return { list: [], json: null };
+          }
+        }
+      };
+
       const discovered = new Set(airlines);
-      // 2a) Unfiltered keyed page — reveals the full airlineFilters list even when the
-      // SSE frame we captured was incomplete.
-      try {
-        const { list, json } = await keyedFetch(null);
+      // 2a) Unfiltered keyed page AND the airlines we already know — all in one parallel
+      // wave so we never pay two sequential round-trips.
+      const wave1Codes = [...discovered];
+      wave1Codes.forEach(c => fetched.add(c));
+      const wave1 = await Promise.all([
+        collect(null),
+        ...wave1Codes.map(code => collect([code])),
+      ]);
+      for (const { list, json } of wave1) {
         push(normalizeSearch({ item1: { airSearchResponses: list } }, origin, destination));
         const filters = json?.airlineFilters || json?.item1?.airlineFilters || [];
         for (const a of filters) if (a?.airlineCode) discovered.add(a.airlineCode);
         for (const it of list) if (it?.platingCarrier) discovered.add(it.platingCarrier);
-      } catch (err) {
-        console.warn('[TripLover] keyed unfiltered fetch failed:', err.message);
       }
 
-      const codes = [...discovered];
-      if (codes.length) {
-        const results = await Promise.allSettled(codes.map(async (code) => {
-          try {
-            return await keyedFetch([code]);
-          } catch (err) {
-            // one retry — UAT drops requests intermittently
-            return await keyedFetch([code]);
-          }
-        }));
-        results.forEach((r, i) => {
-          if (r.status !== 'fulfilled') {
-            console.warn(`[TripLover] airline fetch failed ${codes[i]}: ${r.reason?.message}`);
-            return;
-          }
-          push(normalizeSearch({ item1: { airSearchResponses: r.value.list } }, origin, destination));
-        });
+      // 2b) Second wave — only airlines discovered from the keyed responses.
+      const wave2Codes = [...discovered].filter(c => !fetched.has(c));
+      if (wave2Codes.length) {
+        const wave2 = await Promise.all(wave2Codes.map(code => collect([code])));
+        for (const { list } of wave2) {
+          push(normalizeSearch({ item1: { airSearchResponses: list } }, origin, destination));
+        }
       }
     }
+
 
 
     if (flights.length) {
