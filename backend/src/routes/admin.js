@@ -1687,16 +1687,17 @@ router.get('/service-requests', async (req, res) => {
 });
 
 // PUT /admin/service-requests/:id
-// { action: 'processing'|'completed'|'rejected', adminNotes, serviceCharge, refundAmount }
-// On 'completed' for void / refund / cancel requests the refundAmount is credited
-// to the customer wallet immediately (refund = ticket amount - service charge).
+// { action: 'quote'|'processing'|'completed'|'rejected', adminNotes, airlineFee, serviceCharge, refundAmount }
+// Flow: customer requests → admin sends a quotation (airline refund fee + service charge
+// + net refundable) → customer accepts → admin approves ('completed') and the net amount
+// is credited to the customer wallet immediately.
 router.put('/service-requests/:id', async (req, res) => {
   try {
     await ensureServiceRequestsTable();
-    const { action, adminNotes, serviceCharge, refundAmount } = req.body || {};
-    const allowed = { processing: 'processing', completed: 'completed', rejected: 'rejected' };
+    const { action, adminNotes, airlineFee, serviceCharge, refundAmount } = req.body || {};
+    const allowed = { quote: 'quoted', processing: 'processing', completed: 'completed', rejected: 'rejected' };
     const nextStatus = allowed[action];
-    if (!nextStatus) return res.status(400).json({ message: 'action must be processing, completed or rejected' });
+    if (!nextStatus) return res.status(400).json({ message: 'action must be quote, processing, completed or rejected' });
 
     const [rows] = await db.query(
       `SELECT sr.*, b.booking_ref, b.total_amount FROM booking_service_requests sr
@@ -1707,23 +1708,35 @@ router.put('/service-requests/:id', async (req, res) => {
     const request = rows[0];
 
     const refundableTypes = ['void', 'refund', 'cancel'];
-    const fee = Math.max(0, Number(serviceCharge || 0));
+    const isRefundable = refundableTypes.includes(String(request.type));
     const ticketAmount = Number(request.total_amount || 0);
+    const airline = airlineFee === undefined || airlineFee === null || airlineFee === ''
+      ? Number(request.airline_fee || 0)
+      : Math.max(0, Number(airlineFee));
+    const fee = serviceCharge === undefined || serviceCharge === null || serviceCharge === ''
+      ? Number(request.service_charge || 0)
+      : Math.max(0, Number(serviceCharge));
     let credit = refundAmount === undefined || refundAmount === null || refundAmount === ''
-      ? Math.max(0, ticketAmount - fee)
+      ? (Number(request.refund_amount) || Math.max(0, ticketAmount - airline - fee))
       : Math.max(0, Number(refundAmount));
-
-    const shouldCredit =
-      nextStatus === 'completed' &&
-      refundableTypes.includes(String(request.type)) &&
-      credit > 0 &&
-      !request.refund_txn_id;
 
     if (credit > ticketAmount && ticketAmount > 0) {
       return res.status(400).json({ message: `Refund cannot exceed the ticket amount (৳${ticketAmount.toLocaleString()})` });
     }
 
+    // Approval requires the customer to have accepted the quotation first
+    if (nextStatus === 'completed' && isRefundable && !request.customer_accepted_at) {
+      return res.status(400).json({ message: 'Customer has not accepted the quotation yet' });
+    }
+
+    const shouldCredit =
+      nextStatus === 'completed' &&
+      isRefundable &&
+      credit > 0 &&
+      !request.refund_txn_id;
+
     let refundTxnId = request.refund_txn_id || null;
+
 
     if (shouldCredit) {
       refundTxnId = uuidv4();
@@ -1762,21 +1775,33 @@ router.put('/service-requests/:id', async (req, res) => {
 
     await db.query(
       `UPDATE booking_service_requests
-       SET status = ?, admin_notes = ?, service_charge = ?, refund_amount = ?, refund_txn_id = ?,
-           processed_by = ?, processed_at = NOW()
+       SET status = ?, admin_notes = ?, airline_fee = ?, service_charge = ?, refund_amount = ?, refund_txn_id = ?,
+           quoted_at = ?, customer_accepted_at = ?, processed_by = ?, processed_at = NOW()
        WHERE id = ?`,
       [
         nextStatus,
         adminNotes || null,
-        refundableTypes.includes(String(request.type)) ? fee : null,
-        refundableTypes.includes(String(request.type)) ? credit : null,
+        isRefundable ? airline : null,
+        isRefundable ? fee : null,
+        isRefundable ? credit : null,
         refundTxnId,
+        nextStatus === 'quoted' ? new Date() : (request.quoted_at || null),
+        // Re-quoting resets the customer's acceptance
+        nextStatus === 'quoted' ? null : (request.customer_accepted_at || null),
         req.user.sub,
         req.params.id,
       ]
     );
 
-    res.json({ success: true, status: nextStatus, serviceCharge: fee, refundAmount: credit, credited: shouldCredit });
+    res.json({
+      success: true,
+      status: nextStatus,
+      airlineFee: airline,
+      serviceCharge: fee,
+      refundAmount: credit,
+      credited: shouldCredit,
+    });
+
   } catch (err) {
     console.error('[Admin] Service request update error:', err);
     res.status(500).json({ message: 'Failed to update request', error: err.message });

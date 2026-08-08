@@ -22,10 +22,13 @@ const TYPE_META: Record<string, { label: string; icon: any; tone: string }> = {
 
 const STATUS_TONE: Record<string, string> = {
   pending: "bg-warning/15 text-warning",
+  quoted: "bg-sky-500/15 text-sky-600",
+  accepted: "bg-indigo-500/15 text-indigo-600",
   processing: "bg-primary/15 text-primary",
   completed: "bg-emerald-500/15 text-emerald-600",
   rejected: "bg-destructive/15 text-destructive",
 };
+
 
 const fmt = (v?: string | null) => (v ? new Date(v).toLocaleString() : "—");
 
@@ -35,6 +38,7 @@ const AdminServiceRequests = () => {
   const [status, setStatus] = useState("pending");
   const [selected, setSelected] = useState<any>(null);
   const [adminNotes, setAdminNotes] = useState("");
+  const [airlineFee, setAirlineFee] = useState("");
   const [serviceCharge, setServiceCharge] = useState("");
   const [refundAmount, setRefundAmount] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
@@ -42,9 +46,17 @@ const AdminServiceRequests = () => {
   const ticketAmount = Number(selected?.total_amount || 0);
   const isRefundable = ["void", "refund", "cancel"].includes(String(selected?.type));
   const computedRefund = refundAmount === ""
-    ? Math.max(0, ticketAmount - (Number(serviceCharge) || 0))
+    ? Math.max(0, ticketAmount - (Number(airlineFee) || 0) - (Number(serviceCharge) || 0))
     : Math.max(0, Number(refundAmount) || 0);
+  const customerAccepted = !!selected?.customer_accepted_at;
 
+  const openRequest = (r: any) => {
+    setSelected(r);
+    setAdminNotes(r?.admin_notes || "");
+    setAirlineFee(r?.airline_fee != null ? String(Number(r.airline_fee)) : "");
+    setServiceCharge(r?.service_charge != null ? String(Number(r.service_charge)) : "");
+    setRefundAmount(r?.refund_amount != null ? String(Number(r.refund_amount)) : "");
+  };
 
   const { data, isLoading } = useQuery({
     queryKey: ["admin", "service-requests", status],
@@ -53,28 +65,32 @@ const AdminServiceRequests = () => {
   });
   const rows: any[] = (data as any)?.data || [];
 
-  const act = async (action: "processing" | "completed" | "rejected") => {
+  const act = async (action: "quote" | "processing" | "completed" | "rejected") => {
     if (!selected) return;
     setBusy(action);
     try {
       const payload: any = { action, adminNotes };
-      if (action === "completed" && isRefundable) {
+      if (isRefundable && (action === "quote" || action === "completed")) {
+        payload.airlineFee = Number(airlineFee) || 0;
         payload.serviceCharge = Number(serviceCharge) || 0;
         payload.refundAmount = computedRefund;
       }
       const res: any = await api.put(`/admin/service-requests/${selected.id}`, payload);
       toast({
-        title: "Request updated",
+        title: action === "quote" ? "Quotation sent" : "Request updated",
         description: res?.credited
-          ? `Marked completed. ৳${Number(res.refundAmount || 0).toLocaleString()} credited to the customer balance.`
-          : `Marked as ${action}.`,
+          ? `Approved. ৳${Number(res.refundAmount || 0).toLocaleString()} credited to the customer balance.`
+          : action === "quote"
+            ? `Customer will see the ৳${computedRefund.toLocaleString()} refund quotation for approval.`
+            : `Marked as ${action}.`,
       });
-      setSelected(null); setAdminNotes(""); setServiceCharge(""); setRefundAmount("");
+      setSelected(null); setAdminNotes(""); setAirlineFee(""); setServiceCharge(""); setRefundAmount("");
       queryClient.invalidateQueries({ queryKey: ["admin", "service-requests"] });
     } catch (e: any) {
       toast({ title: "Failed", description: e.message || "Error", variant: "destructive" });
     } finally { setBusy(null); }
   };
+
 
 
   return (
@@ -87,12 +103,15 @@ const AdminServiceRequests = () => {
       <Tabs value={status} onValueChange={setStatus}>
         <TabsList>
           <TabsTrigger value="pending">Pending</TabsTrigger>
+          <TabsTrigger value="quoted">Quoted</TabsTrigger>
+          <TabsTrigger value="accepted">Accepted</TabsTrigger>
           <TabsTrigger value="processing">Processing</TabsTrigger>
           <TabsTrigger value="completed">Completed</TabsTrigger>
           <TabsTrigger value="rejected">Rejected</TabsTrigger>
           <TabsTrigger value="all">All</TabsTrigger>
         </TabsList>
       </Tabs>
+
 
       <Card>
         <CardHeader className="pb-3">
@@ -135,8 +154,9 @@ const AdminServiceRequests = () => {
                         <Badge className={`border-0 uppercase text-[10px] ${STATUS_TONE[String(r.status)] || "bg-muted"}`}>{r.status}</Badge>
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button size="sm" variant="outline" onClick={() => { setSelected(r); setAdminNotes(r.admin_notes || ""); }}>Review</Button>
+                        <Button size="sm" variant="outline" onClick={() => openRequest(r)}>Review</Button>
                       </TableCell>
+
                     </TableRow>
                   );
                 })}
@@ -146,7 +166,7 @@ const AdminServiceRequests = () => {
         </CardContent>
       </Card>
 
-      <Dialog open={!!selected} onOpenChange={(o) => { if (!o) { setSelected(null); setAdminNotes(""); setServiceCharge(""); setRefundAmount(""); } }}>
+      <Dialog open={!!selected} onOpenChange={(o) => { if (!o) { setSelected(null); setAdminNotes(""); setAirlineFee(""); setServiceCharge(""); setRefundAmount(""); } }}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>{TYPE_META[selected?.type]?.label || "Request"} — {selected?.booking_ref}</DialogTitle>
@@ -156,7 +176,7 @@ const AdminServiceRequests = () => {
               <div className="grid grid-cols-2 gap-3">
                 <div><span className="text-xs text-muted-foreground">PNR</span><p className="font-mono font-bold">{selected.pnr || selected.booking_pnr || "—"}</p></div>
                 <div><span className="text-xs text-muted-foreground">Booking Status</span><p className="font-bold">{selected.booking_status}</p></div>
-                <div><span className="text-xs text-muted-foreground">Amount</span><p className="font-bold">৳{ticketAmount.toLocaleString()}</p></div>
+                <div><span className="text-xs text-muted-foreground">Ticket Amount</span><p className="font-bold">৳{ticketAmount.toLocaleString()}</p></div>
                 <div><span className="text-xs text-muted-foreground">Requested</span><p>{fmt(selected.created_at)}</p></div>
               </div>
               {selected.notes && (
@@ -168,8 +188,20 @@ const AdminServiceRequests = () => {
 
               {isRefundable && (
                 <div className="rounded-lg border-2 border-emerald-500/30 p-3 space-y-3 bg-emerald-500/5">
-                  <p className="text-xs font-bold uppercase text-emerald-700">Refund Settlement</p>
+                  <p className="text-xs font-bold uppercase text-emerald-700">Refund Quotation</p>
                   <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label className="text-xs">Airlines Refund Fee (৳)</Label>
+                      <Input
+                        type="number" min={0} value={airlineFee}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          setAirlineFee(v);
+                          setRefundAmount(String(Math.max(0, ticketAmount - (Number(v) || 0) - (Number(serviceCharge) || 0))));
+                        }}
+                        placeholder="0"
+                      />
+                    </div>
                     <div>
                       <Label className="text-xs">Service Charge (৳)</Label>
                       <Input
@@ -177,13 +209,13 @@ const AdminServiceRequests = () => {
                         onChange={(e) => {
                           const v = e.target.value;
                           setServiceCharge(v);
-                          setRefundAmount(String(Math.max(0, ticketAmount - (Number(v) || 0))));
+                          setRefundAmount(String(Math.max(0, ticketAmount - (Number(airlineFee) || 0) - (Number(v) || 0))));
                         }}
                         placeholder="0"
                       />
                     </div>
-                    <div>
-                      <Label className="text-xs">Main Tk Back (৳)</Label>
+                    <div className="col-span-2">
+                      <Label className="text-xs">Refundable Amount (৳)</Label>
                       <Input
                         type="number" min={0} value={refundAmount}
                         onChange={(e) => setRefundAmount(e.target.value)}
@@ -192,7 +224,13 @@ const AdminServiceRequests = () => {
                     </div>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Customer will receive <strong>৳{computedRefund.toLocaleString()}</strong> in their wallet balance immediately on submit.
+                    Quotation: ৳{ticketAmount.toLocaleString()} − ৳{(Number(airlineFee) || 0).toLocaleString()} (airline) − ৳{(Number(serviceCharge) || 0).toLocaleString()} (service) ={" "}
+                    <strong>৳{computedRefund.toLocaleString()}</strong>
+                  </p>
+                  <p className={`text-xs font-semibold ${customerAccepted ? "text-emerald-600" : "text-warning"}`}>
+                    {customerAccepted
+                      ? `Customer accepted on ${fmt(selected.customer_accepted_at)} — you can approve now.`
+                      : "Send the quotation first; approval unlocks after the customer agrees."}
                   </p>
                 </div>
               )}
@@ -203,15 +241,21 @@ const AdminServiceRequests = () => {
               </div>
             </div>
           )}
-          <DialogFooter className="gap-2">
+          <DialogFooter className="gap-2 flex-wrap">
+            {isRefundable && (
+              <Button variant="secondary" onClick={() => act("quote")} disabled={!!busy}>
+                {busy === "quote" ? <><Loader2 className="w-4 h-4 mr-1 animate-spin" /> Sending…</> : "Send Quotation"}
+              </Button>
+            )}
             <Button variant="outline" onClick={() => act("processing")} disabled={!!busy}>Mark Processing</Button>
             <Button variant="destructive" onClick={() => act("rejected")} disabled={!!busy}>Reject</Button>
-            <Button onClick={() => act("completed")} disabled={!!busy}>
-              {busy === "completed" ? <><Loader2 className="w-4 h-4 mr-1 animate-spin" /> Saving…</> : isRefundable ? "Submit & Refund" : "Mark Completed"}
+            <Button onClick={() => act("completed")} disabled={!!busy || (isRefundable && !customerAccepted)}>
+              {busy === "completed" ? <><Loader2 className="w-4 h-4 mr-1 animate-spin" /> Saving…</> : isRefundable ? "Approve & Refund" : "Mark Completed"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
 
     </div>
   );

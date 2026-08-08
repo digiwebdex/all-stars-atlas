@@ -246,6 +246,8 @@ const DashboardBookingDetail = () => {
   const [serviceRequest, setServiceRequest] = useState<null | "reissue" | "refund">(null);
   const [serviceNote, setServiceNote] = useState("");
   const [serviceLoading, setServiceLoading] = useState(false);
+  const [quoteAgreed, setQuoteAgreed] = useState(false);
+  const [acceptingQuote, setAcceptingQuote] = useState(false);
   const [timelineOpen, setTimelineOpen] = useState(false);
   const [ssrOpen, setSsrOpen] = useState(false);
   const [payDialogOpen, setPayDialogOpen] = useState(false);
@@ -423,6 +425,20 @@ const DashboardBookingDetail = () => {
       toast({ title: "Failed", description: e.message || "Error", variant: "destructive" });
     } finally { setServiceLoading(false); }
   };
+
+  const acceptQuote = async (requestId: string) => {
+    setAcceptingQuote(true);
+    try {
+      await api.post(`/dashboard/service-requests/${requestId}/accept`, {});
+      toast({ title: "Quotation Accepted", description: "Awaiting admin approval — the refund will be credited to your balance." });
+      setQuoteAgreed(false);
+      queryClient.invalidateQueries({ queryKey: ["dashboard", "service-requests"] });
+      refetch();
+    } catch (e: any) {
+      toast({ title: "Failed", description: e.message || "Error", variant: "destructive" });
+    } finally { setAcceptingQuote(false); }
+  };
+
 
 
 
@@ -835,15 +851,19 @@ const DashboardBookingDetail = () => {
                   const activeExclusive = exclusiveKeys
                     .map((k) => ({ key: k, req: latestRequestByType(k) }))
                     .find(({ req }) => req && String(req.status || "").toLowerCase() !== "rejected");
+                  const quoted = serviceRequests.find((r: any) => String(r.status).toLowerCase() === "quoted");
+                  const accepted = serviceRequests.find((r: any) => String(r.status).toLowerCase() === "accepted");
                   return (
+                    <>
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                       {boxes.map(box => {
                         const req = latestRequestByType(box.key);
                         const st = String(req?.status || "").toLowerCase();
-                        const stTone = st === "pending" ? "bg-warning/15 text-warning" : st === "processing" ? "bg-primary/15 text-primary" : st === "completed" ? "bg-emerald-500/15 text-emerald-600" : st === "rejected" ? "bg-destructive/15 text-destructive" : "";
+                        const stTone = st === "pending" ? "bg-warning/15 text-warning" : st === "quoted" ? "bg-sky-500/15 text-sky-600" : st === "accepted" ? "bg-indigo-500/15 text-indigo-600" : st === "processing" ? "bg-primary/15 text-primary" : st === "completed" ? "bg-emerald-500/15 text-emerald-600" : st === "rejected" ? "bg-destructive/15 text-destructive" : "";
                         const lockedByOther = !!activeExclusive && exclusiveKeys.includes(box.key) && activeExclusive.key !== box.key;
                         const lockedSelf = exclusiveKeys.includes(box.key) && !!activeExclusive && activeExclusive.key === box.key && st !== "rejected";
-                        const blocked = box.disabled || lockedByOther || lockedSelf || ["pending", "processing"].includes(st);
+                        const blocked = box.disabled || lockedByOther || lockedSelf || ["pending", "quoted", "accepted", "processing"].includes(st);
+
                         return (
                           <button
                             key={box.key}
@@ -871,7 +891,45 @@ const DashboardBookingDetail = () => {
                         );
                       })}
                     </div>
+
+                    {quoted && (
+                      <div className="mt-4 rounded-xl border-2 border-sky-500/30 bg-sky-500/5 p-4">
+                        <p className="text-xs font-bold uppercase text-sky-700 mb-2">
+                          {String(quoted.type).toUpperCase()} Quotation — Please review & agree
+                        </p>
+                        <div className="space-y-1.5 text-sm">
+                          <div className="flex justify-between"><span className="text-muted-foreground">Ticket Amount</span><span className="font-semibold">৳{Number(booking.rawAmount || quoted.total_amount || 0).toLocaleString()}</span></div>
+                          <div className="flex justify-between"><span className="text-muted-foreground">Airlines Refund Fee</span><span className="font-semibold text-destructive">− ৳{Number(quoted.airline_fee || 0).toLocaleString()}</span></div>
+                          <div className="flex justify-between"><span className="text-muted-foreground">Service Charge</span><span className="font-semibold text-destructive">− ৳{Number(quoted.service_charge || 0).toLocaleString()}</span></div>
+                          <Separator className="my-1" />
+                          <div className="flex justify-between text-base"><span className="font-bold">You Will Receive</span><span className="font-extrabold text-emerald-600">৳{Number(quoted.refund_amount || 0).toLocaleString()}</span></div>
+                        </div>
+                        {quoted.admin_notes && <p className="text-[11px] text-muted-foreground mt-2">Admin: {quoted.admin_notes}</p>}
+                        <label className="flex items-start gap-2 mt-3 text-xs cursor-pointer">
+                          <input type="checkbox" className="mt-0.5" checked={quoteAgreed} onChange={(e) => setQuoteAgreed(e.target.checked)} />
+                          <span>I agree with the above deductions and confirm the refund amount.</span>
+                        </label>
+                        <Button
+                          className="mt-3 w-full sm:w-auto bg-sky-600 hover:bg-sky-700 text-white font-bold"
+                          disabled={!quoteAgreed || acceptingQuote}
+                          onClick={() => acceptQuote(quoted.id)}
+                        >
+                          {acceptingQuote ? "Submitting…" : "Agree & Submit"}
+                        </Button>
+                      </div>
+                    )}
+
+                    {accepted && (
+                      <div className="mt-4 rounded-xl border-2 border-indigo-500/30 bg-indigo-500/5 p-4 text-sm">
+                        <p className="font-bold text-indigo-700">Quotation accepted — awaiting admin approval</p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          ৳{Number(accepted.refund_amount || 0).toLocaleString()} will be credited to your balance once approved.
+                        </p>
+                      </div>
+                    )}
+                    </>
                   );
+
 
                 })()}
               </div>
