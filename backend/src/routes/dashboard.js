@@ -1885,8 +1885,31 @@ router.post('/service-requests', async (req, res) => {
   }
 });
 
+// POST /dashboard/service-requests/:id/accept — customer agrees to the admin quotation
+router.post('/service-requests/:id/accept', async (req, res) => {
+  try {
+    const userId = req.user.sub;
+    await ensureServiceRequestsTable();
+    const [rows] = await db.query('SELECT * FROM booking_service_requests WHERE id = ? AND user_id = ?', [req.params.id, userId]);
+    if (!rows.length) return res.status(404).json({ message: 'Request not found' });
+    const request = rows[0];
+    if (String(request.status) !== 'quoted') {
+      return res.status(400).json({ message: 'No quotation is awaiting your approval for this request' });
+    }
+    await db.query(
+      "UPDATE booking_service_requests SET status = 'accepted', customer_accepted_at = NOW() WHERE id = ?",
+      [req.params.id]
+    );
+    res.json({ success: true, status: 'accepted', message: 'Quotation accepted. Admin will process the refund shortly.' });
+  } catch (err) {
+    console.error('[Dashboard] Accept quotation error:', err);
+    res.status(500).json({ message: 'Failed to accept quotation' });
+  }
+});
+
 // GET /dashboard/service-requests — user's own void/reissue/refund/cancel requests
 router.get('/service-requests', async (req, res) => {
+
   try {
     const userId = req.user.sub;
     const [rows] = await db.query(
