@@ -1355,6 +1355,75 @@ router.post('/payment-requests', paymentSlipUpload.single('depositSlip'), async 
   }
 });
 
+// ── List My Payment / Deposit Requests (with slip) ───────
+router.get('/payment-requests', async (req, res) => {
+  try {
+    const userId = req.user.sub || req.user.id;
+    const [rows] = await db.query(
+      `SELECT * FROM transactions WHERE user_id = ? AND type IN ('payment','deposit') ORDER BY created_at DESC LIMIT 100`,
+      [userId]
+    );
+    const items = rows.map(t => {
+      const meta = safeJsonParse(t.meta, {}) || {};
+      return {
+        id: t.id,
+        reference: t.reference,
+        amount: parseFloat(t.amount) || 0,
+        type: t.type,
+        method: t.payment_method,
+        status: t.status === 'completed' ? 'Approved' : t.status === 'pending' ? 'Pending' : t.status === 'rejected' || t.status === 'failed' ? 'Rejected' : t.status,
+        receiptUrl: meta.receiptUrl || null,
+        transactionId: meta.transactionId || null,
+        notes: meta.notes || null,
+        bookingRef: meta.bookingRef || null,
+        date: t.created_at,
+        editable: t.status === 'pending',
+      };
+    });
+    res.json({ data: items });
+  } catch (err) {
+    console.error('List payment requests error:', err);
+    res.status(500).json({ message: 'Failed to load payment requests' });
+  }
+});
+
+// ── Edit a Pending Payment / Deposit Request ─────────────
+router.post('/payment-requests/:id/update', paymentSlipUpload.single('depositSlip'), async (req, res) => {
+  try {
+    const userId = req.user.sub || req.user.id;
+    const { id } = req.params;
+    const [rows] = await db.query('SELECT * FROM transactions WHERE id = ? AND user_id = ?', [id, userId]);
+    if (rows.length === 0) return res.status(404).json({ message: 'Request not found' });
+    const txn = rows[0];
+    if (txn.status !== 'pending') {
+      return res.status(400).json({ message: 'Only pending requests can be edited' });
+    }
+
+    const meta = safeJsonParse(txn.meta, {}) || {};
+    const { amount, transactionId, notes } = req.body;
+
+    let amt = parseFloat(txn.amount);
+    if (amount !== undefined && amount !== '') {
+      const parsed = parseFloat(amount);
+      if (!parsed || parsed < 10) return res.status(400).json({ message: 'Invalid amount' });
+      if (parsed > 500000) return res.status(400).json({ message: 'Maximum single amount is ৳500,000' });
+      amt = parsed;
+    }
+    if (transactionId !== undefined) meta.transactionId = String(transactionId).trim() || meta.transactionId;
+    if (notes !== undefined) meta.notes = notes || null;
+    if (req.file) {
+      meta.receiptUrl = `/uploads/payment-slips/${req.file.filename}`;
+      meta.originalFileName = req.file.originalname;
+    }
+
+    await db.query('UPDATE transactions SET amount = ?, meta = ? WHERE id = ?', [amt, JSON.stringify(meta), id]);
+    res.json({ success: true, message: 'Request updated', receiptUrl: meta.receiptUrl || null });
+  } catch (err) {
+    console.error('Update payment request error:', err);
+    res.status(500).json({ message: 'Failed to update request' });
+  }
+});
+
 // ── Pay Booking With Wallet Balance ──────────────────────
 router.post('/wallet/pay', async (req, res) => {
   let conn = null;
