@@ -38,10 +38,14 @@ export const useDashboardPayments = () =>
 export const useSubmitPayment = () => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: Record<string, unknown>) => api.post(API_ENDPOINTS.DASHBOARD_PAYMENTS, data),
+    mutationFn: (data: Record<string, unknown> | FormData) =>
+      data instanceof FormData
+        ? api.upload(API_ENDPOINTS.DASHBOARD_PAYMENTS, data)
+        : api.post(API_ENDPOINTS.DASHBOARD_PAYMENTS, data),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['dashboard', 'payments'] }),
   });
 };
+
 
 export const useDashboardTickets = (params?: Record<string, string | number | boolean | undefined>) =>
   useQuery({ queryKey: ['dashboard', 'tickets', params], queryFn: () => api.get(API_ENDPOINTS.DASHBOARD_TICKETS, params) });
