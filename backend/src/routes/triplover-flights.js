@@ -250,9 +250,10 @@ async function searchFlights({ origin, destination, departDate, returnDate, adul
     const { text, durationMs } = await tlRawPost('/api/Search/Progressive', payload, {
       timeout: searchTimeout, accept: 'application/json, text/event-stream',
     });
-    const { summary, items } = parseProgressiveStream(text);
-    const key = summary?.searchPaginationKey;
-    const airlines = (summary?.airlineFilters || []).map(a => a.airlineCode).filter(Boolean);
+    const parsed = parseProgressiveStream(text);
+    const { summary, items } = parsed;
+    const key = parsed.key || summary?.searchPaginationKey;
+    const airlines = parsed.airlines;
 
     logApiCall({
       provider: 'triplover', operation: 'Search/Progressive', ok: true, durationMs, request: payload,
@@ -271,26 +272,55 @@ async function searchFlights({ origin, destination, departDate, returnDate, adul
     };
     push(normalizeSearch({ item1: { airSearchResponses: items } }, origin, destination));
 
-    // 2) Pull each airline explicitly so no supplier (SV, X1, RX …) is lost
-    if (key && airlines.length) {
-      const results = await Promise.allSettled(airlines.map(code =>
-        tlRawPost(`/api/Search/key=${key}`, {
-          airlines: [code], sortBy: 1,
+    // 2) Pull results through the pagination key so no supplier (SV, X1, RX …) is lost.
+    if (key) {
+      const keyedFetch = async (codes) => {
+        const body = {
+          sortBy: 1,
           layoverTime: { maxLayoverTime: 60, minLayoverTime: 0 },
           page: 1, limit: perAirlineLimit,
-        }, { timeout: 30000 })
-      ));
-      results.forEach((r, i) => {
-        if (r.status !== 'fulfilled') {
-          console.warn(`[TripLover] airline fetch failed ${airlines[i]}: ${r.reason?.message}`);
-          return;
-        }
+        };
+        if (codes && codes.length) body.airlines = codes;
+        const { text: t } = await tlRawPost(`/api/Search/key=${key}`, body, { timeout: 30000 });
         let json = null;
-        try { json = JSON.parse(r.value.text); } catch (_) { return; }
+        try { json = JSON.parse(t); } catch (_) { return { list: [], json: null }; }
         const list = json?.airSearchResponse || json?.item1?.airSearchResponses || json?.airSearchResponses || [];
+        return { list, json };
+      };
+
+      const discovered = new Set(airlines);
+      // 2a) Unfiltered keyed page — reveals the full airlineFilters list even when the
+      // SSE frame we captured was incomplete.
+      try {
+        const { list, json } = await keyedFetch(null);
         push(normalizeSearch({ item1: { airSearchResponses: list } }, origin, destination));
-      });
+        const filters = json?.airlineFilters || json?.item1?.airlineFilters || [];
+        for (const a of filters) if (a?.airlineCode) discovered.add(a.airlineCode);
+        for (const it of list) if (it?.platingCarrier) discovered.add(it.platingCarrier);
+      } catch (err) {
+        console.warn('[TripLover] keyed unfiltered fetch failed:', err.message);
+      }
+
+      const codes = [...discovered];
+      if (codes.length) {
+        const results = await Promise.allSettled(codes.map(async (code) => {
+          try {
+            return await keyedFetch([code]);
+          } catch (err) {
+            // one retry — UAT drops requests intermittently
+            return await keyedFetch([code]);
+          }
+        }));
+        results.forEach((r, i) => {
+          if (r.status !== 'fulfilled') {
+            console.warn(`[TripLover] airline fetch failed ${codes[i]}: ${r.reason?.message}`);
+            return;
+          }
+          push(normalizeSearch({ item1: { airSearchResponses: r.value.list } }, origin, destination));
+        });
+      }
     }
+
 
     if (flights.length) {
       const codes = [...new Set(flights.map(f => f.airlineCode))];
