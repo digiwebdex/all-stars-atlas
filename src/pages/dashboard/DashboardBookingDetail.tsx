@@ -380,8 +380,11 @@ const DashboardBookingDetail = () => {
   const handleVoid = async () => {
     if (!booking) return; setVoidLoading(true);
     try {
-      await api.post(`/flights/void`, { pnr: booking.pnr !== "—" ? booking.pnr : undefined, bookingId: booking.rawId });
-      toast({ title: "Void Requested", description: "Sent to admin." }); setVoidOpen(false); refetch();
+      await api.post(`/dashboard/service-requests`, { bookingId: booking.rawId, type: "void", notes: `Void requested for PNR ${booking.airlinePnr || booking.pnr}` });
+      toast({ title: "Void Request Submitted", description: "Status: Pending — admin will review it." });
+      setVoidOpen(false);
+      queryClient.invalidateQueries({ queryKey: ["dashboard", "service-requests"] });
+      refetch();
     } catch (e: any) { toast({ title: "Failed", description: e.message || "Error", variant: "destructive" }); }
     finally { setVoidLoading(false); }
   };
@@ -389,18 +392,22 @@ const DashboardBookingDetail = () => {
   const handleServiceRequest = async () => {
     if (!booking || !serviceRequest) return;
     setServiceLoading(true);
-    const label = serviceRequest === "refund" ? "REFUND" : "REISSUE";
+    const label = serviceRequest === "refund" ? "Refund" : "Reissue";
     try {
-      await api.post(`/dashboard/ticket-issue-request`, {
+      await api.post(`/dashboard/service-requests`, {
         bookingId: booking.rawId,
-        notes: `${label} REQUEST: ${serviceNote || "No additional note"}`,
+        type: serviceRequest,
+        notes: serviceNote || null,
       });
-      toast({ title: `${label} Request Sent`, description: "Our team will process it shortly." });
-      setServiceRequest(null); setServiceNote(""); refetch();
+      toast({ title: `${label} Request Submitted`, description: "Status: Pending — our team will process it shortly." });
+      setServiceRequest(null); setServiceNote("");
+      queryClient.invalidateQueries({ queryKey: ["dashboard", "service-requests"] });
+      refetch();
     } catch (e: any) {
       toast({ title: "Failed", description: e.message || "Error", variant: "destructive" });
     } finally { setServiceLoading(false); }
   };
+
 
 
 
