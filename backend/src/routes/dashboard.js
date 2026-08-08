@@ -158,10 +158,13 @@ function getTransactionEntryType(txn) {
 // A booking-linked debit only counts against the wallet once the user actually
 // paid it from wallet (payment_status = 'paid'). Reserved / on-hold bookings must
 // never reduce the balance — money is deducted only on an issue request.
+// 'refunded' MUST stay chargeable: the money really left the wallet and the money
+// coming back is a separate refund credit row. Dropping the debit here would credit
+// the customer twice (balance inflates by the full ticket amount).
 function isChargeableWalletDebit(txn) {
   if (!txn.booking_id) return true;
   const bookingPaid = String(txn.booking_payment_status || '').toLowerCase();
-  return bookingPaid === 'paid' || bookingPaid === 'partial';
+  return bookingPaid === 'paid' || bookingPaid === 'partial' || bookingPaid === 'refunded';
 }
 
 function computeWalletTotalsFromTransactions(rows = []) {
