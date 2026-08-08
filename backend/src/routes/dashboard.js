@@ -1825,6 +1825,70 @@ router.get('/ticket-issue-requests', async (req, res) => {
   }
 });
 
+// =============== POST-TICKET SERVICE REQUESTS ===============
+// POST /dashboard/service-requests { bookingId, type: void|reissue|refund|cancel, notes }
+router.post('/service-requests', async (req, res) => {
+  try {
+    const userId = req.user.sub;
+    const { bookingId, type, notes } = req.body;
+    if (!bookingId || !SERVICE_REQUEST_TYPES.includes(String(type))) {
+      return res.status(400).json({ message: 'bookingId and a valid type (void/reissue/refund/cancel) are required' });
+    }
+
+    const [bookings] = await db.query('SELECT id, booking_ref, pnr, status FROM bookings WHERE id = ? AND user_id = ?', [bookingId, userId]);
+    if (bookings.length === 0) return res.status(404).json({ message: 'Booking not found' });
+    const booking = bookings[0];
+
+    await ensureServiceRequestsTable();
+
+    const [existing] = await db.query(
+      "SELECT id FROM booking_service_requests WHERE booking_id = ? AND type = ? AND status IN ('pending','processing')",
+      [bookingId, type]
+    );
+    if (existing && existing.length > 0) {
+      return res.status(400).json({ message: `A ${type} request is already pending for this booking` });
+    }
+
+    const id = uuidv4();
+    await db.query(
+      'INSERT INTO booking_service_requests (id, booking_id, user_id, type, status, notes, pnr) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [id, bookingId, userId, type, 'pending', notes || null, booking.pnr || null]
+    );
+
+    try {
+      const { notifyBookingStatus } = require('../services/notify');
+      await notifyBookingStatus(booking.booking_ref, `${type}_requested`, null);
+    } catch (e) { console.log('[Service Request] Notification skipped:', e.message); }
+
+    res.json({ success: true, requestId: id, message: `${type} request submitted. Admin will review it shortly.` });
+  } catch (err) {
+    console.error('[Dashboard] Service request error:', err);
+    res.status(500).json({ message: 'Failed to submit request' });
+  }
+});
+
+// GET /dashboard/service-requests — user's own void/reissue/refund/cancel requests
+router.get('/service-requests', async (req, res) => {
+  try {
+    const userId = req.user.sub;
+    const [rows] = await db.query(
+      `SELECT sr.*, b.booking_ref, b.status as booking_status
+       FROM booking_service_requests sr
+       JOIN bookings b ON sr.booking_id = b.id
+       WHERE sr.user_id = ?
+       ORDER BY sr.created_at DESC`,
+      [userId]
+    );
+    res.json({ data: rows });
+  } catch (err) {
+    if (isMissingTableError(err, 'booking_service_requests')) return res.json({ data: [] });
+    console.error('[Dashboard] Service requests list error:', err);
+    res.status(500).json({ message: 'Failed to fetch requests' });
+  }
+});
+
+
+
 // =============== PARTIAL PAYMENT REQUEST (post-booking) ===============
 // POST /dashboard/bookings/:id/request-partial
 // Customer requests 30% upfront + 70% later (admin sets deadline).
