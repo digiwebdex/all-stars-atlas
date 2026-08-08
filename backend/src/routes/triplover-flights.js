@@ -645,28 +645,89 @@ function mapPassenger(p, contactInfo) {
 }
 
 
+// TripLover invalidates search/price references quickly (and blocks a second Book
+// attempt on the same uniqueTransID). When Book fails for one of those reasons the
+// only recovery is: search again → reprice → book with completely fresh refs.
+const RECOVERABLE_BOOK_ERRORS = [
+  'validation error', 'segment sync', 'already have tried to book', 'please search again',
+  'expired', 'not found', 'invalid data found', 'pricecodedetail', 'session',
+];
+
+function isRecoverableBookError(msg) {
+  const m = String(msg || '').toLowerCase();
+  return RECOVERABLE_BOOK_ERRORS.some(k => m.includes(k));
+}
+
+// Re-run the same search and locate the identical itinerary (same flight numbers,
+// same order) so we can obtain valid uniqueTransID / itemCodeRef / segmentCodeRefs.
+async function resolveFreshRefs(ctx) {
+  if (!ctx || !ctx.origin || !ctx.destination || !ctx.departDate) return null;
+  const list = await searchFlights({
+    origin: ctx.origin,
+    destination: ctx.destination,
+    departDate: ctx.departDate,
+    returnDate: ctx.returnDate || null,
+    adults: ctx.adults || 1,
+    children: ctx.children || 0,
+    infants: ctx.infants || 0,
+    cabinClass: ctx.cabinClass,
+    preferredAirline: ctx.airlineCode || null,
+  });
+  if (!Array.isArray(list) || !list.length) return null;
+
+  const want = (ctx.flightNumbers || []).map(n => String(n).toUpperCase().replace(/\s/g, '')).join('>');
+  const keyOf = f => (f.legs || []).map(l => String(l.flightNumber || '').toUpperCase().replace(/\s/g, '')).join('>');
+  const match = (want && list.find(f => keyOf(f) === want))
+    || (ctx.airlineCode && list.find(f => f.airlineCode === ctx.airlineCode))
+    || null;
+  if (!match?._tlItemCodeRef) return null;
+
+  return {
+    uniqueTransID: match._tlUniqueTransID,
+    itemCodeRef: match._tlItemCodeRef,
+    segmentCodeRefs: match._tlSegmentCodeRefs || [],
+    price: match.price,
+  };
+}
+
 // ── Book (creates PNR) ──
-async function createBooking({ uniqueTransID, itemCodeRef, priceCodeRef, segmentCodeRefs = [], passengers = [], contactInfo = {} }) {
+async function createBooking({ uniqueTransID, itemCodeRef, priceCodeRef, segmentCodeRefs = [], passengers = [], contactInfo = {}, refreshContext = null, _isRetry = false }) {
   try {
     const passengerInfoes = passengers.map((p, i) => mapPassenger({ ...p, isLeadPassenger: p.isLeadPassenger ?? i === 0 }, contactInfo));
 
-    const data = await tlPost('/api/Book', {
-      passengerInfoes,
-      uniqueTransID,
-      itemCodeRef,
-      priceCodeRef,
-      segmentCodeRefs,
-      remarks: [],
-      isPartialPayment: false,
-    });
+    let data;
+    try {
+      data = await tlPost('/api/Book', {
+        passengerInfoes,
+        uniqueTransID,
+        itemCodeRef,
+        priceCodeRef,
+        segmentCodeRefs,
+        remarks: [],
+        isPartialPayment: false,
+      });
+    } catch (postErr) {
+      // HTTP-level rejection (400 "Validation error occurred" …) — recover with fresh refs.
+      if (!_isRetry && refreshContext && isRecoverableBookError(postErr.message)) {
+        const retried = await retryWithFreshRefs({ refreshContext, passengers, contactInfo, reason: postErr.message });
+        if (retried) return retried;
+      }
+      throw postErr;
+    }
 
     const r = data?.item1 || {};
     const pnr = r.pnr || r.bookingRefNumber || null;
     if (!pnr) {
       // Surface the real supplier reason (item2.message) instead of a generic failure.
-      const reason = r.message || data?.item2?.message
+      const reason = r.message || data?.item2?.message || data?.message
         || (typeof data?.raw === 'string' ? data.raw.split('\n')[0].trim() : null)
         || 'TripLover booking failed (no PNR)';
+
+      if (!_isRetry && refreshContext && isRecoverableBookError(reason)) {
+        const retried = await retryWithFreshRefs({ refreshContext, passengers, contactInfo, reason });
+        if (retried) return retried;
+      }
+
       const { error, hint } = describeFailure({ message: reason, body: data, operation: 'Book' });
       logApiCall({ provider: 'triplover', operation: 'Book (rejected)', ok: false, response: data, error, hint });
       return { success: false, error, hint, pnr: null, rawResponse: data };
@@ -694,6 +755,44 @@ async function createBooking({ uniqueTransID, itemCodeRef, priceCodeRef, segment
     return { success: false, error: err.message, pnr: null };
   }
 }
+
+// Search → Reprice → Book again with brand-new references.
+async function retryWithFreshRefs({ refreshContext, passengers, contactInfo, reason }) {
+  console.warn('[TripLover] Book rejected (%s) — refreshing search refs and retrying once…', reason);
+  try {
+    const fresh = await resolveFreshRefs(refreshContext);
+    if (!fresh) {
+      console.warn('[TripLover] Could not re-locate the itinerary during refresh retry');
+      return null;
+    }
+    const reprice = await revalidatePrice({
+      uniqueTransID: fresh.uniqueTransID,
+      itemCodeRef: fresh.itemCodeRef,
+      segmentCodeRefs: fresh.segmentCodeRefs,
+    });
+    if (!reprice.success) {
+      console.warn('[TripLover] Refresh retry reprice failed');
+      return null;
+    }
+    logApiCall({
+      provider: 'triplover', operation: 'Book (auto-refresh retry)', ok: true,
+      request: { reason, refreshContext }, response: { newPrice: reprice.totalPrice || fresh.price || null },
+    });
+    return await createBooking({
+      uniqueTransID: reprice.uniqueTransID || fresh.uniqueTransID,
+      itemCodeRef: reprice.itemCodeRef || fresh.itemCodeRef,
+      priceCodeRef: reprice.priceCodeRef,
+      segmentCodeRefs: reprice.segmentCodeRefs?.length ? reprice.segmentCodeRefs : fresh.segmentCodeRefs,
+      passengers,
+      contactInfo,
+      _isRetry: true,
+    });
+  } catch (err) {
+    console.error('[TripLover] Refresh retry failed:', err.message);
+    return null;
+  }
+}
+
 
 // ── Issue ticket ──
 async function issueTicket({ pnr, uniqueTransID, itemCodeRef, priceCodeRef, bookingCodeRef, isPartialPayment = false, commission = 0 }) {
