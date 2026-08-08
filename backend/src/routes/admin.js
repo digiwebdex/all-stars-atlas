@@ -1736,7 +1736,7 @@ router.put('/service-requests/:id', async (req, res) => {
     }
 
     // Approval requires the customer to have accepted the quotation first
-    if (nextStatus === 'completed' && isRefundable && !request.customer_accepted_at) {
+    if (nextStatus === 'completed' && isQuotable && !request.customer_accepted_at) {
       return res.status(400).json({ message: 'Customer has not accepted the quotation yet' });
     }
 

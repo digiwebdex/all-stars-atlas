@@ -292,6 +292,7 @@ async function ensureServiceRequestsTable(executor = db) {
   const extra = [
     ['airline_fee', 'DECIMAL(12,2) NULL'],
     ['service_charge', 'DECIMAL(12,2) NULL'],
+    ['no_show_charge', 'DECIMAL(12,2) NULL'],
     ['refund_amount', 'DECIMAL(12,2) NULL'],
     ['refund_txn_id', 'CHAR(36) NULL'],
     ['quoted_at', 'DATETIME NULL'],
