@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,6 +32,40 @@ const statusLabelMap: Record<string, string> = {
   un_confirmed: "Un-Confirmed", ticketed: "Ticketed",
 };
 function displayStatus(status: string) { return statusLabelMap[status] || status; }
+
+// URL ?status=... -> tab label (sidebar Void / Refund / Reissue links)
+const urlStatusToTab: Record<string, string> = {
+  voided: "Void", void: "Void",
+  refunded: "Refund", refund: "Refund",
+  reissued: "Exchange", reissue: "Exchange", exchange: "Exchange",
+  on_hold: "Reserved", reserved: "Reserved",
+  pending: "Pending", confirmed: "Confirmed", completed: "Completed",
+  cancelled: "Cancelled", expired: "Expired", un_confirmed: "Un-Confirmed",
+  in_progress: "Issue In Progress", issue_in_progress: "Issue In Progress",
+};
+
+// Which raw booking statuses belong to which tab
+const tabStatusMatchers: Record<string, string[]> = {
+  Reserved: ["on_hold", "reserved"],
+  Pending: ["pending", "awaiting_payment"],
+  "Issue In Progress": ["in_progress", "issue_in_progress", "processing"],
+  Confirmed: ["confirmed", "ticketed"],
+  Completed: ["completed"],
+  Void: ["void", "voided"],
+  Refund: ["refund", "refunded"],
+  Exchange: ["exchange", "reissued", "reissue"],
+  Expired: ["expired"],
+  Cancelled: ["cancelled", "canceled"],
+  "Un-Confirmed": ["un_confirmed", "unconfirmed"],
+};
+
+function matchesTab(status: string, tab: string) {
+  if (tab === "All") return true;
+  const s = String(status || "").toLowerCase();
+  const list = tabStatusMatchers[tab];
+  if (list) return list.includes(s);
+  return s === tab.toLowerCase().replace(/[ -]/g, "_");
+}
 
 const statusColors: Record<string, string> = {
   "Confirmed": "bg-accent/10 text-accent border-accent/20", "confirmed": "bg-accent/10 text-accent border-accent/20",
@@ -111,16 +145,32 @@ function mapBooking(b: any) {
 const DashboardBookings = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState("All");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const urlStatus = (searchParams.get("status") || "").toLowerCase();
+  const [activeTab, setActiveTab] = useState(urlStatusToTab[urlStatus] || "All");
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
   const [perPage, setPerPage] = useState("10");
   const [page, setPage] = useState(1);
   const [docVerifyBooking, setDocVerifyBooking] = useState<any>(null);
 
-  const statusParam = (activeTab !== "All" && activeTab !== "Failed") ? (activeTab === "Reserved" ? "on_hold" : activeTab.toLowerCase().replace(/[ -]/g, "_")) : undefined;
+  // Keep tab in sync when the sidebar changes ?status=voided / refunded / reissued
+  useEffect(() => {
+    const mapped = urlStatusToTab[urlStatus];
+    if (mapped && mapped !== activeTab) { setActiveTab(mapped); setPage(1); }
+    if (!urlStatus && activeTab !== "All" && !searchParams.get("keep")) { /* no-op */ }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [urlStatus]);
+
+  const selectTab = (tab: string) => {
+    setActiveTab(tab);
+    setPage(1);
+    if (searchParams.get("status")) { searchParams.delete("status"); setSearchParams(searchParams, { replace: true }); }
+  };
+
+  // Fetch everything and filter client-side so each tab only shows its own statuses
   const { data, isLoading, error, refetch } = useDashboardBookings({
-    status: statusParam, search: search || undefined, limit: 100, page,
+    search: search || undefined, limit: 100, page,
   });
 
   const resolved = (data as any) || {};
@@ -132,23 +182,22 @@ const DashboardBookings = () => {
   const validBookings = allMapped.filter((b: any) => hasPnr(b));
   const failedBookings = allMapped.filter((b: any) => !hasPnr(b));
 
-  // Show failed bookings only in "Failed" or "All" tab
+  // Show failed bookings only in "Failed" tab, otherwise filter by the active tab
   const isFailedTab = activeTab === "Failed";
-  const bookings = isFailedTab ? failedBookings : validBookings;
+  const bookings = isFailedTab
+    ? failedBookings
+    : validBookings.filter((b: any) => matchesTab(b.status, activeTab));
 
-  const tabCounts: Record<string, number> = resolved?.tabCounts || {};
-  if (!tabCounts["All"]) {
-    tabCounts["All"] = validBookings.length;
-    tabCounts["Failed"] = failedBookings.length;
-    statusTabs.forEach(tab => {
-      if (tab !== "All" && tab !== "Failed") {
-        const tabKey = tab === "Reserved" ? "on_hold" : tab.toLowerCase().replace(/ /g, "_");
-        tabCounts[tab] = validBookings.filter((b: any) => b.status?.toLowerCase() === tabKey || displayStatus(b.status) === tab).length;
-      }
-    });
-  }
+  const tabCounts: Record<string, number> = {};
+  tabCounts["All"] = validBookings.length;
+  tabCounts["Failed"] = failedBookings.length;
+  statusTabs.forEach(tab => {
+    if (tab !== "All" && tab !== "Failed") {
+      tabCounts[tab] = validBookings.filter((b: any) => matchesTab(b.status, tab)).length;
+    }
+  });
 
-  const total = isFailedTab ? failedBookings.length : validBookings.length;
+  const total = bookings.length;
   const totalPages = Math.ceil(total / Number(perPage)) || 1;
   const paginatedBookings = bookings.slice((page - 1) * Number(perPage), page * Number(perPage));
 
@@ -178,7 +227,7 @@ const DashboardBookings = () => {
 
       <div className="flex gap-1 overflow-x-auto scrollbar-none border-b border-border pb-px -mx-1 px-1">
         {statusTabs.map((tab) => (
-          <button key={tab} onClick={() => { setActiveTab(tab); setPage(1); }}
+          <button key={tab} onClick={() => selectTab(tab)}
             className={`px-3 py-2.5 text-xs font-medium whitespace-nowrap transition-colors border-b-2 -mb-px flex items-center gap-1.5 ${
               activeTab === tab ? "border-accent text-accent" : "border-transparent text-muted-foreground hover:text-foreground"
             }`}>
