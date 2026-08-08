@@ -22,10 +22,13 @@ const TYPE_META: Record<string, { label: string; icon: any; tone: string }> = {
 
 const STATUS_TONE: Record<string, string> = {
   pending: "bg-warning/15 text-warning",
+  quoted: "bg-sky-500/15 text-sky-600",
+  accepted: "bg-indigo-500/15 text-indigo-600",
   processing: "bg-primary/15 text-primary",
   completed: "bg-emerald-500/15 text-emerald-600",
   rejected: "bg-destructive/15 text-destructive",
 };
+
 
 const fmt = (v?: string | null) => (v ? new Date(v).toLocaleString() : "—");
 
