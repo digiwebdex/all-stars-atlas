@@ -882,7 +882,7 @@ const DashboardBookingDetail = () => {
                       {boxes.map(box => {
                         const req = latestRequestByType(box.key);
                         const st = String(req?.status || "").toLowerCase();
-                        const stTone = st === "pending" ? "bg-warning/15 text-warning" : st === "quoted" ? "bg-sky-500/15 text-sky-600" : st === "accepted" ? "bg-indigo-500/15 text-indigo-600" : st === "processing" ? "bg-primary/15 text-primary" : st === "completed" ? "bg-emerald-500/15 text-emerald-600" : st === "rejected" ? "bg-destructive/15 text-destructive" : "";
+                        const stTone = st === "pending" ? "bg-warning/15 text-warning" : st === "quoted" ? "bg-sky-500/15 text-sky-600" : st === "accepted" ? "bg-indigo-500/15 text-indigo-600" : st === "processing" ? "bg-primary/15 text-primary" : st === "completed" ? "bg-emerald-500/15 text-emerald-600" : st === "rejected" ? "bg-destructive/15 text-destructive" : st === "expired" ? "bg-muted text-muted-foreground" : "";
                         const lockedByOther = !!activeExclusive && exclusiveKeys.includes(box.key) && activeExclusive.key !== box.key;
                         const lockedSelf = exclusiveKeys.includes(box.key) && !!activeExclusive && activeExclusive.key === box.key && st !== "rejected";
                         const blocked = box.disabled || lockedByOther || lockedSelf || ["pending", "quoted", "accepted", "processing"].includes(st);
