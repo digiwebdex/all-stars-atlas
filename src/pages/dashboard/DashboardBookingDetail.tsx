@@ -246,6 +246,8 @@ const DashboardBookingDetail = () => {
   const [serviceRequest, setServiceRequest] = useState<null | "reissue" | "refund">(null);
   const [serviceNote, setServiceNote] = useState("");
   const [serviceLoading, setServiceLoading] = useState(false);
+  const [quoteAgreed, setQuoteAgreed] = useState(false);
+  const [acceptingQuote, setAcceptingQuote] = useState(false);
   const [timelineOpen, setTimelineOpen] = useState(false);
   const [ssrOpen, setSsrOpen] = useState(false);
   const [payDialogOpen, setPayDialogOpen] = useState(false);
