@@ -148,8 +148,9 @@ const AdminServiceRequests = () => {
                         <Badge className={`border-0 uppercase text-[10px] ${STATUS_TONE[String(r.status)] || "bg-muted"}`}>{r.status}</Badge>
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button size="sm" variant="outline" onClick={() => { setSelected(r); setAdminNotes(r.admin_notes || ""); }}>Review</Button>
+                        <Button size="sm" variant="outline" onClick={() => openRequest(r)}>Review</Button>
                       </TableCell>
+
                     </TableRow>
                   );
                 })}
