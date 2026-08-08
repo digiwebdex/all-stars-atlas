@@ -260,7 +260,26 @@ const DashboardBookingDetail = () => {
   const resolved = (data as any) || {};
   const rawBookings = resolved?.data || resolved?.bookings || [];
   const booking = rawBookings.length > 0 ? mapBooking(rawBookings[0]) : null;
-  const countdown = useCountdown(booking?.paymentDeadline || null);
+
+  // Actual ticketing time limit (stored → GDS details → live PNR ADTK)
+  const { data: timeLimitData } = useQuery({
+    queryKey: ["dashboard", "time-limit", booking?.rawId],
+    queryFn: () => api.get<any>(`/dashboard/bookings/${booking?.rawId}/time-limit`),
+    enabled: !!booking?.rawId,
+    staleTime: 60000,
+  });
+  const actualTimeLimit: string | null = booking?.paymentDeadline || (timeLimitData as any)?.timeLimit || null;
+
+  // Partial payment permission (admin toggle + per-user permission)
+  const { data: partialPermData } = useQuery({
+    queryKey: ["dashboard", "partial-permission"],
+    queryFn: () => api.get<any>("/dashboard/partial-permission"),
+    staleTime: 300000,
+  });
+  const partialAllowed = !!(partialPermData as any)?.allowed;
+
+  const countdown = useCountdown(actualTimeLimit);
+
 
   // Fetch ticket issue request for this booking to get admin-entered ticket number
   const { data: issueRequestData } = useQuery({
@@ -371,7 +390,7 @@ const DashboardBookingDetail = () => {
     if (booking.cabinClass) items.push({ ssrType: "cabin", passengerName: "All Passengers", details: booking.cabinClass, status: "confirmed" });
 
     // 6. Time limit
-    if (booking.paymentDeadline) items.push({ ssrType: "time_limit", passengerName: "Booking", details: `Last ticketing: ${fmtDateTime(booking.paymentDeadline)}`, status: booking.status === "on_hold" ? "pending" : "confirmed" });
+    if (actualTimeLimit) items.push({ ssrType: "time_limit", passengerName: "Booking", details: `Last ticketing: ${fmtDateTime(actualTimeLimit)}`, status: booking.status === "on_hold" ? "pending" : "confirmed" });
 
     return items;
   })();
@@ -556,6 +575,7 @@ const DashboardBookingDetail = () => {
             {(() => {
               const ps = String(booking.paymentStatus || '').toLowerCase();
               const st = String(booking.status || '').toLowerCase();
+              if (!partialAllowed) return null;
               if (isTicketed || hasIssuedWithBalance) return null;
               if (ps === 'paid' || ps === 'partial') return null;
               if (['cancelled', 'refunded', 'ticketed', 'completed'].includes(st)) return null;
@@ -617,7 +637,7 @@ const DashboardBookingDetail = () => {
                 : displayStatus === 'cancelled' ? 'bg-red-500' : 'bg-muted';
               return <Badge className={`${statusColor} text-white text-sm px-3 py-1 font-bold`}>{statusLabel}</Badge>;
             })()}
-            {booking.paymentDeadline && booking.status === "on_hold" && countdown && (
+            {actualTimeLimit && booking.status === "on_hold" && countdown && (
               <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-warning/10 border border-warning/30 text-sm">
                 <AlertTriangle className="w-4 h-4 text-warning flex-shrink-0" />
                 <span className="text-warning font-medium">The Booking will expire in {countdown}</span>
@@ -636,7 +656,7 @@ const DashboardBookingDetail = () => {
             {[
               { label: "Booking Id", value: booking.gdsBookingId || booking.id, copy: true, highlight: true },
               { label: "Booking Created", value: fmtDateTime(booking.bookedAt) },
-              { label: "Ticketing Time Limit", value: booking.paymentDeadline ? fmtDateTime(booking.paymentDeadline) : "—" },
+              { label: "Ticketing Time Limit", value: actualTimeLimit ? fmtDateTime(actualTimeLimit) : "—" },
               { label: "PNR", value: booking.pnr, copy: booking.pnr !== "—" },
               { label: "Airline PNR", value: booking.airlinePnr || "—", copy: !!booking.airlinePnr },
               { label: "Refundable", value: booking.refundable ? "Yes" : "No", color: booking.refundable ? "text-emerald-600" : "text-destructive" },
@@ -1087,13 +1107,13 @@ const DashboardBookingDetail = () => {
               <DialogHeader><DialogTitle className="flex items-center gap-2"><Eye className="w-5 h-5 text-primary" /> SSR History</DialogTitle></DialogHeader>
               
               {/* Ticketing Time Limit */}
-              {booking?.paymentDeadline && (
+              {actualTimeLimit && (
                 <div className={`flex items-start gap-3 p-3 rounded-lg border ${booking.status === "on_hold" ? "border-warning/40 bg-warning/5" : "border-border bg-muted/20"}`}>
                   <Clock className={`w-5 h-5 flex-shrink-0 mt-0.5 ${booking.status === "on_hold" ? "text-warning" : "text-muted-foreground"}`} />
                   <div>
                     <p className="text-sm font-semibold">Ticketing Time Limit</p>
                     <p className="text-xs text-muted-foreground mt-0.5">
-                      Deadline: <span className="font-mono font-bold">{fmtDateTime(booking.paymentDeadline)}</span>
+                      Deadline: <span className="font-mono font-bold">{fmtDateTime(actualTimeLimit)}</span>
                     </p>
                     {countdown && booking.status === "on_hold" && (
                       <p className="text-xs text-warning font-medium mt-1">Expires in {countdown}</p>
