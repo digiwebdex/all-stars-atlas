@@ -1644,7 +1644,22 @@ async function ensureServiceRequestsTable() {
         INDEX idx_bsr_user (user_id),
         INDEX idx_bsr_status (status)
   )`);
+  // Self-healing columns for the settlement (service charge / refund) fields
+  const extra = [
+    ['service_charge', 'DECIMAL(12,2) NULL'],
+    ['refund_amount', 'DECIMAL(12,2) NULL'],
+    ['refund_txn_id', 'CHAR(36) NULL'],
+  ];
+  for (const [col, def] of extra) {
+    try {
+      const [cols] = await db.query('SHOW COLUMNS FROM booking_service_requests LIKE ?', [col]);
+      if (!cols || cols.length === 0) {
+        await db.query(`ALTER TABLE booking_service_requests ADD COLUMN ${col} ${def}`);
+      }
+    } catch (e) { /* ignore */ }
+  }
 }
+
 
 // GET /admin/service-requests?status=pending|all&type=void
 router.get('/service-requests', async (req, res) => {
