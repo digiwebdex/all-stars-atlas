@@ -260,7 +260,26 @@ const DashboardBookingDetail = () => {
   const resolved = (data as any) || {};
   const rawBookings = resolved?.data || resolved?.bookings || [];
   const booking = rawBookings.length > 0 ? mapBooking(rawBookings[0]) : null;
-  const countdown = useCountdown(booking?.paymentDeadline || null);
+
+  // Actual ticketing time limit (stored → GDS details → live PNR ADTK)
+  const { data: timeLimitData } = useQuery({
+    queryKey: ["dashboard", "time-limit", booking?.rawId],
+    queryFn: () => api.get<any>(`/dashboard/bookings/${booking?.rawId}/time-limit`),
+    enabled: !!booking?.rawId,
+    staleTime: 60000,
+  });
+  const actualTimeLimit: string | null = booking?.paymentDeadline || (timeLimitData as any)?.timeLimit || null;
+
+  // Partial payment permission (admin toggle + per-user permission)
+  const { data: partialPermData } = useQuery({
+    queryKey: ["dashboard", "partial-permission"],
+    queryFn: () => api.get<any>("/dashboard/partial-permission"),
+    staleTime: 300000,
+  });
+  const partialAllowed = !!(partialPermData as any)?.allowed;
+
+  const countdown = useCountdown(actualTimeLimit);
+
 
   // Fetch ticket issue request for this booking to get admin-entered ticket number
   const { data: issueRequestData } = useQuery({
