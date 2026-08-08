@@ -24,6 +24,8 @@ const router = express.Router();
 // Identical searches (page refresh, back navigation, filter/sort changes)
 // reuse the same GDS payload for a short window instead of re-querying every
 // supplier. TTL is intentionally short so fares stay live and bookable.
+// Government-mandated AIT/VAT — applies to every airline and every scope.
+const FIXED_AIT_PCT = parseFloat(process.env.FIXED_AIT_PCT) || 0.30;
 const PROVIDER_CACHE_TTL_MS = parseInt(process.env.PROVIDER_SEARCH_CACHE_TTL_MS) || 120000;
 const PROVIDER_CACHE_MAX = 60;
 const providerSearchCache = new Map();
@@ -1429,7 +1431,8 @@ router.get('/search', authenticateOptional, async (req, res) => {
 
         // Normalize: discount is ALWAYS a deduction (a negative admin entry must not inflate fare)
         discount = Math.abs(Number(discount) || 0);
-        aitVat = Math.abs(Number(aitVat) || 0);
+        // AIT/VAT is government-mandated and applies to EVERY airline & scope.
+        aitVat = Math.abs(Number(aitVat) || 0) || FIXED_AIT_PCT;
         markup = Math.max(0, Number(markup) || 0);
         fixedMarkup = Math.max(0, Number(fixedMarkup) || 0);
 
@@ -1454,7 +1457,7 @@ router.get('/search', authenticateOptional, async (req, res) => {
       console.error('Fare rule loading failed (using defaults):', fareRuleErr.message);
       // Attach default rules so frontend always has them
       flights = flights.map(f => {
-        f.fareRules = { discount: 0, aitVat: 0, markup: 0, fixedMarkup: 0, isGlobal: true };
+        f.fareRules = { discount: 0, aitVat: FIXED_AIT_PCT, markup: 0, fixedMarkup: 0, isGlobal: true };
         return f;
       });
     }
