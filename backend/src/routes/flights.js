@@ -2188,11 +2188,30 @@ router.post('/book', authenticate, async (req, res) => {
           const reprice = await tlRevalidate({ uniqueTransID, itemCodeRef, segmentCodeRefs });
           if (!reprice.success) throw new Error('TripLover reprice failed — fare no longer available');
 
+          // Allows the provider layer to re-search and rebuild expired refs automatically
+          // if TripLover rejects the Book call ("Validation error", "Segment sync error"…).
+          const legList = Array.isArray(flightData?.legs) && flightData.legs.length
+            ? flightData.legs
+            : [{ flightNumber: flightData?.flightNumber }];
+          const refreshContext = {
+            origin: flightData?.origin,
+            destination: flightData?.destination,
+            departDate: String(flightData?.departureTime || '').slice(0, 10),
+            returnDate: returnFlightData ? String(returnFlightData?.departureTime || '').slice(0, 10) : null,
+            adults: passengers.filter(p => !p.type || p.type === 'adult' || p.type === 'ADT').length || 1,
+            children: passengers.filter(p => p.type === 'child' || p.type === 'CNN').length,
+            infants: passengers.filter(p => p.type === 'infant' || p.type === 'INF').length,
+            cabinClass: flightData?.cabinClass,
+            airlineCode: flightData?.airlineCode,
+            flightNumbers: legList.map(l => l?.flightNumber).filter(Boolean),
+          };
+
           gdsBookingResult = await tlCreateBooking({
             uniqueTransID: reprice.uniqueTransID,
             itemCodeRef: reprice.itemCodeRef,
             priceCodeRef: reprice.priceCodeRef,
             segmentCodeRefs: reprice.segmentCodeRefs?.length ? reprice.segmentCodeRefs : segmentCodeRefs,
+            refreshContext,
             passengers: passengers.map((p, i) => ({
               title: p.title || 'Mr',
               firstName: p.firstName,
@@ -2208,6 +2227,7 @@ router.post('/book', authenticate, async (req, res) => {
             })),
             contactInfo: contactInfo || {},
           });
+
 
           if (gdsBookingResult?.success && gdsBookingResult?.pnr) {
             gdsPnr = gdsBookingResult.pnr;
