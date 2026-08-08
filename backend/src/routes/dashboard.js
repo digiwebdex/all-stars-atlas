@@ -88,7 +88,8 @@ function normalizeBookingFareDetails(details, bookingRow = {}) {
   // No platform default — commission/AIT come only from what admin configured at booking time.
   const discountPct = parsedDiscountPct && parsedDiscountPct > 0 ? parsedDiscountPct : 0;
   const parsedAitPct = firstAmount(fareRules.aitVat, safeDetails.fareRules?.aitVat, fare.aitVatPct, safeDetails.aitVatPct, safeDetails.aitVatPercentage, outbound.aitVatPct);
-  const aitPct = parsedAitPct && parsedAitPct > 0 ? parsedAitPct : 0;
+  const FIXED_AIT_PCT = parseFloat(process.env.FIXED_AIT_PCT) || 0.30;
+  const aitPct = parsedAitPct && parsedAitPct > 0 ? parsedAitPct : FIXED_AIT_PCT;
 
   let discount = firstAmount(safeDetails.discount, safeDetails.totalDiscount, safeDetails.discountAmount, outbound.discount, fare.discount) || 0;
   let aitVat = firstAmount(safeDetails.ait, safeDetails.aitVat, safeDetails.totalAitVat, safeDetails.aitVatAmount, fare.aitVat) || 0;

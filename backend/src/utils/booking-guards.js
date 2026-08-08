@@ -5,6 +5,9 @@
 const db = require('../config/db');
 const { safeJsonParse } = require('./json');
 
+// Government-mandated AIT/VAT applied to all airlines.
+const FIXED_AIT_PCT = parseFloat(process.env.FIXED_AIT_PCT) || 0.30;
+
 const BD_AIRPORTS = ['DAC', 'CXB', 'CGP', 'ZYL', 'JSR', 'RJH', 'SPD', 'BZL', 'IRD', 'TKR'];
 
 async function loadPartialSettings() {
@@ -82,7 +85,7 @@ async function isAirlineRouteBlocked({ airlineCode, originCountry, destCountry }
 async function resolveCommission({ userId, airlineCode }) {
   // No hardcoded defaults — 100% admin-configured (Admin → Markup & Revenue).
   let globalDiscount = 0;
-  let globalAit = 0;
+  let globalAit = FIXED_AIT_PCT;
 
   let airlineMarkup = 0;
   let airlineCommission = null;
@@ -119,7 +122,7 @@ async function resolveCommission({ userId, airlineCode }) {
 
   return {
     discountPct: userOverride?.discount_pct != null ? Number(userOverride.discount_pct) : globalDiscount,
-    aitPct: userOverride?.ait_pct != null ? Number(userOverride.ait_pct) : globalAit,
+    aitPct: (userOverride?.ait_pct != null ? Number(userOverride.ait_pct) : globalAit) || FIXED_AIT_PCT,
     markupPct: userOverride?.markup_pct != null ? Number(userOverride.markup_pct) : airlineMarkup,
     commissionPct: airlineCommission,
     source: userOverride ? 'user_override' : (airlineCode ? 'airline_or_global' : 'global'),
