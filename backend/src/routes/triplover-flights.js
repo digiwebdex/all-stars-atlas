@@ -306,6 +306,8 @@ async function searchFlights({ origin, destination, departDate, returnDate, adul
   const searchTimeout = parseInt(process.env.TRIPLOVER_SEARCH_TIMEOUT_MS) || 85000;
   const perAirlineLimit = parseInt(process.env.TRIPLOVER_PER_AIRLINE_LIMIT) || 20;
   const progressiveMaxMs = parseInt(process.env.TRIPLOVER_PROGRESSIVE_MAX_MS) || 12000;
+  const keyedTimeout = parseInt(process.env.TRIPLOVER_KEYED_TIMEOUT_MS) || 15000;
+
 
   // 1) Progressive stream → pagination key + full airline list (early-abort, see above)
   try {
