@@ -2114,7 +2114,7 @@ const FlightBooking = () => {
                   ) : null}
                   <div className="flex justify-between"><span className="text-muted-foreground">Base Fare{totalPaxCount > 1 ? ` × ${totalPaxCount}` : ""}</span><span className="font-semibold">৳{baseFare.toLocaleString()}</span></div>
                   <div className="flex justify-between"><span className="text-muted-foreground">Tax{totalPaxCount > 1 ? ` × ${totalPaxCount}` : ""}</span><span className="font-semibold">{taxes > 0 ? `৳${taxes.toLocaleString()}` : "Included"}</span></div>
-                  <div className="flex justify-between"><span className="text-muted-foreground">Discount ({DISCOUNT_PCT}%)</span><span className="font-semibold text-accent">-৳{totalDiscount.toLocaleString()}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Discount</span><span className="font-semibold text-accent">-৳{totalDiscount.toLocaleString()}</span></div>
                   <div className="flex justify-between"><span className="text-muted-foreground">AIT VAT</span><span className="font-semibold">৳{totalAitVat.toLocaleString()}</span></div>
                   <div className="flex justify-between"><span className="text-muted-foreground">Service Charge</span><span className="font-semibold">{serviceCharge > 0 ? `৳${serviceCharge}` : "Free"}</span></div>
                   {couponDiscount > 0 && (
