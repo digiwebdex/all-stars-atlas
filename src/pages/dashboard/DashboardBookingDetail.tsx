@@ -861,9 +861,12 @@ const DashboardBookingDetail = () => {
                                 <span className={`inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${stTone}`}>{st}</span>
                                 {req?.admin_notes && <p className="text-[11px] text-muted-foreground mt-1 leading-snug">Admin: {req.admin_notes}</p>}
                               </>
+                            ) : lockedByOther ? (
+                              <p className="text-[11px] text-muted-foreground mt-0.5 leading-snug">Locked — {activeExclusive?.key} request in progress</p>
                             ) : (
                               <p className="text-[11px] text-muted-foreground mt-0.5 leading-snug">{box.hint}</p>
                             )}
+
                           </button>
                         );
                       })}
