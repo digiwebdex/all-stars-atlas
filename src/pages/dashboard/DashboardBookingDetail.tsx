@@ -280,6 +280,22 @@ const DashboardBookingDetail = () => {
   });
   const latestActiveIssueRequest = sortedBookingRequests.find((r: any) => ['pending', 'processing'].includes(String(r?.status || '').toLowerCase()));
   const issuedTicketNo = latestIssuedRequest?.ticket_number || latestIssuedRequest?.ticketNumber || null;
+
+  // Void / Reissue / Refund / Cancel requests for this booking (status visible to the customer)
+  const { data: serviceRequestData } = useQuery({
+    queryKey: ["dashboard", "service-requests", booking?.rawId],
+    queryFn: () => api.get<any>("/dashboard/service-requests"),
+    enabled: !!booking,
+    refetchInterval: 60000,
+  });
+  const serviceRequests = ((serviceRequestData as any)?.data || []).filter(
+    (r: any) => r.booking_id === booking?.rawId
+  );
+  const latestRequestByType = (type: string) =>
+    serviceRequests
+      .filter((r: any) => String(r.type) === type)
+      .sort((a: any, b: any) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime())[0] || null;
+
   const effectiveTicketNo = [booking?.ticketNo, issuedTicketNo].find((value) => value && value !== '—') || null;
   const hasFinalTicket = !!effectiveTicketNo;
   const isTicketed = booking?.status === 'ticketed' || !!effectiveTicketNo || String(latestIssuedRequest?.status || '').toLowerCase() === 'issued';
@@ -380,8 +396,11 @@ const DashboardBookingDetail = () => {
   const handleVoid = async () => {
     if (!booking) return; setVoidLoading(true);
     try {
-      await api.post(`/flights/void`, { pnr: booking.pnr !== "—" ? booking.pnr : undefined, bookingId: booking.rawId });
-      toast({ title: "Void Requested", description: "Sent to admin." }); setVoidOpen(false); refetch();
+      await api.post(`/dashboard/service-requests`, { bookingId: booking.rawId, type: "void", notes: `Void requested for PNR ${booking.airlinePnr || booking.pnr}` });
+      toast({ title: "Void Request Submitted", description: "Status: Pending — admin will review it." });
+      setVoidOpen(false);
+      queryClient.invalidateQueries({ queryKey: ["dashboard", "service-requests"] });
+      refetch();
     } catch (e: any) { toast({ title: "Failed", description: e.message || "Error", variant: "destructive" }); }
     finally { setVoidLoading(false); }
   };
@@ -389,18 +408,22 @@ const DashboardBookingDetail = () => {
   const handleServiceRequest = async () => {
     if (!booking || !serviceRequest) return;
     setServiceLoading(true);
-    const label = serviceRequest === "refund" ? "REFUND" : "REISSUE";
+    const label = serviceRequest === "refund" ? "Refund" : "Reissue";
     try {
-      await api.post(`/dashboard/ticket-issue-request`, {
+      await api.post(`/dashboard/service-requests`, {
         bookingId: booking.rawId,
-        notes: `${label} REQUEST: ${serviceNote || "No additional note"}`,
+        type: serviceRequest,
+        notes: serviceNote || null,
       });
-      toast({ title: `${label} Request Sent`, description: "Our team will process it shortly." });
-      setServiceRequest(null); setServiceNote(""); refetch();
+      toast({ title: `${label} Request Submitted`, description: "Status: Pending — our team will process it shortly." });
+      setServiceRequest(null); setServiceNote("");
+      queryClient.invalidateQueries({ queryKey: ["dashboard", "service-requests"] });
+      refetch();
     } catch (e: any) {
       toast({ title: "Failed", description: e.message || "Error", variant: "destructive" });
     } finally { setServiceLoading(false); }
   };
+
 
 
 
@@ -808,21 +831,35 @@ const DashboardBookingDetail = () => {
                   ];
                   return (
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                      {boxes.map(box => (
-                        <button
-                          key={box.key}
-                          type="button"
-                          disabled={box.disabled}
-                          onClick={box.onClick}
-                          className={`rounded-xl border-2 bg-card p-4 text-left transition-colors ${box.tone} ${box.disabled ? "opacity-50 cursor-not-allowed hover:bg-card" : ""}`}
-                        >
-                          <box.icon className="w-5 h-5 mb-2" />
-                          <p className="text-sm font-bold text-foreground">{box.label}</p>
-                          <p className="text-[11px] text-muted-foreground mt-0.5 leading-snug">{box.hint}</p>
-                        </button>
-                      ))}
+                      {boxes.map(box => {
+                        const req = latestRequestByType(box.key);
+                        const st = String(req?.status || "").toLowerCase();
+                        const stTone = st === "pending" ? "bg-warning/15 text-warning" : st === "processing" ? "bg-primary/15 text-primary" : st === "completed" ? "bg-emerald-500/15 text-emerald-600" : st === "rejected" ? "bg-destructive/15 text-destructive" : "";
+                        const blocked = box.disabled || ["pending", "processing"].includes(st);
+                        return (
+                          <button
+                            key={box.key}
+                            type="button"
+                            disabled={blocked}
+                            onClick={box.onClick}
+                            className={`rounded-xl border-2 bg-card p-4 text-left transition-colors ${box.tone} ${blocked ? "opacity-60 cursor-not-allowed hover:bg-card" : ""}`}
+                          >
+                            <box.icon className="w-5 h-5 mb-2" />
+                            <p className="text-sm font-bold text-foreground">{box.label}</p>
+                            {st ? (
+                              <>
+                                <span className={`inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${stTone}`}>{st}</span>
+                                {req?.admin_notes && <p className="text-[11px] text-muted-foreground mt-1 leading-snug">Admin: {req.admin_notes}</p>}
+                              </>
+                            ) : (
+                              <p className="text-[11px] text-muted-foreground mt-0.5 leading-snug">{box.hint}</p>
+                            )}
+                          </button>
+                        );
+                      })}
                     </div>
                   );
+
                 })()}
               </div>
             </div>
