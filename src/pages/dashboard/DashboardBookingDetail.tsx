@@ -875,7 +875,45 @@ const DashboardBookingDetail = () => {
                         );
                       })}
                     </div>
+
+                    {quoted && (
+                      <div className="mt-4 rounded-xl border-2 border-sky-500/30 bg-sky-500/5 p-4">
+                        <p className="text-xs font-bold uppercase text-sky-700 mb-2">
+                          {String(quoted.type).toUpperCase()} Quotation — Please review & agree
+                        </p>
+                        <div className="space-y-1.5 text-sm">
+                          <div className="flex justify-between"><span className="text-muted-foreground">Ticket Amount</span><span className="font-semibold">৳{Number(booking.totalAmount || quoted.total_amount || 0).toLocaleString()}</span></div>
+                          <div className="flex justify-between"><span className="text-muted-foreground">Airlines Refund Fee</span><span className="font-semibold text-destructive">− ৳{Number(quoted.airline_fee || 0).toLocaleString()}</span></div>
+                          <div className="flex justify-between"><span className="text-muted-foreground">Service Charge</span><span className="font-semibold text-destructive">− ৳{Number(quoted.service_charge || 0).toLocaleString()}</span></div>
+                          <Separator className="my-1" />
+                          <div className="flex justify-between text-base"><span className="font-bold">You Will Receive</span><span className="font-extrabold text-emerald-600">৳{Number(quoted.refund_amount || 0).toLocaleString()}</span></div>
+                        </div>
+                        {quoted.admin_notes && <p className="text-[11px] text-muted-foreground mt-2">Admin: {quoted.admin_notes}</p>}
+                        <label className="flex items-start gap-2 mt-3 text-xs cursor-pointer">
+                          <input type="checkbox" className="mt-0.5" checked={quoteAgreed} onChange={(e) => setQuoteAgreed(e.target.checked)} />
+                          <span>I agree with the above deductions and confirm the refund amount.</span>
+                        </label>
+                        <Button
+                          className="mt-3 w-full sm:w-auto bg-sky-600 hover:bg-sky-700 text-white font-bold"
+                          disabled={!quoteAgreed || acceptingQuote}
+                          onClick={() => acceptQuote(quoted.id)}
+                        >
+                          {acceptingQuote ? "Submitting…" : "Agree & Submit"}
+                        </Button>
+                      </div>
+                    )}
+
+                    {accepted && (
+                      <div className="mt-4 rounded-xl border-2 border-indigo-500/30 bg-indigo-500/5 p-4 text-sm">
+                        <p className="font-bold text-indigo-700">Quotation accepted — awaiting admin approval</p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          ৳{Number(accepted.refund_amount || 0).toLocaleString()} will be credited to your balance once approved.
+                        </p>
+                      </div>
+                    )}
+                    </>
                   );
+
 
                 })()}
               </div>
