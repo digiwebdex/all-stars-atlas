@@ -14,6 +14,7 @@ import { useState, useRef } from "react";
 import { downloadCSV } from "@/lib/csv-export";
 import { useToast } from "@/hooks/use-toast";
 import { usePaymentGatewayStatus } from "@/hooks/usePaymentGateways";
+import MyPaymentRequests from "@/components/dashboard/MyPaymentRequests";
 
 const PAYMENT_METHODS = [
   { id: "ssl", label: "Card / Bank", icon: CreditCard, color: "text-blue-600", bg: "bg-blue-100 dark:bg-blue-500/20", gateway: "ssl" },
@@ -281,7 +282,10 @@ const DashboardWallet = () => {
             </Table>
           </CardContent>
         </Card>
+
+        <MyPaymentRequests />
       </DataLoader>
+
 
       {/* ── Add Funds Dialog ── */}
       <Dialog open={addFundsOpen} onOpenChange={(v) => { if (!v) resetAddFunds(); else setAddFundsOpen(true); }}>
