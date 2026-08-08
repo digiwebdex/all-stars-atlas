@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { XCircle, RefreshCw, Wallet, Ban, Loader2 } from "lucide-react";
@@ -33,7 +35,16 @@ const AdminServiceRequests = () => {
   const [status, setStatus] = useState("pending");
   const [selected, setSelected] = useState<any>(null);
   const [adminNotes, setAdminNotes] = useState("");
+  const [serviceCharge, setServiceCharge] = useState("");
+  const [refundAmount, setRefundAmount] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
+
+  const ticketAmount = Number(selected?.total_amount || 0);
+  const isRefundable = ["void", "refund", "cancel"].includes(String(selected?.type));
+  const computedRefund = refundAmount === ""
+    ? Math.max(0, ticketAmount - (Number(serviceCharge) || 0))
+    : Math.max(0, Number(refundAmount) || 0);
+
 
   const { data, isLoading } = useQuery({
     queryKey: ["admin", "service-requests", status],
@@ -46,14 +57,25 @@ const AdminServiceRequests = () => {
     if (!selected) return;
     setBusy(action);
     try {
-      await api.put(`/admin/service-requests/${selected.id}`, { action, adminNotes });
-      toast({ title: "Request updated", description: `Marked as ${action}.` });
-      setSelected(null); setAdminNotes("");
+      const payload: any = { action, adminNotes };
+      if (action === "completed" && isRefundable) {
+        payload.serviceCharge = Number(serviceCharge) || 0;
+        payload.refundAmount = computedRefund;
+      }
+      const res: any = await api.put(`/admin/service-requests/${selected.id}`, payload);
+      toast({
+        title: "Request updated",
+        description: res?.credited
+          ? `Marked completed. ৳${Number(res.refundAmount || 0).toLocaleString()} credited to the customer balance.`
+          : `Marked as ${action}.`,
+      });
+      setSelected(null); setAdminNotes(""); setServiceCharge(""); setRefundAmount("");
       queryClient.invalidateQueries({ queryKey: ["admin", "service-requests"] });
     } catch (e: any) {
       toast({ title: "Failed", description: e.message || "Error", variant: "destructive" });
     } finally { setBusy(null); }
   };
+
 
   return (
     <div className="space-y-6">
@@ -124,7 +146,7 @@ const AdminServiceRequests = () => {
         </CardContent>
       </Card>
 
-      <Dialog open={!!selected} onOpenChange={(o) => { if (!o) { setSelected(null); setAdminNotes(""); } }}>
+      <Dialog open={!!selected} onOpenChange={(o) => { if (!o) { setSelected(null); setAdminNotes(""); setServiceCharge(""); setRefundAmount(""); } }}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>{TYPE_META[selected?.type]?.label || "Request"} — {selected?.booking_ref}</DialogTitle>
@@ -134,7 +156,7 @@ const AdminServiceRequests = () => {
               <div className="grid grid-cols-2 gap-3">
                 <div><span className="text-xs text-muted-foreground">PNR</span><p className="font-mono font-bold">{selected.pnr || selected.booking_pnr || "—"}</p></div>
                 <div><span className="text-xs text-muted-foreground">Booking Status</span><p className="font-bold">{selected.booking_status}</p></div>
-                <div><span className="text-xs text-muted-foreground">Amount</span><p className="font-bold">৳{Number(selected.total_amount || 0).toLocaleString()}</p></div>
+                <div><span className="text-xs text-muted-foreground">Amount</span><p className="font-bold">৳{ticketAmount.toLocaleString()}</p></div>
                 <div><span className="text-xs text-muted-foreground">Requested</span><p>{fmt(selected.created_at)}</p></div>
               </div>
               {selected.notes && (
@@ -143,6 +165,38 @@ const AdminServiceRequests = () => {
                   <p>{selected.notes}</p>
                 </div>
               )}
+
+              {isRefundable && (
+                <div className="rounded-lg border-2 border-emerald-500/30 p-3 space-y-3 bg-emerald-500/5">
+                  <p className="text-xs font-bold uppercase text-emerald-700">Refund Settlement</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label className="text-xs">Service Charge (৳)</Label>
+                      <Input
+                        type="number" min={0} value={serviceCharge}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          setServiceCharge(v);
+                          setRefundAmount(String(Math.max(0, ticketAmount - (Number(v) || 0))));
+                        }}
+                        placeholder="0"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs">Main Tk Back (৳)</Label>
+                      <Input
+                        type="number" min={0} value={refundAmount}
+                        onChange={(e) => setRefundAmount(e.target.value)}
+                        placeholder={String(ticketAmount)}
+                      />
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Customer will receive <strong>৳{computedRefund.toLocaleString()}</strong> in their wallet balance immediately on submit.
+                  </p>
+                </div>
+              )}
+
               <div>
                 <p className="text-xs font-bold uppercase text-muted-foreground mb-1">Admin Note</p>
                 <Textarea value={adminNotes} onChange={(e) => setAdminNotes(e.target.value)} placeholder="Visible to the customer" />
@@ -153,11 +207,12 @@ const AdminServiceRequests = () => {
             <Button variant="outline" onClick={() => act("processing")} disabled={!!busy}>Mark Processing</Button>
             <Button variant="destructive" onClick={() => act("rejected")} disabled={!!busy}>Reject</Button>
             <Button onClick={() => act("completed")} disabled={!!busy}>
-              {busy === "completed" ? <><Loader2 className="w-4 h-4 mr-1 animate-spin" /> Saving…</> : "Mark Completed"}
+              {busy === "completed" ? <><Loader2 className="w-4 h-4 mr-1 animate-spin" /> Saving…</> : isRefundable ? "Submit & Refund" : "Mark Completed"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
     </div>
   );
 };

@@ -1644,7 +1644,22 @@ async function ensureServiceRequestsTable() {
         INDEX idx_bsr_user (user_id),
         INDEX idx_bsr_status (status)
   )`);
+  // Self-healing columns for the settlement (service charge / refund) fields
+  const extra = [
+    ['service_charge', 'DECIMAL(12,2) NULL'],
+    ['refund_amount', 'DECIMAL(12,2) NULL'],
+    ['refund_txn_id', 'CHAR(36) NULL'],
+  ];
+  for (const [col, def] of extra) {
+    try {
+      const [cols] = await db.query('SHOW COLUMNS FROM booking_service_requests LIKE ?', [col]);
+      if (!cols || cols.length === 0) {
+        await db.query(`ALTER TABLE booking_service_requests ADD COLUMN ${col} ${def}`);
+      }
+    } catch (e) { /* ignore */ }
+  }
 }
+
 
 // GET /admin/service-requests?status=pending|all&type=void
 router.get('/service-requests', async (req, res) => {
@@ -1671,28 +1686,103 @@ router.get('/service-requests', async (req, res) => {
   }
 });
 
-// PUT /admin/service-requests/:id  { action: 'processing'|'completed'|'rejected', adminNotes }
+// PUT /admin/service-requests/:id
+// { action: 'processing'|'completed'|'rejected', adminNotes, serviceCharge, refundAmount }
+// On 'completed' for void / refund / cancel requests the refundAmount is credited
+// to the customer wallet immediately (refund = ticket amount - service charge).
 router.put('/service-requests/:id', async (req, res) => {
   try {
     await ensureServiceRequestsTable();
-    const { action, adminNotes } = req.body || {};
+    const { action, adminNotes, serviceCharge, refundAmount } = req.body || {};
     const allowed = { processing: 'processing', completed: 'completed', rejected: 'rejected' };
     const nextStatus = allowed[action];
     if (!nextStatus) return res.status(400).json({ message: 'action must be processing, completed or rejected' });
 
-    const [rows] = await db.query('SELECT * FROM booking_service_requests WHERE id = ?', [req.params.id]);
+    const [rows] = await db.query(
+      `SELECT sr.*, b.booking_ref, b.total_amount FROM booking_service_requests sr
+       LEFT JOIN bookings b ON b.id = sr.booking_id WHERE sr.id = ?`,
+      [req.params.id]
+    );
     if (!rows.length) return res.status(404).json({ message: 'Request not found' });
+    const request = rows[0];
+
+    const refundableTypes = ['void', 'refund', 'cancel'];
+    const fee = Math.max(0, Number(serviceCharge || 0));
+    const ticketAmount = Number(request.total_amount || 0);
+    let credit = refundAmount === undefined || refundAmount === null || refundAmount === ''
+      ? Math.max(0, ticketAmount - fee)
+      : Math.max(0, Number(refundAmount));
+
+    const shouldCredit =
+      nextStatus === 'completed' &&
+      refundableTypes.includes(String(request.type)) &&
+      credit > 0 &&
+      !request.refund_txn_id;
+
+    if (credit > ticketAmount && ticketAmount > 0) {
+      return res.status(400).json({ message: `Refund cannot exceed the ticket amount (৳${ticketAmount.toLocaleString()})` });
+    }
+
+    let refundTxnId = request.refund_txn_id || null;
+
+    if (shouldCredit) {
+      refundTxnId = uuidv4();
+      const label = String(request.type) === 'void' ? 'Void' : String(request.type) === 'refund' ? 'Refund' : 'Itinerary cancel';
+      await db.query(
+        `INSERT INTO transactions (id, user_id, booking_id, type, amount, status, payment_method, reference, description, created_at)
+         VALUES (?, ?, ?, 'refund', ?, 'completed', 'wallet', ?, ?, NOW())`,
+        [
+          refundTxnId,
+          request.user_id,
+          request.booking_id,
+          credit,
+          `RFND-${String(request.booking_ref || request.booking_id).slice(0, 12)}`,
+          `${label} refund for ${request.booking_ref || request.booking_id} (service charge ৳${fee.toLocaleString()})`,
+        ]
+      );
+
+      // Credit the wallet row immediately so the balance reflects on the customer ID
+      try {
+        const [upd] = await db.query('UPDATE wallet SET balance = balance + ? WHERE user_id = ?', [credit, request.user_id]);
+        if (!upd?.affectedRows) {
+          await db.query('INSERT INTO wallet (user_id, balance) VALUES (?, ?)', [request.user_id, credit]);
+        }
+      } catch (e) {
+        console.warn('[Admin] Wallet credit skipped:', e?.message || e);
+      }
+
+      // Reflect the settlement on the booking
+      try {
+        const bookingStatus = String(request.type) === 'reissue' ? null : 'cancelled';
+        if (bookingStatus) {
+          await db.query('UPDATE bookings SET status = ?, payment_status = ? WHERE id = ?', [bookingStatus, 'refunded', request.booking_id]);
+        }
+      } catch (e) { /* non-fatal */ }
+    }
 
     await db.query(
-      'UPDATE booking_service_requests SET status = ?, admin_notes = ?, processed_by = ?, processed_at = NOW() WHERE id = ?',
-      [nextStatus, adminNotes || null, req.user.sub, req.params.id]
+      `UPDATE booking_service_requests
+       SET status = ?, admin_notes = ?, service_charge = ?, refund_amount = ?, refund_txn_id = ?,
+           processed_by = ?, processed_at = NOW()
+       WHERE id = ?`,
+      [
+        nextStatus,
+        adminNotes || null,
+        refundableTypes.includes(String(request.type)) ? fee : null,
+        refundableTypes.includes(String(request.type)) ? credit : null,
+        refundTxnId,
+        req.user.sub,
+        req.params.id,
+      ]
     );
-    res.json({ success: true, status: nextStatus });
+
+    res.json({ success: true, status: nextStatus, serviceCharge: fee, refundAmount: credit, credited: shouldCredit });
   } catch (err) {
     console.error('[Admin] Service request update error:', err);
-    res.status(500).json({ message: 'Failed to update request' });
+    res.status(500).json({ message: 'Failed to update request', error: err.message });
   }
 });
+
 
 module.exports = router;
 
