@@ -919,15 +919,22 @@ const DashboardBookingDetail = () => {
                         </p>
                         <div className="space-y-1.5 text-sm">
                           <div className="flex justify-between"><span className="text-muted-foreground">Ticket Amount</span><span className="font-semibold">৳{Number(booking.rawAmount || quoted.total_amount || 0).toLocaleString()}</span></div>
-                          <div className="flex justify-between"><span className="text-muted-foreground">Airlines Refund Fee</span><span className="font-semibold text-destructive">− ৳{Number(quoted.airline_fee || 0).toLocaleString()}</span></div>
+                          <div className="flex justify-between"><span className="text-muted-foreground">{String(quoted.type) === "reissue" ? "Airlines Reissue Fee" : "Airlines Refund Fee"}</span><span className="font-semibold text-destructive">− ৳{Number(quoted.airline_fee || 0).toLocaleString()}</span></div>
                           <div className="flex justify-between"><span className="text-muted-foreground">Service Charge</span><span className="font-semibold text-destructive">− ৳{Number(quoted.service_charge || 0).toLocaleString()}</span></div>
+                          {Number(quoted.no_show_charge || 0) > 0 && (
+                            <div className="flex justify-between"><span className="text-muted-foreground">No-Show Charge</span><span className="font-semibold text-destructive">− ৳{Number(quoted.no_show_charge || 0).toLocaleString()}</span></div>
+                          )}
                           <Separator className="my-1" />
-                          <div className="flex justify-between text-base"><span className="font-bold">You Will Receive</span><span className="font-extrabold text-emerald-600">৳{Number(quoted.refund_amount || 0).toLocaleString()}</span></div>
+                          {String(quoted.type) === "reissue" ? (
+                            <div className="flex justify-between text-base"><span className="font-bold">Total Payable Charges</span><span className="font-extrabold text-destructive">৳{(Number(quoted.airline_fee || 0) + Number(quoted.service_charge || 0) + Number(quoted.no_show_charge || 0)).toLocaleString()}</span></div>
+                          ) : (
+                            <div className="flex justify-between text-base"><span className="font-bold">You Will Receive</span><span className="font-extrabold text-emerald-600">৳{Number(quoted.refund_amount || 0).toLocaleString()}</span></div>
+                          )}
                         </div>
                         {quoted.admin_notes && <p className="text-[11px] text-muted-foreground mt-2">Admin: {quoted.admin_notes}</p>}
                         <label className="flex items-start gap-2 mt-3 text-xs cursor-pointer">
                           <input type="checkbox" className="mt-0.5" checked={quoteAgreed} onChange={(e) => setQuoteAgreed(e.target.checked)} />
-                          <span>I agree with the above deductions and confirm the refund amount.</span>
+                          <span>{String(quoted.type) === "reissue" ? "I agree with the above charges and confirm the reissue." : "I agree with the above deductions and confirm the refund amount."}</span>
                         </label>
                         <Button
                           className="mt-3 w-full sm:w-auto bg-sky-600 hover:bg-sky-700 text-white font-bold"

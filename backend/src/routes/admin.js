@@ -1646,9 +1646,13 @@ async function ensureServiceRequestsTable() {
   )`);
   // Self-healing columns for the settlement (service charge / refund) fields
   const extra = [
+    ['airline_fee', 'DECIMAL(12,2) NULL'],
     ['service_charge', 'DECIMAL(12,2) NULL'],
+    ['no_show_charge', 'DECIMAL(12,2) NULL'],
     ['refund_amount', 'DECIMAL(12,2) NULL'],
     ['refund_txn_id', 'CHAR(36) NULL'],
+    ['quoted_at', 'DATETIME NULL'],
+    ['customer_accepted_at', 'DATETIME NULL'],
   ];
   for (const [col, def] of extra) {
     try {
@@ -1694,7 +1698,7 @@ router.get('/service-requests', async (req, res) => {
 router.put('/service-requests/:id', async (req, res) => {
   try {
     await ensureServiceRequestsTable();
-    const { action, adminNotes, airlineFee, serviceCharge, refundAmount } = req.body || {};
+    const { action, adminNotes, airlineFee, serviceCharge, noShowCharge, refundAmount } = req.body || {};
     const allowed = { quote: 'quoted', processing: 'processing', completed: 'completed', rejected: 'rejected' };
     const nextStatus = allowed[action];
     if (!nextStatus) return res.status(400).json({ message: 'action must be quote, processing, completed or rejected' });
@@ -1709,6 +1713,9 @@ router.put('/service-requests/:id', async (req, res) => {
 
     const refundableTypes = ['void', 'refund', 'cancel'];
     const isRefundable = refundableTypes.includes(String(request.type));
+    // Reissue also gets a quotation (airline fee + service charge + no-show charge),
+    // but never credits the wallet.
+    const isQuotable = isRefundable || String(request.type) === 'reissue';
     const ticketAmount = Number(request.total_amount || 0);
     const airline = airlineFee === undefined || airlineFee === null || airlineFee === ''
       ? Number(request.airline_fee || 0)
@@ -1716,16 +1723,20 @@ router.put('/service-requests/:id', async (req, res) => {
     const fee = serviceCharge === undefined || serviceCharge === null || serviceCharge === ''
       ? Number(request.service_charge || 0)
       : Math.max(0, Number(serviceCharge));
+    const noShow = noShowCharge === undefined || noShowCharge === null || noShowCharge === ''
+      ? Number(request.no_show_charge || 0)
+      : Math.max(0, Number(noShowCharge));
     let credit = refundAmount === undefined || refundAmount === null || refundAmount === ''
-      ? (Number(request.refund_amount) || Math.max(0, ticketAmount - airline - fee))
+      ? (Number(request.refund_amount) || Math.max(0, ticketAmount - airline - fee - noShow))
       : Math.max(0, Number(refundAmount));
+    if (!isRefundable) credit = 0;
 
     if (credit > ticketAmount && ticketAmount > 0) {
       return res.status(400).json({ message: `Refund cannot exceed the ticket amount (৳${ticketAmount.toLocaleString()})` });
     }
 
     // Approval requires the customer to have accepted the quotation first
-    if (nextStatus === 'completed' && isRefundable && !request.customer_accepted_at) {
+    if (nextStatus === 'completed' && isQuotable && !request.customer_accepted_at) {
       return res.status(400).json({ message: 'Customer has not accepted the quotation yet' });
     }
 
@@ -1775,14 +1786,15 @@ router.put('/service-requests/:id', async (req, res) => {
 
     await db.query(
       `UPDATE booking_service_requests
-       SET status = ?, admin_notes = ?, airline_fee = ?, service_charge = ?, refund_amount = ?, refund_txn_id = ?,
+       SET status = ?, admin_notes = ?, airline_fee = ?, service_charge = ?, no_show_charge = ?, refund_amount = ?, refund_txn_id = ?,
            quoted_at = ?, customer_accepted_at = ?, processed_by = ?, processed_at = NOW()
        WHERE id = ?`,
       [
         nextStatus,
         adminNotes || null,
-        isRefundable ? airline : null,
-        isRefundable ? fee : null,
+        isQuotable ? airline : null,
+        isQuotable ? fee : null,
+        isQuotable ? noShow : null,
         isRefundable ? credit : null,
         refundTxnId,
         nextStatus === 'quoted' ? new Date() : (request.quoted_at || null),
@@ -1798,6 +1810,7 @@ router.put('/service-requests/:id', async (req, res) => {
       status: nextStatus,
       airlineFee: airline,
       serviceCharge: fee,
+      noShowCharge: noShow,
       refundAmount: credit,
       credited: shouldCredit,
     });

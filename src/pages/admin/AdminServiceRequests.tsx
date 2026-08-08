@@ -40,13 +40,17 @@ const AdminServiceRequests = () => {
   const [adminNotes, setAdminNotes] = useState("");
   const [airlineFee, setAirlineFee] = useState("");
   const [serviceCharge, setServiceCharge] = useState("");
+  const [noShowCharge, setNoShowCharge] = useState("");
   const [refundAmount, setRefundAmount] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
 
   const ticketAmount = Number(selected?.total_amount || 0);
   const isRefundable = ["void", "refund", "cancel"].includes(String(selected?.type));
+  // Reissue also gets a quotation (fees only, no wallet credit)
+  const isQuotable = isRefundable || String(selected?.type) === "reissue";
+  const deductions = (Number(airlineFee) || 0) + (Number(serviceCharge) || 0) + (Number(noShowCharge) || 0);
   const computedRefund = refundAmount === ""
-    ? Math.max(0, ticketAmount - (Number(airlineFee) || 0) - (Number(serviceCharge) || 0))
+    ? Math.max(0, ticketAmount - deductions)
     : Math.max(0, Number(refundAmount) || 0);
   const customerAccepted = !!selected?.customer_accepted_at;
 
@@ -55,6 +59,7 @@ const AdminServiceRequests = () => {
     setAdminNotes(r?.admin_notes || "");
     setAirlineFee(r?.airline_fee != null ? String(Number(r.airline_fee)) : "");
     setServiceCharge(r?.service_charge != null ? String(Number(r.service_charge)) : "");
+    setNoShowCharge(r?.no_show_charge != null ? String(Number(r.no_show_charge)) : "");
     setRefundAmount(r?.refund_amount != null ? String(Number(r.refund_amount)) : "");
   };
 
@@ -70,10 +75,11 @@ const AdminServiceRequests = () => {
     setBusy(action);
     try {
       const payload: any = { action, adminNotes };
-      if (isRefundable && (action === "quote" || action === "completed")) {
+      if (isQuotable && (action === "quote" || action === "completed")) {
         payload.airlineFee = Number(airlineFee) || 0;
         payload.serviceCharge = Number(serviceCharge) || 0;
-        payload.refundAmount = computedRefund;
+        payload.noShowCharge = Number(noShowCharge) || 0;
+        if (isRefundable) payload.refundAmount = computedRefund;
       }
       const res: any = await api.put(`/admin/service-requests/${selected.id}`, payload);
       toast({
@@ -81,10 +87,12 @@ const AdminServiceRequests = () => {
         description: res?.credited
           ? `Approved. ৳${Number(res.refundAmount || 0).toLocaleString()} credited to the customer balance.`
           : action === "quote"
-            ? `Customer will see the ৳${computedRefund.toLocaleString()} refund quotation for approval.`
+            ? isRefundable
+              ? `Customer will see the ৳${computedRefund.toLocaleString()} refund quotation for approval.`
+              : `Customer will see the ৳${deductions.toLocaleString()} reissue charge quotation for approval.`
             : `Marked as ${action}.`,
       });
-      setSelected(null); setAdminNotes(""); setAirlineFee(""); setServiceCharge(""); setRefundAmount("");
+      setSelected(null); setAdminNotes(""); setAirlineFee(""); setServiceCharge(""); setNoShowCharge(""); setRefundAmount("");
       queryClient.invalidateQueries({ queryKey: ["admin", "service-requests"] });
     } catch (e: any) {
       toast({ title: "Failed", description: e.message || "Error", variant: "destructive" });
@@ -186,18 +194,20 @@ const AdminServiceRequests = () => {
                 </div>
               )}
 
-              {isRefundable && (
+              {isQuotable && (
                 <div className="rounded-lg border-2 border-emerald-500/30 p-3 space-y-3 bg-emerald-500/5">
-                  <p className="text-xs font-bold uppercase text-emerald-700">Refund Quotation</p>
+                  <p className="text-xs font-bold uppercase text-emerald-700">
+                    {isRefundable ? "Refund Quotation" : "Reissue Charge Quotation"}
+                  </p>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <Label className="text-xs">Airlines Refund Fee (৳)</Label>
+                      <Label className="text-xs">{isRefundable ? "Airlines Refund Fee (৳)" : "Airlines Reissue Fee (৳)"}</Label>
                       <Input
                         type="number" min={0} value={airlineFee}
                         onChange={(e) => {
                           const v = e.target.value;
                           setAirlineFee(v);
-                          setRefundAmount(String(Math.max(0, ticketAmount - (Number(v) || 0) - (Number(serviceCharge) || 0))));
+                          setRefundAmount(String(Math.max(0, ticketAmount - (Number(v) || 0) - (Number(serviceCharge) || 0) - (Number(noShowCharge) || 0))));
                         }}
                         placeholder="0"
                       />
@@ -209,23 +219,46 @@ const AdminServiceRequests = () => {
                         onChange={(e) => {
                           const v = e.target.value;
                           setServiceCharge(v);
-                          setRefundAmount(String(Math.max(0, ticketAmount - (Number(airlineFee) || 0) - (Number(v) || 0))));
+                          setRefundAmount(String(Math.max(0, ticketAmount - (Number(airlineFee) || 0) - (Number(v) || 0) - (Number(noShowCharge) || 0))));
                         }}
                         placeholder="0"
                       />
                     </div>
                     <div className="col-span-2">
-                      <Label className="text-xs">Refundable Amount (৳)</Label>
+                      <Label className="text-xs">No-Show Charge (৳)</Label>
                       <Input
-                        type="number" min={0} value={refundAmount}
-                        onChange={(e) => setRefundAmount(e.target.value)}
-                        placeholder={String(ticketAmount)}
+                        type="number" min={0} value={noShowCharge}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          setNoShowCharge(v);
+                          setRefundAmount(String(Math.max(0, ticketAmount - (Number(airlineFee) || 0) - (Number(serviceCharge) || 0) - (Number(v) || 0))));
+                        }}
+                        placeholder="0"
                       />
+                      <p className="text-[11px] text-muted-foreground mt-1">
+                        Passenger did not fly and did not cancel before departure (no-show penalty).
+                      </p>
                     </div>
+                    {isRefundable && (
+                      <div className="col-span-2">
+                        <Label className="text-xs">Refundable Amount (৳)</Label>
+                        <Input
+                          type="number" min={0} value={refundAmount}
+                          onChange={(e) => setRefundAmount(e.target.value)}
+                          placeholder={String(ticketAmount)}
+                        />
+                      </div>
+                    )}
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Quotation: ৳{ticketAmount.toLocaleString()} − ৳{(Number(airlineFee) || 0).toLocaleString()} (airline) − ৳{(Number(serviceCharge) || 0).toLocaleString()} (service) ={" "}
-                    <strong>৳{computedRefund.toLocaleString()}</strong>
+                    {isRefundable ? (
+                      <>
+                        Quotation: ৳{ticketAmount.toLocaleString()} − ৳{(Number(airlineFee) || 0).toLocaleString()} (airline) − ৳{(Number(serviceCharge) || 0).toLocaleString()} (service) − ৳{(Number(noShowCharge) || 0).toLocaleString()} (no-show) ={" "}
+                        <strong>৳{computedRefund.toLocaleString()}</strong>
+                      </>
+                    ) : (
+                      <>Total payable charges: <strong>৳{deductions.toLocaleString()}</strong></>
+                    )}
                   </p>
                   <p className={`text-xs font-semibold ${customerAccepted ? "text-emerald-600" : "text-warning"}`}>
                     {customerAccepted
@@ -242,14 +275,14 @@ const AdminServiceRequests = () => {
             </div>
           )}
           <DialogFooter className="gap-2 flex-wrap">
-            {isRefundable && (
+            {isQuotable && (
               <Button variant="secondary" onClick={() => act("quote")} disabled={!!busy}>
                 {busy === "quote" ? <><Loader2 className="w-4 h-4 mr-1 animate-spin" /> Sending…</> : "Send Quotation"}
               </Button>
             )}
             <Button variant="outline" onClick={() => act("processing")} disabled={!!busy}>Mark Processing</Button>
             <Button variant="destructive" onClick={() => act("rejected")} disabled={!!busy}>Reject</Button>
-            <Button onClick={() => act("completed")} disabled={!!busy || (isRefundable && !customerAccepted)}>
+            <Button onClick={() => act("completed")} disabled={!!busy || (isQuotable && !customerAccepted)}>
               {busy === "completed" ? <><Loader2 className="w-4 h-4 mr-1 animate-spin" /> Saving…</> : isRefundable ? "Approve & Refund" : "Mark Completed"}
             </Button>
           </DialogFooter>
