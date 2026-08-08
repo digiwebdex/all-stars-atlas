@@ -198,20 +198,30 @@ async function tlRawPost(pathname, body, { timeout = 85000, accept = 'applicatio
   return { text, durationMs: Date.now() - started, url };
 }
 
-// Parses the SSE body of /api/Search/Progressive; returns the last (most complete) frame.
+// Parses the SSE body of /api/Search/Progressive; returns the last (most complete) frame
+// plus the UNION of every airline seen in any frame (the stream is incremental, so the
+// last frame alone can miss suppliers that arrived earlier, e.g. SV).
 function parseProgressiveStream(text) {
   const frames = String(text).split(/\n?data:\s*/).map(s => s.trim()).filter(Boolean);
   let last = null;
+  let key = null;
   const items = [];
+  const airlineSet = new Set();
   for (const frame of frames) {
     let json;
     try { json = JSON.parse(frame); } catch (_) { continue; }
     const sr = json.searchResponse || json.item1 || json;
     if (sr && (sr.searchPaginationKey || Array.isArray(sr.airSearchResponses))) last = sr;
-    for (const it of sr?.airSearchResponses || []) items.push(it);
+    if (sr?.searchPaginationKey) key = sr.searchPaginationKey;
+    for (const a of sr?.airlineFilters || []) if (a?.airlineCode) airlineSet.add(a.airlineCode);
+    for (const it of sr?.airSearchResponses || []) {
+      items.push(it);
+      if (it?.platingCarrier) airlineSet.add(it.platingCarrier);
+    }
   }
-  return { summary: last, items };
+  return { summary: last, items, key, airlines: [...airlineSet] };
 }
+
 
 async function searchFlights({ origin, destination, departDate, returnDate, adults = 1, children = 0, infants = 0, cabinClass, preferredAirline, childrenAges = [] }) {
   const config = await getTripLoverConfig();
