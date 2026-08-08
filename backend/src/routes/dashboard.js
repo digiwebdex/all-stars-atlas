@@ -598,17 +598,26 @@ router.get('/payments', async (req, res) => {
     
     const methodLabels = { bkash: 'bKash', nagad: 'Nagad', rocket: 'Rocket', card: 'Card Payment', bank_transfer: 'Bank Transfer' };
     
-    const paymentHistory = rows.map(t => ({
-      id: t.id, 
-      amount: parseFloat(t.amount), 
-      currency: t.currency, 
-      status: t.status === 'completed' ? 'Approved' : t.status === 'pending' ? 'Pending' : 'Rejected',
-      paymentMethod: methodLabels[t.payment_method] || t.payment_method,
-      reference: t.reference, 
-      description: t.description, 
-      createdAt: t.created_at,
-      bookingRef: t.reference || 'N/A',
-    }));
+    const paymentHistory = rows.map(t => {
+      const meta = safeJsonParse(t.meta, {}) || {};
+      return {
+        id: t.id,
+        amount: parseFloat(t.amount),
+        currency: t.currency,
+        status: t.status === 'completed' ? 'Approved' : t.status === 'pending' ? 'Pending' : 'Rejected',
+        paymentMethod: methodLabels[t.payment_method] || t.payment_method,
+        method: methodLabels[t.payment_method] || t.payment_method,
+        reference: t.reference,
+        description: t.description,
+        createdAt: t.created_at,
+        date: t.created_at ? new Date(t.created_at).toLocaleString('en-GB') : null,
+        receiptUrl: meta.receiptUrl || null,
+        transactionId: meta.transactionId || null,
+        notes: meta.notes || null,
+        bookingRef: meta.bookingRef || t.reference || 'N/A',
+      };
+    });
+
     
     // Get admin-configured bank accounts from system_settings
     let bankAccounts = [];
