@@ -426,6 +426,20 @@ const DashboardBookingDetail = () => {
     } finally { setServiceLoading(false); }
   };
 
+  const acceptQuote = async (requestId: string) => {
+    setAcceptingQuote(true);
+    try {
+      await api.post(`/dashboard/service-requests/${requestId}/accept`, {});
+      toast({ title: "Quotation Accepted", description: "Awaiting admin approval — the refund will be credited to your balance." });
+      setQuoteAgreed(false);
+      queryClient.invalidateQueries({ queryKey: ["dashboard", "service-requests"] });
+      refetch();
+    } catch (e: any) {
+      toast({ title: "Failed", description: e.message || "Error", variant: "destructive" });
+    } finally { setAcceptingQuote(false); }
+  };
+
+
 
 
 
