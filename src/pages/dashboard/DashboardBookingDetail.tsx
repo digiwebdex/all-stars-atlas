@@ -831,21 +831,35 @@ const DashboardBookingDetail = () => {
                   ];
                   return (
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                      {boxes.map(box => (
-                        <button
-                          key={box.key}
-                          type="button"
-                          disabled={box.disabled}
-                          onClick={box.onClick}
-                          className={`rounded-xl border-2 bg-card p-4 text-left transition-colors ${box.tone} ${box.disabled ? "opacity-50 cursor-not-allowed hover:bg-card" : ""}`}
-                        >
-                          <box.icon className="w-5 h-5 mb-2" />
-                          <p className="text-sm font-bold text-foreground">{box.label}</p>
-                          <p className="text-[11px] text-muted-foreground mt-0.5 leading-snug">{box.hint}</p>
-                        </button>
-                      ))}
+                      {boxes.map(box => {
+                        const req = latestRequestByType(box.key);
+                        const st = String(req?.status || "").toLowerCase();
+                        const stTone = st === "pending" ? "bg-warning/15 text-warning" : st === "processing" ? "bg-primary/15 text-primary" : st === "completed" ? "bg-emerald-500/15 text-emerald-600" : st === "rejected" ? "bg-destructive/15 text-destructive" : "";
+                        const blocked = box.disabled || ["pending", "processing"].includes(st);
+                        return (
+                          <button
+                            key={box.key}
+                            type="button"
+                            disabled={blocked}
+                            onClick={box.onClick}
+                            className={`rounded-xl border-2 bg-card p-4 text-left transition-colors ${box.tone} ${blocked ? "opacity-60 cursor-not-allowed hover:bg-card" : ""}`}
+                          >
+                            <box.icon className="w-5 h-5 mb-2" />
+                            <p className="text-sm font-bold text-foreground">{box.label}</p>
+                            {st ? (
+                              <>
+                                <span className={`inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${stTone}`}>{st}</span>
+                                {req?.admin_notes && <p className="text-[11px] text-muted-foreground mt-1 leading-snug">Admin: {req.admin_notes}</p>}
+                              </>
+                            ) : (
+                              <p className="text-[11px] text-muted-foreground mt-0.5 leading-snug">{box.hint}</p>
+                            )}
+                          </button>
+                        );
+                      })}
                     </div>
                   );
+
                 })()}
               </div>
             </div>
