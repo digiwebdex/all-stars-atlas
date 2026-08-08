@@ -882,7 +882,7 @@ const DashboardBookingDetail = () => {
                           {String(quoted.type).toUpperCase()} Quotation — Please review & agree
                         </p>
                         <div className="space-y-1.5 text-sm">
-                          <div className="flex justify-between"><span className="text-muted-foreground">Ticket Amount</span><span className="font-semibold">৳{Number(booking.totalAmount || quoted.total_amount || 0).toLocaleString()}</span></div>
+                          <div className="flex justify-between"><span className="text-muted-foreground">Ticket Amount</span><span className="font-semibold">৳{Number(booking.rawAmount || quoted.total_amount || 0).toLocaleString()}</span></div>
                           <div className="flex justify-between"><span className="text-muted-foreground">Airlines Refund Fee</span><span className="font-semibold text-destructive">− ৳{Number(quoted.airline_fee || 0).toLocaleString()}</span></div>
                           <div className="flex justify-between"><span className="text-muted-foreground">Service Charge</span><span className="font-semibold text-destructive">− ৳{Number(quoted.service_charge || 0).toLocaleString()}</span></div>
                           <Separator className="my-1" />
