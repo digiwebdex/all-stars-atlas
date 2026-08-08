@@ -227,7 +227,7 @@ const DashboardBookings = () => {
 
       <div className="flex gap-1 overflow-x-auto scrollbar-none border-b border-border pb-px -mx-1 px-1">
         {statusTabs.map((tab) => (
-          <button key={tab} onClick={() => { setActiveTab(tab); setPage(1); }}
+          <button key={tab} onClick={() => selectTab(tab)}
             className={`px-3 py-2.5 text-xs font-medium whitespace-nowrap transition-colors border-b-2 -mb-px flex items-center gap-1.5 ${
               activeTab === tab ? "border-accent text-accent" : "border-transparent text-muted-foreground hover:text-foreground"
             }`}>
