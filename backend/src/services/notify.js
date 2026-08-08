@@ -135,6 +135,46 @@ async function notifyContactSubmission(contactName, contactEmail) {
   return Promise.allSettled(promises);
 }
 
+// ============ POST-TICKET SERVICE REQUESTS (void / refund / reissue) ============
+// IMPORTANT: These requests are never sent to any airline / GDS API automatically.
+// They only land in the admin panel and are emailed to the configured inbox(es).
+async function getServiceRequestInbox() {
+  const list = [];
+  try {
+    const [rows] = await db.query("SELECT setting_value FROM system_settings WHERE setting_key = 'api_service_request_alerts' LIMIT 1");
+    if (rows.length && rows[0].setting_value) {
+      const cfg = JSON.parse(rows[0].setting_value);
+      if (cfg && String(cfg.enabled) !== 'false' && cfg.emails) {
+        String(cfg.emails).split(/[,;\s]+/).forEach((e) => { if (e && e.includes('@')) list.push(e.trim()); });
+      }
+    }
+  } catch {}
+  if (!list.length) {
+    try { (await getAdminEmails()).forEach((e) => { if (e) list.push(e); }); } catch {}
+  }
+  return [...new Set(list)];
+}
+
+async function notifyServiceRequest({ type, bookingRef, pnr, customerName, customerEmail, customerPhone, notes }) {
+  try {
+    const to = await getServiceRequestInbox();
+    if (!to.length) return;
+    const label = String(type || '').toUpperCase();
+    const lines = [
+      `Request type: <strong>${label}</strong>`,
+      `Booking Ref: <strong>${bookingRef || '-'}</strong>`,
+      `PNR: <strong>${pnr || '-'}</strong>`,
+      `Customer: ${customerName || '-'} (${customerEmail || '-'} / ${customerPhone || '-'})`,
+      `Customer note: ${notes || '-'}`,
+      `Action: review & send quotation from Admin → Void / Refund / Reissue. No airline API call was made.`,
+    ];
+    const tpl = adminNotifyEmail(`New ${label} Request — ${bookingRef || ''}`.trim(), `<ul>${lines.map((l) => `<li>${l}</li>`).join('')}</ul>`);
+    return Promise.allSettled(to.map((addr) => sendEmail({ to: addr, ...tpl })));
+  } catch (err) {
+    console.error('notifyServiceRequest error:', err.message);
+  }
+}
+
 module.exports = {
   notifyAdminsEvent,
   notifyOTP,
@@ -145,4 +185,5 @@ module.exports = {
   notifyPayment,
   notifyVisaStatus,
   notifyContactSubmission,
+  notifyServiceRequest,
 };

@@ -1877,10 +1877,22 @@ router.post('/service-requests', async (req, res) => {
       [id, bookingId, userId, type, 'pending', notes || null, booking.pnr || null]
     );
 
+    // NOTE: void / refund / reissue requests are NEVER pushed to the airline or GDS API here.
+    // The request is only recorded for the admin panel and emailed to the configured inbox.
     try {
-      const { notifyBookingStatus } = require('../services/notify');
-      await notifyBookingStatus(booking.booking_ref, `${type}_requested`, null);
-    } catch (e) { console.log('[Service Request] Notification skipped:', e.message); }
+      const { notifyServiceRequest } = require('../services/notify');
+      const [users] = await db.query('SELECT first_name, last_name, email, phone FROM users WHERE id = ?', [userId]);
+      const u = users[0] || {};
+      await notifyServiceRequest({
+        type,
+        bookingRef: booking.booking_ref,
+        pnr: booking.pnr,
+        customerName: `${u.first_name || ''} ${u.last_name || ''}`.trim(),
+        customerEmail: u.email,
+        customerPhone: u.phone,
+        notes,
+      });
+    } catch (e) { console.log('[Service Request] Admin email skipped:', e.message); }
 
     res.json({ success: true, requestId: id, message: `${type} request submitted. Admin will review it shortly.` });
   } catch (err) {
