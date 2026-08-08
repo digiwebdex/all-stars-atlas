@@ -25,6 +25,14 @@ const paymentSlipUpload = multer({
   limits: { fileSize: 5 * 1024 * 1024 },
 });
 
+// Accept the slip under any field name (receipt, depositSlip, slip, file...)
+const slipUploadAny = paymentSlipUpload.any();
+function pickSlipFile(req) {
+  if (req.file) return req.file;
+  if (Array.isArray(req.files) && req.files.length) return req.files[0];
+  return null;
+}
+
 const APPROVED_TRANSACTION_STATUSES = new Set(['completed', 'approved']);
 
 function isMissingTableError(err, tableName) {
@@ -644,7 +652,7 @@ router.get('/payments', async (req, res) => {
 });
 
 // POST /dashboard/payments
-router.post('/payments', paymentSlipUpload.single('receipt'), async (req, res) => {
+router.post('/payments', slipUploadAny, async (req, res) => {
   try {
     const { paymentMethod, amount, paymentDate, bookingRef, depositBank, chequeNo, chequeBank, chequeDate, transactionId, notes } = req.body;
     
@@ -662,7 +670,8 @@ router.post('/payments', paymentSlipUpload.single('receipt'), async (req, res) =
       if (bookings.length > 0) bookingId = bookings[0].id;
     }
     
-    const receiptUrl = req.file ? `/uploads/payment-slips/${req.file.filename}` : null;
+    const slipFile = pickSlipFile(req);
+    const receiptUrl = slipFile ? `/uploads/payment-slips/${slipFile.filename}` : null;
     const meta = JSON.stringify({ paymentMethod, depositBank, chequeNo, chequeBank, chequeDate, transactionId, paymentDate, notes: notes || null, receiptUrl, bookingRef: bookingRef || null });
     
     await db.query(
@@ -1319,7 +1328,7 @@ router.get('/mfs-accounts', async (req, res) => {
 });
 
 // ── Send Payment Request ────────────────────────────────
-router.post('/payment-requests', paymentSlipUpload.single('depositSlip'), async (req, res) => {
+router.post('/payment-requests', slipUploadAny, async (req, res) => {
   try {
     const userId = req.user.sub || req.user.id;
     const { bookingRef, amount, paymentMethod, notes } = req.body;
@@ -1344,13 +1353,14 @@ router.post('/payment-requests', paymentSlipUpload.single('depositSlip'), async 
     if (bookings.length > 0) bookingId = bookings[0].id;
 
     const id = uuidv4();
-    const receiptUrl = req.file ? `/uploads/payment-slips/${req.file.filename}` : null;
+    const slipFile = pickSlipFile(req);
+    const receiptUrl = slipFile ? `/uploads/payment-slips/${slipFile.filename}` : null;
     const reference = `PAY-${id.substring(0, 8).toUpperCase()}`;
     const meta = JSON.stringify({
       source: 'payment_request',
       bookingRef,
       receiptUrl,
-      originalFileName: req.file?.originalname || null,
+      originalFileName: slipFile?.originalname || null,
       notes: notes || null,
     });
 
@@ -1399,7 +1409,7 @@ router.get('/payment-requests', async (req, res) => {
 });
 
 // ── Edit a Pending Payment / Deposit Request ─────────────
-router.post('/payment-requests/:id/update', paymentSlipUpload.single('depositSlip'), async (req, res) => {
+router.post('/payment-requests/:id/update', slipUploadAny, async (req, res) => {
   try {
     const userId = req.user.sub || req.user.id;
     const { id } = req.params;
@@ -1422,8 +1432,8 @@ router.post('/payment-requests/:id/update', paymentSlipUpload.single('depositSli
     }
     if (transactionId !== undefined) meta.transactionId = String(transactionId).trim() || meta.transactionId;
     if (notes !== undefined) meta.notes = notes || null;
-    if (req.file) {
-      meta.receiptUrl = `/uploads/payment-slips/${req.file.filename}`;
+    if (pickSlipFile(req)) {
+      meta.receiptUrl = `/uploads/payment-slips/${pickSlipFile(req).filename}`;
       meta.originalFileName = req.file.originalname;
     }
 
@@ -1613,7 +1623,7 @@ async function ensureTransactionEnums() {
 }
 
 // ── Wallet Deposit Request (with optional deposit slip) ──
-router.post('/wallet/deposit', paymentSlipUpload.single('depositSlip'), async (req, res) => {
+router.post('/wallet/deposit', slipUploadAny, async (req, res) => {
   try {
     const userId = req.user.sub || req.user.id;
     const { amount, method, notes, transactionId } = req.body;
@@ -1631,12 +1641,13 @@ router.post('/wallet/deposit', paymentSlipUpload.single('depositSlip'), async (r
 
     const txnId = uuidv4();
     const reference = `DEP-${txnId.substring(0, 8).toUpperCase()}`;
-    const receiptUrl = req.file ? `/uploads/payment-slips/${req.file.filename}` : null;
+    const slipFile = pickSlipFile(req);
+    const receiptUrl = slipFile ? `/uploads/payment-slips/${slipFile.filename}` : null;
     const dbMethod = method === 'bank' ? 'bank_transfer' : (method || 'bank_transfer');
     const meta = JSON.stringify({
       source: 'wallet_deposit',
       receiptUrl,
-      originalFileName: req.file?.originalname || null,
+      originalFileName: slipFile?.originalname || null,
       transactionId: txnRef,
       notes: notes || null,
     });
