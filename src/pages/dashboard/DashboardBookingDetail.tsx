@@ -312,6 +312,9 @@ const DashboardBookingDetail = () => {
   const serviceRequests = ((serviceRequestData as any)?.data || []).filter(
     (r: any) => r.booking_id === booking?.rawId
   );
+  const quotedRequest = serviceRequests.find((r: any) => String(r.status).toLowerCase() === "quoted") || null;
+  const quoteCountdown = useCountdown(quotedRequest?.quote_expires_at || null);
+  const quoteExpired = !!quotedRequest?.quote_expires_at && new Date(quotedRequest.quote_expires_at).getTime() <= Date.now();
   const latestRequestByType = (type: string) =>
     serviceRequests
       .filter((r: any) => String(r.type) === type)
@@ -870,7 +873,7 @@ const DashboardBookingDetail = () => {
                   const exclusiveKeys = ["void", "reissue", "refund"];
                   const activeExclusive = exclusiveKeys
                     .map((k) => ({ key: k, req: latestRequestByType(k) }))
-                    .find(({ req }) => req && String(req.status || "").toLowerCase() !== "rejected");
+                    .find(({ req }) => req && !["rejected", "expired"].includes(String(req.status || "").toLowerCase()));
                   const quoted = serviceRequests.find((r: any) => String(r.status).toLowerCase() === "quoted");
                   const accepted = serviceRequests.find((r: any) => String(r.status).toLowerCase() === "accepted");
                   return (
@@ -931,14 +934,21 @@ const DashboardBookingDetail = () => {
                             <div className="flex justify-between text-base"><span className="font-bold">You Will Receive</span><span className="font-extrabold text-emerald-600">৳{Number(quoted.refund_amount || 0).toLocaleString()}</span></div>
                           )}
                         </div>
+                        {quoted.quote_expires_at && (
+                          <p className={`text-[11px] font-semibold mt-2 ${quoteExpired ? "text-destructive" : "text-warning"}`}>
+                            {quoteExpired
+                              ? "This quotation has expired — please submit a new request."
+                              : `Please agree within: ${quoteCountdown || "…"} Otherwise the request will be cancelled automatically.`}
+                          </p>
+                        )}
                         {quoted.admin_notes && <p className="text-[11px] text-muted-foreground mt-2">Admin: {quoted.admin_notes}</p>}
                         <label className="flex items-start gap-2 mt-3 text-xs cursor-pointer">
-                          <input type="checkbox" className="mt-0.5" checked={quoteAgreed} onChange={(e) => setQuoteAgreed(e.target.checked)} />
+                          <input type="checkbox" className="mt-0.5" disabled={quoteExpired} checked={quoteAgreed} onChange={(e) => setQuoteAgreed(e.target.checked)} />
                           <span>{String(quoted.type) === "reissue" ? "I agree with the above charges and confirm the reissue." : "I agree with the above deductions and confirm the refund amount."}</span>
                         </label>
                         <Button
                           className="mt-3 w-full sm:w-auto bg-sky-600 hover:bg-sky-700 text-white font-bold"
-                          disabled={!quoteAgreed || acceptingQuote}
+                          disabled={!quoteAgreed || acceptingQuote || quoteExpired}
                           onClick={() => acceptQuote(quoted.id)}
                         >
                           {acceptingQuote ? "Submitting…" : "Agree & Submit"}
