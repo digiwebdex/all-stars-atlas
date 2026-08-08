@@ -1742,9 +1742,12 @@ router.put('/service-requests/:id', async (req, res) => {
 
     // Quotation validity window — the customer must accept before it expires,
     // otherwise the request auto-cancels and a fresh request is required.
-    const validHours = Math.min(720, Math.max(1, Number(quoteValidHours) || 24));
+    const rawMinutes = Number(req.body?.quoteValidMinutes);
+    const validMinutes = Number.isFinite(rawMinutes) && rawMinutes > 0
+      ? Math.min(43200, Math.max(1, Math.round(rawMinutes)))
+      : Math.min(43200, Math.max(1, Math.round((Number(quoteValidHours) || 24) * 60)));
     const expiresAt = nextStatus === 'quoted'
-      ? new Date(Date.now() + validHours * 3600 * 1000)
+      ? new Date(Date.now() + validMinutes * 60 * 1000)
       : (request.quote_expires_at || null);
 
     // Approval requires the customer to have accepted the quotation first
