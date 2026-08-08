@@ -1775,21 +1775,33 @@ router.put('/service-requests/:id', async (req, res) => {
 
     await db.query(
       `UPDATE booking_service_requests
-       SET status = ?, admin_notes = ?, service_charge = ?, refund_amount = ?, refund_txn_id = ?,
-           processed_by = ?, processed_at = NOW()
+       SET status = ?, admin_notes = ?, airline_fee = ?, service_charge = ?, refund_amount = ?, refund_txn_id = ?,
+           quoted_at = ?, customer_accepted_at = ?, processed_by = ?, processed_at = NOW()
        WHERE id = ?`,
       [
         nextStatus,
         adminNotes || null,
-        refundableTypes.includes(String(request.type)) ? fee : null,
-        refundableTypes.includes(String(request.type)) ? credit : null,
+        isRefundable ? airline : null,
+        isRefundable ? fee : null,
+        isRefundable ? credit : null,
         refundTxnId,
+        nextStatus === 'quoted' ? new Date() : (request.quoted_at || null),
+        // Re-quoting resets the customer's acceptance
+        nextStatus === 'quoted' ? null : (request.customer_accepted_at || null),
         req.user.sub,
         req.params.id,
       ]
     );
 
-    res.json({ success: true, status: nextStatus, serviceCharge: fee, refundAmount: credit, credited: shouldCredit });
+    res.json({
+      success: true,
+      status: nextStatus,
+      airlineFee: airline,
+      serviceCharge: fee,
+      refundAmount: credit,
+      credited: shouldCredit,
+    });
+
   } catch (err) {
     console.error('[Admin] Service request update error:', err);
     res.status(500).json({ message: 'Failed to update request', error: err.message });
