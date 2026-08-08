@@ -781,7 +781,7 @@ const DashboardBookingDetail = () => {
           </Section>
 
           {/* ━━ Manage Booking ━━ */}
-          <Section title="Manage Booking" defaultOpen={false}>
+          <Section title="Manage Booking" defaultOpen={isTicketed || hasFinalTicket}>
             <div className="p-5 space-y-4">
               <div>
                 <p className="text-xs font-bold uppercase text-muted-foreground mb-3">Flight Status</p>
@@ -796,7 +796,9 @@ const DashboardBookingDetail = () => {
               <Separator />
               <div>
                 <p className="text-xs font-bold uppercase text-muted-foreground mb-3">Actions</p>
-                {(() => {
+                {!(isTicketed || hasFinalTicket) ? (
+                  <p className="text-xs text-muted-foreground">Void, Reissue, Refund and Itinerary Cancel options become available once the ticket is issued.</p>
+                ) : (() => {
                   const vw = getVoidWindow(booking.ticketedAt || latestIssuedRequest?.processed_at || null);
                   const boxes = [
                     { key: "void", label: "Void", hint: vw.eligible ? "Available until 11:30 PM today" : vw.reason, icon: XCircle, tone: "text-destructive border-destructive/30 hover:bg-destructive/5", disabled: !vw.eligible, onClick: () => setVoidOpen(true) },
