@@ -774,7 +774,7 @@ const DashboardBookingDetail = () => {
                 </div>
                 <div className="px-4 py-2 space-y-2">
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Base Price</span>
+                    <span className="text-muted-foreground">Base Fare</span>
                     <span className="font-medium">{booking.baseFare.toLocaleString('en-BD', { minimumFractionDigits: 2 })} BDT</span>
                   </div>
                   <div className="flex justify-between text-sm">
