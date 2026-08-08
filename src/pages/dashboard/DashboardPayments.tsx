@@ -13,6 +13,8 @@ import { downloadCSV } from "@/lib/csv-export";
 import { useDashboardPayments, useSubmitPayment } from "@/hooks/useApiData";
 import DataLoader from "@/components/DataLoader";
 import { useToast } from "@/hooks/use-toast";
+import { fileUrl } from "@/lib/config";
+
 
 
 const statusColors: Record<string, string> = {
