@@ -57,14 +57,25 @@ const AdminServiceRequests = () => {
     if (!selected) return;
     setBusy(action);
     try {
-      await api.put(`/admin/service-requests/${selected.id}`, { action, adminNotes });
-      toast({ title: "Request updated", description: `Marked as ${action}.` });
-      setSelected(null); setAdminNotes("");
+      const payload: any = { action, adminNotes };
+      if (action === "completed" && isRefundable) {
+        payload.serviceCharge = Number(serviceCharge) || 0;
+        payload.refundAmount = computedRefund;
+      }
+      const res: any = await api.put(`/admin/service-requests/${selected.id}`, payload);
+      toast({
+        title: "Request updated",
+        description: res?.credited
+          ? `Marked completed. ৳${Number(res.refundAmount || 0).toLocaleString()} credited to the customer balance.`
+          : `Marked as ${action}.`,
+      });
+      setSelected(null); setAdminNotes(""); setServiceCharge(""); setRefundAmount("");
       queryClient.invalidateQueries({ queryKey: ["admin", "service-requests"] });
     } catch (e: any) {
       toast({ title: "Failed", description: e.message || "Error", variant: "destructive" });
     } finally { setBusy(null); }
   };
+
 
   return (
     <div className="space-y-6">
