@@ -33,6 +33,40 @@ const statusLabelMap: Record<string, string> = {
 };
 function displayStatus(status: string) { return statusLabelMap[status] || status; }
 
+// URL ?status=... -> tab label (sidebar Void / Refund / Reissue links)
+const urlStatusToTab: Record<string, string> = {
+  voided: "Void", void: "Void",
+  refunded: "Refund", refund: "Refund",
+  reissued: "Exchange", reissue: "Exchange", exchange: "Exchange",
+  on_hold: "Reserved", reserved: "Reserved",
+  pending: "Pending", confirmed: "Confirmed", completed: "Completed",
+  cancelled: "Cancelled", expired: "Expired", un_confirmed: "Un-Confirmed",
+  in_progress: "Issue In Progress", issue_in_progress: "Issue In Progress",
+};
+
+// Which raw booking statuses belong to which tab
+const tabStatusMatchers: Record<string, string[]> = {
+  Reserved: ["on_hold", "reserved"],
+  Pending: ["pending", "awaiting_payment"],
+  "Issue In Progress": ["in_progress", "issue_in_progress", "processing"],
+  Confirmed: ["confirmed", "ticketed"],
+  Completed: ["completed"],
+  Void: ["void", "voided"],
+  Refund: ["refund", "refunded"],
+  Exchange: ["exchange", "reissued", "reissue"],
+  Expired: ["expired"],
+  Cancelled: ["cancelled", "canceled"],
+  "Un-Confirmed": ["un_confirmed", "unconfirmed"],
+};
+
+function matchesTab(status: string, tab: string) {
+  if (tab === "All") return true;
+  const s = String(status || "").toLowerCase();
+  const list = tabStatusMatchers[tab];
+  if (list) return list.includes(s);
+  return s === tab.toLowerCase().replace(/[ -]/g, "_");
+}
+
 const statusColors: Record<string, string> = {
   "Confirmed": "bg-accent/10 text-accent border-accent/20", "confirmed": "bg-accent/10 text-accent border-accent/20",
   "Ticketed": "bg-accent/10 text-accent border-accent/20", "ticketed": "bg-accent/10 text-accent border-accent/20",
