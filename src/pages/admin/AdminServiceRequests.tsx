@@ -254,14 +254,14 @@ const AdminServiceRequests = () => {
                       </div>
                     )}
                     <div className="col-span-2">
-                      <Label className="text-xs">Quotation Validity (hours)</Label>
+                      <Label className="text-xs">Quotation Validity (minutes)</Label>
                       <Input
-                        type="number" min={1} max={720} value={quoteValidHours}
+                        type="number" min={1} max={43200} value={quoteValidHours}
                         onChange={(e) => setQuoteValidHours(e.target.value)}
-                        placeholder="24"
+                        placeholder="15"
                       />
                       <p className="text-[11px] text-muted-foreground mt-1">
-                        Customer must press "Agree &amp; Submit" within this window. Otherwise the request auto-cancels and they must send a new one.
+                        Customer must press "Agree &amp; Submit" within this many minutes. Otherwise the request auto-cancels and they must send a new one.
                         {selected?.quote_expires_at && String(selected?.status) === "quoted" && (
                           <> Current quote expires: <strong>{fmt(selected.quote_expires_at)}</strong></>
                         )}
