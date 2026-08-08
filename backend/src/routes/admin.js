@@ -1646,9 +1646,13 @@ async function ensureServiceRequestsTable() {
   )`);
   // Self-healing columns for the settlement (service charge / refund) fields
   const extra = [
+    ['airline_fee', 'DECIMAL(12,2) NULL'],
     ['service_charge', 'DECIMAL(12,2) NULL'],
+    ['no_show_charge', 'DECIMAL(12,2) NULL'],
     ['refund_amount', 'DECIMAL(12,2) NULL'],
     ['refund_txn_id', 'CHAR(36) NULL'],
+    ['quoted_at', 'DATETIME NULL'],
+    ['customer_accepted_at', 'DATETIME NULL'],
   ];
   for (const [col, def] of extra) {
     try {
