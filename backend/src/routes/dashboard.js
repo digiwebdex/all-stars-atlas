@@ -1932,6 +1932,29 @@ router.post('/service-requests/:id/accept', async (req, res) => {
   }
 });
 
+// POST /dashboard/service-requests/:id/decline — customer rejects the admin quotation
+router.post('/service-requests/:id/decline', async (req, res) => {
+  try {
+    const userId = req.user.sub;
+    await ensureServiceRequestsTable();
+    const [rows] = await db.query('SELECT * FROM booking_service_requests WHERE id = ? AND user_id = ?', [req.params.id, userId]);
+    if (!rows.length) return res.status(404).json({ message: 'Request not found' });
+    const request = rows[0];
+    if (!['pending', 'quoted'].includes(String(request.status))) {
+      return res.status(400).json({ message: 'This request can no longer be cancelled' });
+    }
+    const note = String(req.body?.notes || '').slice(0, 500);
+    await db.query(
+      "UPDATE booking_service_requests SET status = 'rejected', notes = CONCAT(COALESCE(notes,''), ?) WHERE id = ?",
+      [note ? `\n[Customer declined] ${note}` : '\n[Customer declined the quotation]', req.params.id]
+    );
+    res.json({ success: true, status: 'rejected', message: 'Request cancelled. You can submit a new request anytime.' });
+  } catch (err) {
+    console.error('[Dashboard] Decline quotation error:', err);
+    res.status(500).json({ message: 'Failed to decline quotation' });
+  }
+});
+
 // Auto-cancel quotations that were not accepted within the admin-set validity window
 async function expireStaleQuotations() {
   try {
