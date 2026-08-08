@@ -145,16 +145,32 @@ function mapBooking(b: any) {
 const DashboardBookings = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState("All");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const urlStatus = (searchParams.get("status") || "").toLowerCase();
+  const [activeTab, setActiveTab] = useState(urlStatusToTab[urlStatus] || "All");
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
   const [perPage, setPerPage] = useState("10");
   const [page, setPage] = useState(1);
   const [docVerifyBooking, setDocVerifyBooking] = useState<any>(null);
 
-  const statusParam = (activeTab !== "All" && activeTab !== "Failed") ? (activeTab === "Reserved" ? "on_hold" : activeTab.toLowerCase().replace(/[ -]/g, "_")) : undefined;
+  // Keep tab in sync when the sidebar changes ?status=voided / refunded / reissued
+  useEffect(() => {
+    const mapped = urlStatusToTab[urlStatus];
+    if (mapped && mapped !== activeTab) { setActiveTab(mapped); setPage(1); }
+    if (!urlStatus && activeTab !== "All" && !searchParams.get("keep")) { /* no-op */ }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [urlStatus]);
+
+  const selectTab = (tab: string) => {
+    setActiveTab(tab);
+    setPage(1);
+    if (searchParams.get("status")) { searchParams.delete("status"); setSearchParams(searchParams, { replace: true }); }
+  };
+
+  // Fetch everything and filter client-side so each tab only shows its own statuses
   const { data, isLoading, error, refetch } = useDashboardBookings({
-    status: statusParam, search: search || undefined, limit: 100, page,
+    search: search || undefined, limit: 100, page,
   });
 
   const resolved = (data as any) || {};
@@ -166,21 +182,20 @@ const DashboardBookings = () => {
   const validBookings = allMapped.filter((b: any) => hasPnr(b));
   const failedBookings = allMapped.filter((b: any) => !hasPnr(b));
 
-  // Show failed bookings only in "Failed" or "All" tab
+  // Show failed bookings only in "Failed" tab, otherwise filter by the active tab
   const isFailedTab = activeTab === "Failed";
-  const bookings = isFailedTab ? failedBookings : validBookings;
+  const bookings = isFailedTab
+    ? failedBookings
+    : validBookings.filter((b: any) => matchesTab(b.status, activeTab));
 
-  const tabCounts: Record<string, number> = resolved?.tabCounts || {};
-  if (!tabCounts["All"]) {
-    tabCounts["All"] = validBookings.length;
-    tabCounts["Failed"] = failedBookings.length;
-    statusTabs.forEach(tab => {
-      if (tab !== "All" && tab !== "Failed") {
-        const tabKey = tab === "Reserved" ? "on_hold" : tab.toLowerCase().replace(/ /g, "_");
-        tabCounts[tab] = validBookings.filter((b: any) => b.status?.toLowerCase() === tabKey || displayStatus(b.status) === tab).length;
-      }
-    });
-  }
+  const tabCounts: Record<string, number> = {};
+  tabCounts["All"] = validBookings.length;
+  tabCounts["Failed"] = failedBookings.length;
+  statusTabs.forEach(tab => {
+    if (tab !== "All" && tab !== "Failed") {
+      tabCounts[tab] = validBookings.filter((b: any) => matchesTab(b.status, tab)).length;
+    }
+  });
 
   const total = isFailedTab ? failedBookings.length : validBookings.length;
   const totalPages = Math.ceil(total / Number(perPage)) || 1;
