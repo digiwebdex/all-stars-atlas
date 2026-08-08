@@ -177,16 +177,6 @@ const AdminPaymentApprovals = () => {
                             <ImageIcon className="w-3.5 h-3.5" />
                           </Button>
                         )}
-                        {p.status === "Pending" && (
-                          <>
-                            <Button size="sm" variant="outline" className="h-7 px-2 text-success" onClick={() => handleApprove(p.id)} disabled={actionLoading === p.id}>
-                              {actionLoading === p.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5 mr-1" />} Approve
-                            </Button>
-                            <Button size="sm" variant="outline" className="h-7 px-2 text-destructive" onClick={() => handleReject(p.id)} disabled={actionLoading === p.id}>
-                              <XCircle className="w-3.5 h-3.5 mr-1" /> Reject
-                            </Button>
-                          </>
-                        )}
                         <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => setViewPayment(p)}>
                           <Eye className="w-3.5 h-3.5" />
                         </Button>
