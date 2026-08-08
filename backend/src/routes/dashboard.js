@@ -266,6 +266,30 @@ async function ensureTicketIssueRequestsTable(executor = db) {
   }
 }
 
+// Post-ticket service requests (void / reissue / refund / itinerary cancel)
+const SERVICE_REQUEST_TYPES = ['void', 'reissue', 'refund', 'cancel'];
+async function ensureServiceRequestsTable(executor = db) {
+  await executor.query(`CREATE TABLE IF NOT EXISTS booking_service_requests (
+        id CHAR(36) PRIMARY KEY,
+        booking_id CHAR(36) NOT NULL,
+        user_id CHAR(36) NOT NULL,
+        type VARCHAR(20) NOT NULL,
+        status VARCHAR(20) DEFAULT 'pending',
+        notes TEXT,
+        admin_notes TEXT,
+        pnr VARCHAR(20),
+        processed_by CHAR(36),
+        processed_at DATETIME,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_bsr_booking (booking_id),
+        INDEX idx_bsr_user (user_id),
+        INDEX idx_bsr_status (status)
+  )`);
+}
+
+
+
 // All routes require auth
 router.use(authenticate);
 
