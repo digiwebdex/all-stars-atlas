@@ -644,9 +644,9 @@ router.get('/payments', async (req, res) => {
 });
 
 // POST /dashboard/payments
-router.post('/payments', async (req, res) => {
+router.post('/payments', paymentSlipUpload.single('receipt'), async (req, res) => {
   try {
-    const { paymentMethod, amount, paymentDate, bookingRef, depositBank, chequeNo, chequeBank, chequeDate, transactionId } = req.body;
+    const { paymentMethod, amount, paymentDate, bookingRef, depositBank, chequeNo, chequeBank, chequeDate, transactionId, notes } = req.body;
     
     const id = uuidv4();
     const methodMap = {
@@ -662,12 +662,14 @@ router.post('/payments', async (req, res) => {
       if (bookings.length > 0) bookingId = bookings[0].id;
     }
     
-    const meta = JSON.stringify({ paymentMethod, depositBank, chequeNo, chequeBank, chequeDate, transactionId, paymentDate });
+    const receiptUrl = req.file ? `/uploads/payment-slips/${req.file.filename}` : null;
+    const meta = JSON.stringify({ paymentMethod, depositBank, chequeNo, chequeBank, chequeDate, transactionId, paymentDate, notes: notes || null, receiptUrl, bookingRef: bookingRef || null });
     
     await db.query(
       `INSERT INTO transactions (id, user_id, booking_id, type, amount, status, payment_method, reference, description, meta) VALUES (?, ?, ?, 'payment', ?, 'pending', ?, ?, ?, ?)`,
       [id, req.user.sub, bookingId, parseFloat(amount) || 0, dbMethod, transactionId || `PAY-${id.substring(0,8).toUpperCase()}`, `Payment via ${paymentMethod}`, meta]
     );
+
     
     res.status(201).json({ id, message: 'Payment submitted for review', status: 'pending' });
   } catch (err) { console.error(err); res.status(500).json({ message: 'Something went wrong', status: 500 }); }
