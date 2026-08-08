@@ -1432,9 +1432,10 @@ router.post('/payment-requests/:id/update', slipUploadAny, async (req, res) => {
     }
     if (transactionId !== undefined) meta.transactionId = String(transactionId).trim() || meta.transactionId;
     if (notes !== undefined) meta.notes = notes || null;
-    if (pickSlipFile(req)) {
-      meta.receiptUrl = `/uploads/payment-slips/${pickSlipFile(req).filename}`;
-      meta.originalFileName = req.file.originalname;
+    const newSlip = pickSlipFile(req);
+    if (newSlip) {
+      meta.receiptUrl = `/uploads/payment-slips/${newSlip.filename}`;
+      meta.originalFileName = newSlip.originalname;
     }
 
     await db.query('UPDATE transactions SET amount = ?, meta = ? WHERE id = ?', [amt, JSON.stringify(meta), id]);
