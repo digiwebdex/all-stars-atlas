@@ -2007,5 +2007,106 @@ router.post('/bookings/:id/request-partial', async (req, res) => {
   }
 });
 
+// =============== PARTIAL PAYMENT PERMISSION (UI visibility) ===============
+// GET /dashboard/partial-permission → { allowed, reason, minHours, upfrontPct }
+router.get('/partial-permission', async (req, res) => {
+  try {
+    const userId = req.user.sub || req.user.id;
+    const settings = await loadPartialSettings();
+    const perm = await isPartialAllowedForUser(userId, settings);
+    res.json({
+      allowed: !!perm.allowed,
+      reason: perm.reason,
+      minHours: settings.minHours,
+      upfrontPct: settings.upfrontPct,
+    });
+  } catch (err) {
+    console.error('[Dashboard] partial-permission error:', err.message);
+    res.json({ allowed: false, reason: 'error' });
+  }
+});
+
+// =============== ACTUAL TICKETING TIME LIMIT ===============
+// GET /dashboard/bookings/:id/time-limit → { timeLimit, source }
+// Priority: stored payment_deadline → GDS details JSON → live Sabre PNR (ADTK / TicketTimeLimit).
+function parseAdtkString(str) {
+  if (!str || typeof str !== 'string') return null;
+  const months = { JAN: 0, FEB: 1, MAR: 2, APR: 3, MAY: 4, JUN: 5, JUL: 6, AUG: 7, SEP: 8, OCT: 9, NOV: 10, DEC: 11 };
+  const m = str.match(/(\d{2})([A-Z]{3})(\d{2,4})\s*(?:AT)?\s*(\d{2}):?(\d{2})\s*(GMT|UTC)?/i);
+  if (!m) return null;
+  let yr = parseInt(m[3], 10);
+  if (yr < 100) yr += 2000;
+  const d = new Date(Date.UTC(yr, months[m[2].toUpperCase()] ?? 0, parseInt(m[1], 10), parseInt(m[4], 10), parseInt(m[5], 10), 0));
+  return isNaN(d.getTime()) ? null : d;
+}
+
+function deepFindTimeLimit(node, depth = 0) {
+  if (!node || depth > 8) return null;
+  if (typeof node === 'string') {
+    if (/ADTK|TTL|TICKET/i.test(node)) return parseAdtkString(node);
+    return null;
+  }
+  if (Array.isArray(node)) {
+    for (const v of node) { const r = deepFindTimeLimit(v, depth + 1); if (r) return r; }
+    return null;
+  }
+  if (typeof node !== 'object') return null;
+  for (const [k, v] of Object.entries(node)) {
+    if (/(ticketingtimelimit|tickettimelimit|timelimit|lastticketdate|lastticketingdate|ticketbydate)/i.test(k)) {
+      if (typeof v === 'string') {
+        const d = new Date(v);
+        if (!isNaN(d.getTime())) return d;
+        const a = parseAdtkString(v);
+        if (a) return a;
+      }
+    }
+    const r = deepFindTimeLimit(v, depth + 1);
+    if (r) return r;
+  }
+  return null;
+}
+
+router.get('/bookings/:id/time-limit', async (req, res) => {
+  try {
+    const userId = req.user.sub || req.user.id;
+    const [rows] = await db.query('SELECT * FROM bookings WHERE id = ? AND user_id = ?', [req.params.id, userId]);
+    if (!rows.length) return res.status(404).json({ message: 'Booking not found' });
+    const b = rows[0];
+
+    if (b.payment_deadline) {
+      return res.json({ timeLimit: new Date(b.payment_deadline).toISOString(), source: 'stored' });
+    }
+
+    const details = safeJsonParse(b.details, {}) || {};
+    const fromDetails = deepFindTimeLimit(details);
+    if (fromDetails) {
+      await db.query('UPDATE bookings SET payment_deadline = ? WHERE id = ?', [fromDetails, b.id]).catch(() => {});
+      return res.json({ timeLimit: fromDetails.toISOString(), source: 'gds_details' });
+    }
+
+    const pnr = b.pnr || details.gdsPnr || null;
+    if (pnr) {
+      try {
+        const { getBooking: sabreGetBooking } = require('./sabre-flights');
+        const result = await sabreGetBooking({ pnr });
+        if (result?.success) {
+          const live = deepFindTimeLimit(result.rawResponse) || deepFindTimeLimit(result.ticketing);
+          if (live) {
+            await db.query('UPDATE bookings SET payment_deadline = ? WHERE id = ?', [live, b.id]).catch(() => {});
+            return res.json({ timeLimit: live.toISOString(), source: 'gds_live' });
+          }
+        }
+      } catch (gdsErr) {
+        console.warn('[Dashboard] time-limit GDS lookup failed:', gdsErr.message);
+      }
+    }
+
+    res.json({ timeLimit: null, source: 'unavailable' });
+  } catch (err) {
+    console.error('[Dashboard] time-limit error:', err.message);
+    res.json({ timeLimit: null, source: 'error' });
+  }
+});
+
 module.exports = router;
 
