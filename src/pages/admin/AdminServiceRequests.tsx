@@ -194,18 +194,20 @@ const AdminServiceRequests = () => {
                 </div>
               )}
 
-              {isRefundable && (
+              {isQuotable && (
                 <div className="rounded-lg border-2 border-emerald-500/30 p-3 space-y-3 bg-emerald-500/5">
-                  <p className="text-xs font-bold uppercase text-emerald-700">Refund Quotation</p>
+                  <p className="text-xs font-bold uppercase text-emerald-700">
+                    {isRefundable ? "Refund Quotation" : "Reissue Charge Quotation"}
+                  </p>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <Label className="text-xs">Airlines Refund Fee (৳)</Label>
+                      <Label className="text-xs">{isRefundable ? "Airlines Refund Fee (৳)" : "Airlines Reissue Fee (৳)"}</Label>
                       <Input
                         type="number" min={0} value={airlineFee}
                         onChange={(e) => {
                           const v = e.target.value;
                           setAirlineFee(v);
-                          setRefundAmount(String(Math.max(0, ticketAmount - (Number(v) || 0) - (Number(serviceCharge) || 0))));
+                          setRefundAmount(String(Math.max(0, ticketAmount - (Number(v) || 0) - (Number(serviceCharge) || 0) - (Number(noShowCharge) || 0))));
                         }}
                         placeholder="0"
                       />
@@ -217,23 +219,46 @@ const AdminServiceRequests = () => {
                         onChange={(e) => {
                           const v = e.target.value;
                           setServiceCharge(v);
-                          setRefundAmount(String(Math.max(0, ticketAmount - (Number(airlineFee) || 0) - (Number(v) || 0))));
+                          setRefundAmount(String(Math.max(0, ticketAmount - (Number(airlineFee) || 0) - (Number(v) || 0) - (Number(noShowCharge) || 0))));
                         }}
                         placeholder="0"
                       />
                     </div>
                     <div className="col-span-2">
-                      <Label className="text-xs">Refundable Amount (৳)</Label>
+                      <Label className="text-xs">No-Show Charge (৳)</Label>
                       <Input
-                        type="number" min={0} value={refundAmount}
-                        onChange={(e) => setRefundAmount(e.target.value)}
-                        placeholder={String(ticketAmount)}
+                        type="number" min={0} value={noShowCharge}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          setNoShowCharge(v);
+                          setRefundAmount(String(Math.max(0, ticketAmount - (Number(airlineFee) || 0) - (Number(serviceCharge) || 0) - (Number(v) || 0))));
+                        }}
+                        placeholder="0"
                       />
+                      <p className="text-[11px] text-muted-foreground mt-1">
+                        Passenger did not fly and did not cancel before departure (no-show penalty).
+                      </p>
                     </div>
+                    {isRefundable && (
+                      <div className="col-span-2">
+                        <Label className="text-xs">Refundable Amount (৳)</Label>
+                        <Input
+                          type="number" min={0} value={refundAmount}
+                          onChange={(e) => setRefundAmount(e.target.value)}
+                          placeholder={String(ticketAmount)}
+                        />
+                      </div>
+                    )}
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Quotation: ৳{ticketAmount.toLocaleString()} − ৳{(Number(airlineFee) || 0).toLocaleString()} (airline) − ৳{(Number(serviceCharge) || 0).toLocaleString()} (service) ={" "}
-                    <strong>৳{computedRefund.toLocaleString()}</strong>
+                    {isRefundable ? (
+                      <>
+                        Quotation: ৳{ticketAmount.toLocaleString()} − ৳{(Number(airlineFee) || 0).toLocaleString()} (airline) − ৳{(Number(serviceCharge) || 0).toLocaleString()} (service) − ৳{(Number(noShowCharge) || 0).toLocaleString()} (no-show) ={" "}
+                        <strong>৳{computedRefund.toLocaleString()}</strong>
+                      </>
+                    ) : (
+                      <>Total payable charges: <strong>৳{deductions.toLocaleString()}</strong></>
+                    )}
                   </p>
                   <p className={`text-xs font-semibold ${customerAccepted ? "text-emerald-600" : "text-warning"}`}>
                     {customerAccepted
