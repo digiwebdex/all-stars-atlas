@@ -297,6 +297,7 @@ async function ensureServiceRequestsTable(executor = db) {
     ['refund_txn_id', 'CHAR(36) NULL'],
     ['quoted_at', 'DATETIME NULL'],
     ['customer_accepted_at', 'DATETIME NULL'],
+    ['quote_expires_at', 'DATETIME NULL'],
   ];
   for (const [col, def] of extra) {
     try {
@@ -1906,11 +1907,19 @@ router.post('/service-requests/:id/accept', async (req, res) => {
   try {
     const userId = req.user.sub;
     await ensureServiceRequestsTable();
+    await expireStaleQuotations();
     const [rows] = await db.query('SELECT * FROM booking_service_requests WHERE id = ? AND user_id = ?', [req.params.id, userId]);
     if (!rows.length) return res.status(404).json({ message: 'Request not found' });
     const request = rows[0];
+    if (String(request.status) === 'expired') {
+      return res.status(400).json({ message: 'This quotation has expired. Please submit a new request.' });
+    }
     if (String(request.status) !== 'quoted') {
       return res.status(400).json({ message: 'No quotation is awaiting your approval for this request' });
+    }
+    if (request.quote_expires_at && new Date(request.quote_expires_at).getTime() < Date.now()) {
+      await db.query("UPDATE booking_service_requests SET status = 'expired' WHERE id = ?", [req.params.id]);
+      return res.status(400).json({ message: 'This quotation has expired. Please submit a new request.' });
     }
     await db.query(
       "UPDATE booking_service_requests SET status = 'accepted', customer_accepted_at = NOW() WHERE id = ?",
@@ -1923,8 +1932,16 @@ router.post('/service-requests/:id/accept', async (req, res) => {
   }
 });
 
+// Auto-cancel quotations that were not accepted within the admin-set validity window
+async function expireStaleQuotations() {
+  try {
+    await db.query("UPDATE booking_service_requests SET status = 'expired' WHERE status = 'quoted' AND quote_expires_at IS NOT NULL AND quote_expires_at < NOW()");
+  } catch (e) { /* ignore */ }
+}
+
 // GET /dashboard/service-requests — user's own void/reissue/refund/cancel requests
 router.get('/service-requests', async (req, res) => {
+  await expireStaleQuotations();
 
   try {
     const userId = req.user.sub;

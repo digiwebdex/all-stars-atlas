@@ -1653,6 +1653,7 @@ async function ensureServiceRequestsTable() {
     ['refund_txn_id', 'CHAR(36) NULL'],
     ['quoted_at', 'DATETIME NULL'],
     ['customer_accepted_at', 'DATETIME NULL'],
+    ['quote_expires_at', 'DATETIME NULL'],
   ];
   for (const [col, def] of extra) {
     try {
@@ -1670,6 +1671,10 @@ router.get('/service-requests', async (req, res) => {
   try {
     await ensureServiceRequestsTable();
     const { status = 'pending', type } = req.query;
+    // Auto-cancel quotations the customer did not accept in time
+    try {
+      await db.query("UPDATE booking_service_requests SET status = 'expired' WHERE status = 'quoted' AND quote_expires_at IS NOT NULL AND quote_expires_at < NOW()");
+    } catch (e) { /* ignore */ }
     let sql = `SELECT sr.*, b.booking_ref, b.pnr as booking_pnr, b.status as booking_status,
                b.total_amount, b.payment_status, b.details, b.booking_type,
                TRIM(CONCAT(COALESCE(u.first_name,''),' ',COALESCE(u.last_name,''))) as user_name,
@@ -1698,7 +1703,7 @@ router.get('/service-requests', async (req, res) => {
 router.put('/service-requests/:id', async (req, res) => {
   try {
     await ensureServiceRequestsTable();
-    const { action, adminNotes, airlineFee, serviceCharge, noShowCharge, refundAmount } = req.body || {};
+    const { action, adminNotes, airlineFee, serviceCharge, noShowCharge, refundAmount, quoteValidHours } = req.body || {};
     const allowed = { quote: 'quoted', processing: 'processing', completed: 'completed', rejected: 'rejected' };
     const nextStatus = allowed[action];
     if (!nextStatus) return res.status(400).json({ message: 'action must be quote, processing, completed or rejected' });
@@ -1734,6 +1739,13 @@ router.put('/service-requests/:id', async (req, res) => {
     if (credit > ticketAmount && ticketAmount > 0) {
       return res.status(400).json({ message: `Refund cannot exceed the ticket amount (৳${ticketAmount.toLocaleString()})` });
     }
+
+    // Quotation validity window — the customer must accept before it expires,
+    // otherwise the request auto-cancels and a fresh request is required.
+    const validHours = Math.min(720, Math.max(1, Number(quoteValidHours) || 24));
+    const expiresAt = nextStatus === 'quoted'
+      ? new Date(Date.now() + validHours * 3600 * 1000)
+      : (request.quote_expires_at || null);
 
     // Approval requires the customer to have accepted the quotation first
     if (nextStatus === 'completed' && isQuotable && !request.customer_accepted_at) {
@@ -1787,7 +1799,7 @@ router.put('/service-requests/:id', async (req, res) => {
     await db.query(
       `UPDATE booking_service_requests
        SET status = ?, admin_notes = ?, airline_fee = ?, service_charge = ?, no_show_charge = ?, refund_amount = ?, refund_txn_id = ?,
-           quoted_at = ?, customer_accepted_at = ?, processed_by = ?, processed_at = NOW()
+           quoted_at = ?, quote_expires_at = ?, customer_accepted_at = ?, processed_by = ?, processed_at = NOW()
        WHERE id = ?`,
       [
         nextStatus,
@@ -1798,6 +1810,7 @@ router.put('/service-requests/:id', async (req, res) => {
         isRefundable ? credit : null,
         refundTxnId,
         nextStatus === 'quoted' ? new Date() : (request.quoted_at || null),
+        expiresAt,
         // Re-quoting resets the customer's acceptance
         nextStatus === 'quoted' ? null : (request.customer_accepted_at || null),
         req.user.sub,
@@ -1812,6 +1825,7 @@ router.put('/service-requests/:id', async (req, res) => {
       serviceCharge: fee,
       noShowCharge: noShow,
       refundAmount: credit,
+      quoteExpiresAt: expiresAt,
       credited: shouldCredit,
     });
 
