@@ -280,6 +280,22 @@ const DashboardBookingDetail = () => {
   });
   const latestActiveIssueRequest = sortedBookingRequests.find((r: any) => ['pending', 'processing'].includes(String(r?.status || '').toLowerCase()));
   const issuedTicketNo = latestIssuedRequest?.ticket_number || latestIssuedRequest?.ticketNumber || null;
+
+  // Void / Reissue / Refund / Cancel requests for this booking (status visible to the customer)
+  const { data: serviceRequestData } = useQuery({
+    queryKey: ["dashboard", "service-requests", booking?.rawId],
+    queryFn: () => api.get<any>("/dashboard/service-requests"),
+    enabled: !!booking,
+    refetchInterval: 60000,
+  });
+  const serviceRequests = ((serviceRequestData as any)?.data || []).filter(
+    (r: any) => r.booking_id === booking?.rawId
+  );
+  const latestRequestByType = (type: string) =>
+    serviceRequests
+      .filter((r: any) => String(r.type) === type)
+      .sort((a: any, b: any) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime())[0] || null;
+
   const effectiveTicketNo = [booking?.ticketNo, issuedTicketNo].find((value) => value && value !== '—') || null;
   const hasFinalTicket = !!effectiveTicketNo;
   const isTicketed = booking?.status === 'ticketed' || !!effectiveTicketNo || String(latestIssuedRequest?.status || '').toLowerCase() === 'issued';
