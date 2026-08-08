@@ -197,7 +197,7 @@ const DashboardBookings = () => {
     }
   });
 
-  const total = isFailedTab ? failedBookings.length : validBookings.length;
+  const total = bookings.length;
   const totalPages = Math.ceil(total / Number(perPage)) || 1;
   const paginatedBookings = bookings.slice((page - 1) * Number(perPage), page * Number(perPage));
 
