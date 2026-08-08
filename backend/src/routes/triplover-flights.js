@@ -651,6 +651,7 @@ function mapPassenger(p, contactInfo) {
 const RECOVERABLE_BOOK_ERRORS = [
   'validation error', 'segment sync', 'already have tried to book', 'please search again',
   'expired', 'not found', 'invalid data found', 'pricecodedetail', 'session',
+  'could not be processed', 'try again', 'bookcontroller',
 ];
 
 function isRecoverableBookError(msg) {
