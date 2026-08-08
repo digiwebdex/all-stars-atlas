@@ -124,7 +124,7 @@ const AdminServiceRequests = () => {
         </CardContent>
       </Card>
 
-      <Dialog open={!!selected} onOpenChange={(o) => { if (!o) { setSelected(null); setAdminNotes(""); } }}>
+      <Dialog open={!!selected} onOpenChange={(o) => { if (!o) { setSelected(null); setAdminNotes(""); setServiceCharge(""); setRefundAmount(""); } }}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>{TYPE_META[selected?.type]?.label || "Request"} — {selected?.booking_ref}</DialogTitle>
@@ -134,7 +134,7 @@ const AdminServiceRequests = () => {
               <div className="grid grid-cols-2 gap-3">
                 <div><span className="text-xs text-muted-foreground">PNR</span><p className="font-mono font-bold">{selected.pnr || selected.booking_pnr || "—"}</p></div>
                 <div><span className="text-xs text-muted-foreground">Booking Status</span><p className="font-bold">{selected.booking_status}</p></div>
-                <div><span className="text-xs text-muted-foreground">Amount</span><p className="font-bold">৳{Number(selected.total_amount || 0).toLocaleString()}</p></div>
+                <div><span className="text-xs text-muted-foreground">Amount</span><p className="font-bold">৳{ticketAmount.toLocaleString()}</p></div>
                 <div><span className="text-xs text-muted-foreground">Requested</span><p>{fmt(selected.created_at)}</p></div>
               </div>
               {selected.notes && (
@@ -143,6 +143,38 @@ const AdminServiceRequests = () => {
                   <p>{selected.notes}</p>
                 </div>
               )}
+
+              {isRefundable && (
+                <div className="rounded-lg border-2 border-emerald-500/30 p-3 space-y-3 bg-emerald-500/5">
+                  <p className="text-xs font-bold uppercase text-emerald-700">Refund Settlement</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label className="text-xs">Service Charge (৳)</Label>
+                      <Input
+                        type="number" min={0} value={serviceCharge}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          setServiceCharge(v);
+                          setRefundAmount(String(Math.max(0, ticketAmount - (Number(v) || 0))));
+                        }}
+                        placeholder="0"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs">Main Tk Back (৳)</Label>
+                      <Input
+                        type="number" min={0} value={refundAmount}
+                        onChange={(e) => setRefundAmount(e.target.value)}
+                        placeholder={String(ticketAmount)}
+                      />
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Customer will receive <strong>৳{computedRefund.toLocaleString()}</strong> in their wallet balance immediately on submit.
+                  </p>
+                </div>
+              )}
+
               <div>
                 <p className="text-xs font-bold uppercase text-muted-foreground mb-1">Admin Note</p>
                 <Textarea value={adminNotes} onChange={(e) => setAdminNotes(e.target.value)} placeholder="Visible to the customer" />
@@ -153,11 +185,12 @@ const AdminServiceRequests = () => {
             <Button variant="outline" onClick={() => act("processing")} disabled={!!busy}>Mark Processing</Button>
             <Button variant="destructive" onClick={() => act("rejected")} disabled={!!busy}>Reject</Button>
             <Button onClick={() => act("completed")} disabled={!!busy}>
-              {busy === "completed" ? <><Loader2 className="w-4 h-4 mr-1 animate-spin" /> Saving…</> : "Mark Completed"}
+              {busy === "completed" ? <><Loader2 className="w-4 h-4 mr-1 animate-spin" /> Saving…</> : isRefundable ? "Submit & Refund" : "Mark Completed"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
     </div>
   );
 };
