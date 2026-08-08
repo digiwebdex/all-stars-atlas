@@ -286,6 +286,23 @@ async function ensureServiceRequestsTable(executor = db) {
         INDEX idx_bsr_user (user_id),
         INDEX idx_bsr_status (status)
   )`);
+  const extra = [
+    ['airline_fee', 'DECIMAL(12,2) NULL'],
+    ['service_charge', 'DECIMAL(12,2) NULL'],
+    ['refund_amount', 'DECIMAL(12,2) NULL'],
+    ['refund_txn_id', 'CHAR(36) NULL'],
+    ['quoted_at', 'DATETIME NULL'],
+    ['customer_accepted_at', 'DATETIME NULL'],
+  ];
+  for (const [col, def] of extra) {
+    try {
+      const [cols] = await executor.query('SHOW COLUMNS FROM booking_service_requests LIKE ?', [col]);
+      if (!cols || cols.length === 0) {
+        await executor.query(`ALTER TABLE booking_service_requests ADD COLUMN ${col} ${def}`);
+      }
+    } catch (e) { /* ignore */ }
+  }
+
 }
 
 
