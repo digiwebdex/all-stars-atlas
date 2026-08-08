@@ -1429,7 +1429,8 @@ router.get('/search', authenticateOptional, async (req, res) => {
 
         // Normalize: discount is ALWAYS a deduction (a negative admin entry must not inflate fare)
         discount = Math.abs(Number(discount) || 0);
-        aitVat = Math.abs(Number(aitVat) || 0);
+        // AIT/VAT is government-mandated and applies to EVERY airline & scope.
+        aitVat = Math.abs(Number(aitVat) || 0) || FIXED_AIT_PCT;
         markup = Math.max(0, Number(markup) || 0);
         fixedMarkup = Math.max(0, Number(fixedMarkup) || 0);
 
