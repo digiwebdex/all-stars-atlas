@@ -305,12 +305,12 @@ async function searchFlights({ origin, destination, departDate, returnDate, adul
 
   const searchTimeout = parseInt(process.env.TRIPLOVER_SEARCH_TIMEOUT_MS) || 85000;
   const perAirlineLimit = parseInt(process.env.TRIPLOVER_PER_AIRLINE_LIMIT) || 20;
+  const progressiveMaxMs = parseInt(process.env.TRIPLOVER_PROGRESSIVE_MAX_MS) || 12000;
 
-  // 1) Progressive stream → pagination key + full airline list
+  // 1) Progressive stream → pagination key + full airline list (early-abort, see above)
   try {
-    const { text, durationMs } = await tlRawPost('/api/Search/Progressive', payload, {
-      timeout: searchTimeout, accept: 'application/json, text/event-stream',
-    });
+    const { text, durationMs } = await tlProgressiveStream(payload, { maxMs: progressiveMaxMs });
+
     const parsed = parseProgressiveStream(text);
     const { summary, items } = parsed;
     const key = parsed.key || summary?.searchPaginationKey;
