@@ -959,13 +959,23 @@ const DashboardBookingDetail = () => {
                           <input type="checkbox" className="mt-0.5" disabled={quoteExpired} checked={quoteAgreed} onChange={(e) => setQuoteAgreed(e.target.checked)} />
                           <span>{String(quoted.type) === "reissue" ? "I agree with the above charges and confirm the reissue." : "I agree with the above deductions and confirm the refund amount."}</span>
                         </label>
-                        <Button
-                          className="mt-3 w-full sm:w-auto bg-sky-600 hover:bg-sky-700 text-white font-bold"
-                          disabled={!quoteAgreed || acceptingQuote || quoteExpired}
-                          onClick={() => acceptQuote(quoted.id)}
-                        >
-                          {acceptingQuote ? "Submitting…" : "Agree & Submit"}
-                        </Button>
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          <Button
+                            className="w-full sm:w-auto bg-sky-600 hover:bg-sky-700 text-white font-bold"
+                            disabled={!quoteAgreed || acceptingQuote || quoteExpired || decliningQuote}
+                            onClick={() => acceptQuote(quoted.id)}
+                          >
+                            {acceptingQuote ? "Submitting…" : "Agree & Submit"}
+                          </Button>
+                          <Button
+                            variant="outline"
+                            className="w-full sm:w-auto border-destructive/40 text-destructive hover:bg-destructive/10 font-bold"
+                            disabled={acceptingQuote || decliningQuote}
+                            onClick={() => declineQuote(quoted.id)}
+                          >
+                            {decliningQuote ? "Cancelling…" : "Reject Quotation"}
+                          </Button>
+                        </div>
                       </div>
                     )}
 
