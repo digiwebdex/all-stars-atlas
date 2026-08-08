@@ -281,7 +281,10 @@ const DashboardWallet = () => {
             </Table>
           </CardContent>
         </Card>
+
+        <MyPaymentRequests />
       </DataLoader>
+
 
       {/* ── Add Funds Dialog ── */}
       <Dialog open={addFundsOpen} onOpenChange={(v) => { if (!v) resetAddFunds(); else setAddFundsOpen(true); }}>
