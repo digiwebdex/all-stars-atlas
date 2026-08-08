@@ -35,6 +35,7 @@ const AdminServiceRequests = () => {
   const [status, setStatus] = useState("pending");
   const [selected, setSelected] = useState<any>(null);
   const [adminNotes, setAdminNotes] = useState("");
+  const [airlineFee, setAirlineFee] = useState("");
   const [serviceCharge, setServiceCharge] = useState("");
   const [refundAmount, setRefundAmount] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
@@ -42,9 +43,17 @@ const AdminServiceRequests = () => {
   const ticketAmount = Number(selected?.total_amount || 0);
   const isRefundable = ["void", "refund", "cancel"].includes(String(selected?.type));
   const computedRefund = refundAmount === ""
-    ? Math.max(0, ticketAmount - (Number(serviceCharge) || 0))
+    ? Math.max(0, ticketAmount - (Number(airlineFee) || 0) - (Number(serviceCharge) || 0))
     : Math.max(0, Number(refundAmount) || 0);
+  const customerAccepted = !!selected?.customer_accepted_at;
 
+  const openRequest = (r: any) => {
+    setSelected(r);
+    setAdminNotes(r?.admin_notes || "");
+    setAirlineFee(r?.airline_fee != null ? String(Number(r.airline_fee)) : "");
+    setServiceCharge(r?.service_charge != null ? String(Number(r.service_charge)) : "");
+    setRefundAmount(r?.refund_amount != null ? String(Number(r.refund_amount)) : "");
+  };
 
   const { data, isLoading } = useQuery({
     queryKey: ["admin", "service-requests", status],
@@ -53,28 +62,32 @@ const AdminServiceRequests = () => {
   });
   const rows: any[] = (data as any)?.data || [];
 
-  const act = async (action: "processing" | "completed" | "rejected") => {
+  const act = async (action: "quote" | "processing" | "completed" | "rejected") => {
     if (!selected) return;
     setBusy(action);
     try {
       const payload: any = { action, adminNotes };
-      if (action === "completed" && isRefundable) {
+      if (isRefundable && (action === "quote" || action === "completed")) {
+        payload.airlineFee = Number(airlineFee) || 0;
         payload.serviceCharge = Number(serviceCharge) || 0;
         payload.refundAmount = computedRefund;
       }
       const res: any = await api.put(`/admin/service-requests/${selected.id}`, payload);
       toast({
-        title: "Request updated",
+        title: action === "quote" ? "Quotation sent" : "Request updated",
         description: res?.credited
-          ? `Marked completed. ৳${Number(res.refundAmount || 0).toLocaleString()} credited to the customer balance.`
-          : `Marked as ${action}.`,
+          ? `Approved. ৳${Number(res.refundAmount || 0).toLocaleString()} credited to the customer balance.`
+          : action === "quote"
+            ? `Customer will see the ৳${computedRefund.toLocaleString()} refund quotation for approval.`
+            : `Marked as ${action}.`,
       });
-      setSelected(null); setAdminNotes(""); setServiceCharge(""); setRefundAmount("");
+      setSelected(null); setAdminNotes(""); setAirlineFee(""); setServiceCharge(""); setRefundAmount("");
       queryClient.invalidateQueries({ queryKey: ["admin", "service-requests"] });
     } catch (e: any) {
       toast({ title: "Failed", description: e.message || "Error", variant: "destructive" });
     } finally { setBusy(null); }
   };
+
 
 
   return (
