@@ -1625,4 +1625,74 @@ router.put('/users/:id/admin-flags', async (req, res) => {
   }
 });
 
+// ═══════════ POST-TICKET SERVICE REQUESTS (void / reissue / refund / cancel) ═══════════
+async function ensureServiceRequestsTable() {
+  await db.query(`CREATE TABLE IF NOT EXISTS booking_service_requests (
+        id CHAR(36) PRIMARY KEY,
+        booking_id CHAR(36) NOT NULL,
+        user_id CHAR(36) NOT NULL,
+        type VARCHAR(20) NOT NULL,
+        status VARCHAR(20) DEFAULT 'pending',
+        notes TEXT,
+        admin_notes TEXT,
+        pnr VARCHAR(20),
+        processed_by CHAR(36),
+        processed_at DATETIME,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_bsr_booking (booking_id),
+        INDEX idx_bsr_user (user_id),
+        INDEX idx_bsr_status (status)
+  )`);
+}
+
+// GET /admin/service-requests?status=pending|all&type=void
+router.get('/service-requests', async (req, res) => {
+  try {
+    await ensureServiceRequestsTable();
+    const { status = 'pending', type } = req.query;
+    let sql = `SELECT sr.*, b.booking_ref, b.pnr as booking_pnr, b.status as booking_status,
+               b.total_amount, b.payment_status, b.details, b.booking_type,
+               TRIM(CONCAT(COALESCE(u.first_name,''),' ',COALESCE(u.last_name,''))) as user_name,
+               u.email as user_email, u.phone as user_phone
+               FROM booking_service_requests sr
+               JOIN bookings b ON sr.booking_id = b.id
+               LEFT JOIN users u ON sr.user_id = u.id`;
+    const where = []; const params = [];
+    if (status && status !== 'all') { where.push('sr.status = ?'); params.push(status); }
+    if (type && type !== 'all') { where.push('sr.type = ?'); params.push(type); }
+    if (where.length) sql += ' WHERE ' + where.join(' AND ');
+    sql += ' ORDER BY sr.created_at DESC LIMIT 300';
+    const [rows] = await db.query(sql, params);
+    res.json({ data: rows });
+  } catch (err) {
+    console.error('[Admin] Service requests error:', err);
+    res.status(500).json({ message: 'Failed to fetch service requests', error: err.message });
+  }
+});
+
+// PUT /admin/service-requests/:id  { action: 'processing'|'completed'|'rejected', adminNotes }
+router.put('/service-requests/:id', async (req, res) => {
+  try {
+    await ensureServiceRequestsTable();
+    const { action, adminNotes } = req.body || {};
+    const allowed = { processing: 'processing', completed: 'completed', rejected: 'rejected' };
+    const nextStatus = allowed[action];
+    if (!nextStatus) return res.status(400).json({ message: 'action must be processing, completed or rejected' });
+
+    const [rows] = await db.query('SELECT * FROM booking_service_requests WHERE id = ?', [req.params.id]);
+    if (!rows.length) return res.status(404).json({ message: 'Request not found' });
+
+    await db.query(
+      'UPDATE booking_service_requests SET status = ?, admin_notes = ?, processed_by = ?, processed_at = NOW() WHERE id = ?',
+      [nextStatus, adminNotes || null, req.user.sub, req.params.id]
+    );
+    res.json({ success: true, status: nextStatus });
+  } catch (err) {
+    console.error('[Admin] Service request update error:', err);
+    res.status(500).json({ message: 'Failed to update request' });
+  }
+});
+
 module.exports = router;
+
