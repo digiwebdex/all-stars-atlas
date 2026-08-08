@@ -281,6 +281,7 @@ const App = () => (
                 <Route path="markup" element={<AdminMarkup />} />
                 <Route path="currency" element={<AdminCurrency />} />
                 <Route path="ticket-requests" element={<AdminTicketRequests />} />
+                <Route path="service-requests" element={<AdminServiceRequests />} />
                 <Route path="enterprise" element={<AdminEnterprise />} />
               </Route>
 
