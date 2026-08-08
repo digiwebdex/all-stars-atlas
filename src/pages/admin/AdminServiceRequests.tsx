@@ -43,7 +43,7 @@ const AdminServiceRequests = () => {
   const [serviceCharge, setServiceCharge] = useState("");
   const [noShowCharge, setNoShowCharge] = useState("");
   const [refundAmount, setRefundAmount] = useState("");
-  const [quoteValidHours, setQuoteValidHours] = useState("24");
+  const [quoteValidHours, setQuoteValidHours] = useState("15");
   const [busy, setBusy] = useState<string | null>(null);
 
   const ticketAmount = Number(selected?.total_amount || 0);
@@ -63,7 +63,7 @@ const AdminServiceRequests = () => {
     setServiceCharge(r?.service_charge != null ? String(Number(r.service_charge)) : "");
     setNoShowCharge(r?.no_show_charge != null ? String(Number(r.no_show_charge)) : "");
     setRefundAmount(r?.refund_amount != null ? String(Number(r.refund_amount)) : "");
-    setQuoteValidHours("24");
+    setQuoteValidHours("15");
   };
 
   const { data, isLoading } = useQuery({
@@ -83,7 +83,7 @@ const AdminServiceRequests = () => {
         payload.serviceCharge = Number(serviceCharge) || 0;
         payload.noShowCharge = Number(noShowCharge) || 0;
         if (isRefundable) payload.refundAmount = computedRefund;
-        if (action === "quote") payload.quoteValidHours = Math.min(720, Math.max(1, Number(quoteValidHours) || 24));
+        if (action === "quote") payload.quoteValidMinutes = Math.min(43200, Math.max(1, Number(quoteValidHours) || 15));
       }
       const res: any = await api.put(`/admin/service-requests/${selected.id}`, payload);
       toast({
@@ -92,8 +92,8 @@ const AdminServiceRequests = () => {
           ? `Approved. ৳${Number(res.refundAmount || 0).toLocaleString()} credited to the customer balance.`
           : action === "quote"
             ? isRefundable
-              ? `Customer must accept the ৳${computedRefund.toLocaleString()} refund quotation within ${Number(quoteValidHours) || 24}h, or it auto-cancels.`
-              : `Customer must accept the ৳${deductions.toLocaleString()} reissue charge quotation within ${Number(quoteValidHours) || 24}h, or it auto-cancels.`
+              ? `Customer must accept the ৳${computedRefund.toLocaleString()} refund quotation within ${Number(quoteValidHours) || 15} minute(s), or it auto-cancels.`
+              : `Customer must accept the ৳${deductions.toLocaleString()} reissue charge quotation within ${Number(quoteValidHours) || 15} minute(s), or it auto-cancels.`
             : `Marked as ${action}.`,
       });
       setSelected(null); setAdminNotes(""); setAirlineFee(""); setServiceCharge(""); setNoShowCharge(""); setRefundAmount("");
