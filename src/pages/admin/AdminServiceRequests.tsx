@@ -275,14 +275,14 @@ const AdminServiceRequests = () => {
             </div>
           )}
           <DialogFooter className="gap-2 flex-wrap">
-            {isRefundable && (
+            {isQuotable && (
               <Button variant="secondary" onClick={() => act("quote")} disabled={!!busy}>
                 {busy === "quote" ? <><Loader2 className="w-4 h-4 mr-1 animate-spin" /> Sending…</> : "Send Quotation"}
               </Button>
             )}
             <Button variant="outline" onClick={() => act("processing")} disabled={!!busy}>Mark Processing</Button>
             <Button variant="destructive" onClick={() => act("rejected")} disabled={!!busy}>Reject</Button>
-            <Button onClick={() => act("completed")} disabled={!!busy || (isRefundable && !customerAccepted)}>
+            <Button onClick={() => act("completed")} disabled={!!busy || (isQuotable && !customerAccepted)}>
               {busy === "completed" ? <><Loader2 className="w-4 h-4 mr-1 animate-spin" /> Saving…</> : isRefundable ? "Approve & Refund" : "Mark Completed"}
             </Button>
           </DialogFooter>
