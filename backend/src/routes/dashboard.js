@@ -1859,9 +1859,10 @@ router.post('/service-requests', async (req, res) => {
     await ensureServiceRequestsTable();
 
     const [existing] = await db.query(
-      "SELECT id FROM booking_service_requests WHERE booking_id = ? AND type = ? AND status IN ('pending','processing')",
+      "SELECT id FROM booking_service_requests WHERE booking_id = ? AND type = ? AND status IN ('pending','processing','quoted','accepted')",
       [bookingId, type]
     );
+
     if (existing && existing.length > 0) {
       return res.status(400).json({ message: `A ${type} request is already pending for this booking` });
     }
