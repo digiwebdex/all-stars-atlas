@@ -829,21 +829,31 @@ const DashboardBookingDetail = () => {
                     { key: "refund", label: "Refund", hint: booking.refundable ? "Refundable ticket" : "Fare rules apply", icon: Wallet, tone: "text-emerald-600 border-emerald-500/30 hover:bg-emerald-500/5", disabled: false, onClick: () => setServiceRequest("refund") },
                     { key: "cancel", label: "Itinerary Cancel", hint: "Cancel the whole itinerary", icon: Ban, tone: "text-destructive border-destructive/30 hover:bg-destructive/5", disabled: false, onClick: () => setCancelOpen(true) },
                   ];
+                  // Exclusive lock: once one of Void / Reissue / Refund is requested,
+                  // the other two stay locked until that request is rejected.
+                  const exclusiveKeys = ["void", "reissue", "refund"];
+                  const activeExclusive = exclusiveKeys
+                    .map((k) => ({ key: k, req: latestRequestByType(k) }))
+                    .find(({ req }) => req && String(req.status || "").toLowerCase() !== "rejected");
                   return (
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                       {boxes.map(box => {
                         const req = latestRequestByType(box.key);
                         const st = String(req?.status || "").toLowerCase();
                         const stTone = st === "pending" ? "bg-warning/15 text-warning" : st === "processing" ? "bg-primary/15 text-primary" : st === "completed" ? "bg-emerald-500/15 text-emerald-600" : st === "rejected" ? "bg-destructive/15 text-destructive" : "";
-                        const blocked = box.disabled || ["pending", "processing"].includes(st);
+                        const lockedByOther = !!activeExclusive && exclusiveKeys.includes(box.key) && activeExclusive.key !== box.key;
+                        const lockedSelf = exclusiveKeys.includes(box.key) && !!activeExclusive && activeExclusive.key === box.key && st !== "rejected";
+                        const blocked = box.disabled || lockedByOther || lockedSelf || ["pending", "processing"].includes(st);
                         return (
                           <button
                             key={box.key}
                             type="button"
                             disabled={blocked}
                             onClick={box.onClick}
+                            title={lockedByOther ? `Locked: a ${activeExclusive?.key} request is already in progress` : undefined}
                             className={`rounded-xl border-2 bg-card p-4 text-left transition-colors ${box.tone} ${blocked ? "opacity-60 cursor-not-allowed hover:bg-card" : ""}`}
                           >
+
                             <box.icon className="w-5 h-5 mb-2" />
                             <p className="text-sm font-bold text-foreground">{box.label}</p>
                             {st ? (
@@ -851,9 +861,12 @@ const DashboardBookingDetail = () => {
                                 <span className={`inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${stTone}`}>{st}</span>
                                 {req?.admin_notes && <p className="text-[11px] text-muted-foreground mt-1 leading-snug">Admin: {req.admin_notes}</p>}
                               </>
+                            ) : lockedByOther ? (
+                              <p className="text-[11px] text-muted-foreground mt-0.5 leading-snug">Locked — {activeExclusive?.key} request in progress</p>
                             ) : (
                               <p className="text-[11px] text-muted-foreground mt-0.5 leading-snug">{box.hint}</p>
                             )}
+
                           </button>
                         );
                       })}
