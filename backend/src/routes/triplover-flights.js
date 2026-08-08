@@ -222,6 +222,67 @@ function parseProgressiveStream(text) {
   return { summary: last, items, key, airlines: [...airlineSet] };
 }
 
+// Streaming variant: reads /api/Search/Progressive incrementally and ABORTS as soon as
+// we have what we need (pagination key + airline list). TripLover UAT keeps the SSE
+// connection open for ~40s even though the key + airlineFilters arrive in the first
+// few seconds, so waiting for the stream to end was the whole latency cost.
+async function tlProgressiveStream(payload, { maxMs = 12000, idleMs = 2500 } = {}) {
+  const config = await getTripLoverConfig();
+  if (!config) throw new Error('TripLover API not configured');
+  const token = await getToken(config);
+  if (!token) throw new Error('TripLover authentication failed');
+
+  const url = `${config.searchBaseUrl}/api/Search/Progressive`;
+  const controller = new AbortController();
+  const started = Date.now();
+  const hardStop = setTimeout(() => controller.abort(), maxMs);
+
+  let text = '';
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json, text/event-stream',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(payload),
+      signal: controller.signal,
+    });
+    if (!res.ok) {
+      clearTimeout(hardStop);
+      const raw = await res.text().catch(() => '');
+      logApiCall({
+        provider: 'triplover', operation: 'Search/Progressive', url, status: res.status, ok: false,
+        durationMs: Date.now() - started, request: payload, response: { raw: raw.slice(0, 800) },
+        error: `HTTP ${res.status}`,
+      });
+      throw new Error(`TripLover Progressive: HTTP ${res.status}`);
+    }
+
+    const decoder = new TextDecoder();
+    let lastChunkAt = Date.now();
+    let sawKey = false;
+    for await (const chunk of res.body) {
+      text += decoder.decode(chunk, { stream: true });
+      lastChunkAt = Date.now();
+      if (!sawKey && /searchPaginationKey/.test(text)) sawKey = true;
+      // Once the key is in hand, stop after a short idle gap — remaining frames are
+      // duplicates of what the keyed per-airline fetches return anyway.
+      if (sawKey && Date.now() - lastChunkAt > idleMs) break;
+      if (sawKey && Date.now() - started > Math.min(maxMs, 8000)) break;
+      if (Date.now() - started > maxMs) break;
+    }
+  } catch (err) {
+    if (err?.name !== 'AbortError' && !text) { clearTimeout(hardStop); throw err; }
+  } finally {
+    clearTimeout(hardStop);
+    try { controller.abort(); } catch (_) {}
+  }
+  return { text, durationMs: Date.now() - started };
+}
+
+
 
 async function searchFlights({ origin, destination, departDate, returnDate, adults = 1, children = 0, infants = 0, cabinClass, preferredAirline, childrenAges = [] }) {
   const config = await getTripLoverConfig();
