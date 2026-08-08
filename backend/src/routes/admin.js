@@ -1786,14 +1786,15 @@ router.put('/service-requests/:id', async (req, res) => {
 
     await db.query(
       `UPDATE booking_service_requests
-       SET status = ?, admin_notes = ?, airline_fee = ?, service_charge = ?, refund_amount = ?, refund_txn_id = ?,
+       SET status = ?, admin_notes = ?, airline_fee = ?, service_charge = ?, no_show_charge = ?, refund_amount = ?, refund_txn_id = ?,
            quoted_at = ?, customer_accepted_at = ?, processed_by = ?, processed_at = NOW()
        WHERE id = ?`,
       [
         nextStatus,
         adminNotes || null,
-        isRefundable ? airline : null,
-        isRefundable ? fee : null,
+        isQuotable ? airline : null,
+        isQuotable ? fee : null,
+        isQuotable ? noShow : null,
         isRefundable ? credit : null,
         refundTxnId,
         nextStatus === 'quoted' ? new Date() : (request.quoted_at || null),
@@ -1809,6 +1810,7 @@ router.put('/service-requests/:id', async (req, res) => {
       status: nextStatus,
       airlineFee: airline,
       serviceCharge: fee,
+      noShowCharge: noShow,
       refundAmount: credit,
       credited: shouldCredit,
     });
