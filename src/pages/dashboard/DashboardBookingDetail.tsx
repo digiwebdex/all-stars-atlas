@@ -924,9 +924,7 @@ const DashboardBookingDetail = () => {
                           <div className="flex justify-between"><span className="text-muted-foreground">Ticket Amount</span><span className="font-semibold">৳{Number(booking.rawAmount || quoted.total_amount || 0).toLocaleString()}</span></div>
                           <div className="flex justify-between"><span className="text-muted-foreground">{String(quoted.type) === "reissue" ? "Airlines Reissue Fee" : "Airlines Refund Fee"}</span><span className="font-semibold text-destructive">− ৳{Number(quoted.airline_fee || 0).toLocaleString()}</span></div>
                           <div className="flex justify-between"><span className="text-muted-foreground">Service Charge</span><span className="font-semibold text-destructive">− ৳{Number(quoted.service_charge || 0).toLocaleString()}</span></div>
-                          {Number(quoted.no_show_charge || 0) > 0 && (
-                            <div className="flex justify-between"><span className="text-muted-foreground">No-Show Charge</span><span className="font-semibold text-destructive">− ৳{Number(quoted.no_show_charge || 0).toLocaleString()}</span></div>
-                          )}
+                          <div className="flex justify-between"><span className="text-muted-foreground">No-Show Charge</span><span className="font-semibold text-destructive">− ৳{Number(quoted.no_show_charge || 0).toLocaleString()}</span></div>
                           <Separator className="my-1" />
                           {String(quoted.type) === "reissue" ? (
                             <div className="flex justify-between text-base"><span className="font-bold">Total Payable Charges</span><span className="font-extrabold text-destructive">৳{(Number(quoted.airline_fee || 0) + Number(quoted.service_charge || 0) + Number(quoted.no_show_charge || 0)).toLocaleString()}</span></div>
@@ -934,13 +932,14 @@ const DashboardBookingDetail = () => {
                             <div className="flex justify-between text-base"><span className="font-bold">You Will Receive</span><span className="font-extrabold text-emerald-600">৳{Number(quoted.refund_amount || 0).toLocaleString()}</span></div>
                           )}
                         </div>
-                        {quoted.quote_expires_at && (
-                          <p className={`text-[11px] font-semibold mt-2 ${quoteExpired ? "text-destructive" : "text-warning"}`}>
-                            {quoteExpired
+                        <p className={`text-[11px] font-semibold mt-2 ${quoteExpired ? "text-destructive" : "text-warning"}`}>
+                          {!quoted.quote_expires_at
+                            ? "No expiry set for this quotation — please agree as soon as possible."
+                            : quoteExpired
                               ? "This quotation has expired — please submit a new request."
-                              : `Please agree within: ${quoteCountdown || "…"} Otherwise the request will be cancelled automatically.`}
-                          </p>
-                        )}
+                              : `Please agree within: ${quoteCountdown || "…"} (deadline: ${new Date(quoted.quote_expires_at).toLocaleString()}). Otherwise the request will be cancelled automatically.`}
+                        </p>
+
                         {quoted.admin_notes && <p className="text-[11px] text-muted-foreground mt-2">Admin: {quoted.admin_notes}</p>}
                         <label className="flex items-start gap-2 mt-3 text-xs cursor-pointer">
                           <input type="checkbox" className="mt-0.5" disabled={quoteExpired} checked={quoteAgreed} onChange={(e) => setQuoteAgreed(e.target.checked)} />
