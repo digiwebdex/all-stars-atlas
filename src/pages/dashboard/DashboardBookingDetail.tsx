@@ -461,6 +461,20 @@ const DashboardBookingDetail = () => {
     } finally { setAcceptingQuote(false); }
   };
 
+  const [decliningQuote, setDecliningQuote] = useState(false);
+  const declineQuote = async (requestId: string) => {
+    setDecliningQuote(true);
+    try {
+      await api.post(`/dashboard/service-requests/${requestId}/decline`, {});
+      toast({ title: "Quotation Declined", description: "Request cancelled. You can submit a new request anytime." });
+      setQuoteAgreed(false);
+      queryClient.invalidateQueries({ queryKey: ["dashboard", "service-requests"] });
+      refetch();
+    } catch (e: any) {
+      toast({ title: "Failed", description: e.message || "Error", variant: "destructive" });
+    } finally { setDecliningQuote(false); }
+  };
+
 
 
 
