@@ -1306,8 +1306,11 @@ router.get('/wallet', async (req, res) => {
 
     res.json({
       balance: walletState.effectiveBalance,
+      creditLimit: walletState.creditLimit,
+      availableBalance: walletState.availableBalance,
       totalCredited: walletState.totalCredited,
       totalDebited: walletState.totalDebited,
+
       transactions: normalizedTxns,
     });
   } catch (err) {
