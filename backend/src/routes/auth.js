@@ -37,7 +37,8 @@ const idUpload = multer({
 // POST /auth/register
 router.post('/register', async (req, res) => {
   try {
-    const { firstName, lastName, email, phone, password } = req.body;
+    const { firstName, lastName, phone, password } = req.body;
+    const email = String(req.body?.email || '').trim().toLowerCase();
     if (!firstName || !lastName || !email || !password) {
       return res.status(400).json({ message: 'All fields are required', status: 400 });
     }
@@ -45,7 +46,7 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ message: 'Password must be at least 8 characters', status: 400 });
     }
 
-    const [existing] = await db.query('SELECT id FROM users WHERE email = ?', [email]);
+    const [existing] = await db.query('SELECT id FROM users WHERE LOWER(email) = ?', [email]);
     if (existing.length > 0) {
       return res.status(409).json({ message: 'Email already registered', status: 409 });
     }
@@ -81,8 +82,9 @@ router.post('/register-agency', async (req, res) => {
     const {
       agencyName, mocatLicense, country, city, address, postalCode,
       ownerFirstName, ownerLastName, ownerEmail, ownerMobile,
-      email, mobile, password,
+      mobile, password,
     } = req.body || {};
+    const email = String(req.body?.email || '').trim().toLowerCase();
 
     if (!agencyName || !ownerFirstName || !ownerEmail || !ownerMobile || !email || !mobile || !password) {
       return res.status(400).json({ message: 'Please fill all required fields', status: 400 });
@@ -91,7 +93,7 @@ router.post('/register-agency', async (req, res) => {
       return res.status(400).json({ message: 'Password must be at least 8 characters', status: 400 });
     }
 
-    const [existing] = await db.query('SELECT id FROM users WHERE email = ?', [email]);
+    const [existing] = await db.query('SELECT id FROM users WHERE LOWER(email) = ?', [email]);
     if (existing.length > 0) {
       return res.status(409).json({ message: 'Email already registered', status: 409 });
     }
@@ -139,12 +141,13 @@ router.post('/register-agency', async (req, res) => {
 // POST /auth/login
 router.post('/login', async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const email = String(req.body?.email || '').trim().toLowerCase();
+    const password = req.body?.password;
     if (!email || !password) {
       return res.status(400).json({ message: 'Email and password are required', status: 400 });
     }
 
-    const [rows] = await db.query('SELECT * FROM users WHERE email = ?', [email]);
+    const [rows] = await db.query('SELECT * FROM users WHERE LOWER(TRIM(email)) = ? ORDER BY created_at DESC', [email]);
     if (rows.length === 0) {
       return res.status(401).json({ message: 'Invalid email or password', status: 401 });
     }
@@ -169,12 +172,13 @@ router.post('/login', async (req, res) => {
 // POST /admin/auth/login
 router.post('/admin/login', async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const email = String(req.body?.email || '').trim().toLowerCase();
+    const password = req.body?.password;
     if (!email || !password) {
       return res.status(400).json({ message: 'Email and password are required', status: 400 });
     }
 
-    const [rows] = await db.query('SELECT * FROM users WHERE email = ?', [email]);
+    const [rows] = await db.query('SELECT * FROM users WHERE LOWER(TRIM(email)) = ? ORDER BY created_at DESC', [email]);
     if (rows.length === 0) {
       return res.status(401).json({ message: 'Invalid credentials', status: 401 });
     }
@@ -248,6 +252,7 @@ async function ensureResetColumns() {
     ['reset_token', 'VARCHAR(100) NULL'],
     ['reset_expires', 'DATETIME NULL'],
   ];
+  try { await db.query('ALTER TABLE users MODIFY COLUMN password_hash VARCHAR(255) NULL'); } catch {}
   for (const [name, type] of cols) {
     try { await db.query(`ALTER TABLE users ADD COLUMN ${name} ${type}`); } catch {}
   }
@@ -263,7 +268,7 @@ router.post('/forgot-password', async (req, res) => {
     }
     await ensureResetColumns();
 
-    const [rows] = await db.query('SELECT * FROM users WHERE LOWER(email) = ?', [email]);
+    const [rows] = await db.query('SELECT * FROM users WHERE LOWER(TRIM(email)) = ? ORDER BY created_at DESC LIMIT 1', [email]);
     let delivery = null;
     if (rows.length > 0) {
       const user = rows[0];
@@ -273,7 +278,7 @@ router.post('/forgot-password', async (req, res) => {
 
       const name = `${user.first_name || ''} ${user.last_name || ''}`.trim();
       try {
-        const results = await notifyPasswordReset(user.email, user.phone, name, otp);
+        const results = await notifyPasswordReset(user.email, user.phone, name, otp) || [];
         const ok = results.some(r => r.status === 'fulfilled' && r.value?.success);
         delivery = ok ? 'sent' : 'failed';
         if (!ok) console.error('Password reset delivery failed:', JSON.stringify(results));
@@ -296,8 +301,9 @@ router.post('/forgot-password', async (req, res) => {
 // POST /auth/verify-otp
 router.post('/verify-otp', async (req, res) => {
   try {
-    const { email, otp } = req.body;
-    const [rows] = await db.query('SELECT * FROM users WHERE email = ? AND otp_expires > NOW()', [email]);
+    const email = String(req.body?.email || '').trim().toLowerCase();
+    const otp = String(req.body?.otp || '').trim();
+    const [rows] = await db.query('SELECT * FROM users WHERE LOWER(TRIM(email)) = ? AND otp_expires > NOW() ORDER BY otp_expires DESC LIMIT 1', [email]);
     if (rows.length === 0) {
       return res.status(400).json({ message: 'Invalid or expired OTP', status: 400 });
     }
