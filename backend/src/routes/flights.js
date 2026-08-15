@@ -13,7 +13,7 @@ const { searchFlights: sabreSearch, createBooking: sabreCreateBooking, revalidat
 const { searchFlights: galileoSearch } = require('./galileo-flights');
 const { searchFlights: ndcSearch } = require('./ndc-flights');
 const { searchAllLCCs } = require('./lcc-flights');
-const { searchFlights: triploverSearch, revalidatePrice: tlRevalidate, createBooking: tlCreateBooking, issueTicket: tlIssueTicket, cancelBooking: tlCancelBooking } = require('./triplover-flights');
+const { searchFlights: triploverSearch, revalidatePrice: tlRevalidate, createBooking: tlCreateBooking, issueTicket: tlIssueTicket, cancelBooking: tlCancelBooking, isInstantIssueAirline } = require('./triplover-flights');
 const { getProviderStatuses } = require('../utils/provider-status');
 const { loadPartialSettings, evaluatePartialEligibility, isAirlineRouteBlocked, BD_AIRPORTS: GUARDS_BD } = require('../utils/booking-guards');
 
@@ -1929,9 +1929,10 @@ router.post('/book', authenticate, async (req, res) => {
     const airlineTimeLimit = flightData?.timeLimit || null;
     const paymentDeadline = resolvePaymentDeadline(airlineTimeLimit);
 
-    const normalizedPaymentMethod = 'pay_later';
-    const status = 'on_hold';
-    const payStatus = 'pending';
+    let normalizedPaymentMethod = 'pay_later';
+    let status = 'on_hold';
+    let payStatus = 'pending';
+    let ticketStatus = 'not_issued';
 
 
 
@@ -1945,6 +1946,40 @@ router.post('/book', authenticate, async (req, res) => {
     const isFlyhubFlight = flightSource.includes('flyhub');
     const isTriploverFlight = flightSource.includes('triplover') || !!flightData?._tlItemCodeRef;
     const isGdsFlight = isTtiFlight || isSabreFlight || isBdfareFlight || isFlyhubFlight || isTriploverFlight;
+
+    // ── Instant-issue LCC carriers (TripLover): no hold, no partial payment ──
+    // Air Arabia, Salam Air, IndiGo, Jazeera, Flydubai, Flynas, FitsAir, AirAsia
+    const isInstantIssue = isTriploverFlight && isInstantIssueAirline(airlineCode);
+    let instantWalletState = null;
+    if (isInstantIssue) {
+      if (req.body?.isPartialPayment || String(req.body?.paymentMethod || '') === 'partial') {
+        return res.status(400).json({
+          message: 'Partial payment is not available for this airline. Full payment is required for instant ticketing.',
+          instantIssue: true,
+        });
+      }
+      try {
+        const { getEffectiveWalletState } = require('./dashboard');
+        instantWalletState = await getEffectiveWalletState(req.user.sub);
+      } catch (walletErr) {
+        console.error('[Booking] Instant-issue wallet lookup failed:', walletErr.message);
+        return res.status(500).json({ message: 'Could not verify wallet balance. Please try again.' });
+      }
+      const availableNow = Number(instantWalletState?.availableBalance || 0);
+      const requiredNow = Number(totalAmount || 0);
+      if (!(requiredNow > 0)) {
+        return res.status(400).json({ message: 'Invalid booking amount for instant ticketing.' });
+      }
+      if (availableNow + 0.5 < requiredNow) {
+        return res.status(402).json({
+          message: `This airline issues tickets instantly — full payment is required. Available balance ৳${availableNow.toLocaleString()}, required ৳${requiredNow.toLocaleString()}. Please add balance first.`,
+          instantIssue: true,
+          insufficientBalance: true,
+          availableBalance: availableNow,
+          requiredAmount: requiredNow,
+        });
+      }
+    }
 
 
     if (isGdsFlight) {
@@ -2245,6 +2280,57 @@ router.post('/book', authenticate, async (req, res) => {
     }
 
 
+    // ── Instant ticketing for LCC carriers ──
+    let instantTicketNumbers = [];
+    if (isInstantIssue && gdsPnr) {
+      const refs = gdsBookingResult?.refs || {};
+      console.log('[Booking] Instant-issue airline', airlineCode, '— issuing ticket immediately for PNR', gdsPnr);
+      let issueResult = null;
+      try {
+        issueResult = await tlIssueTicket({
+          pnr: gdsPnr,
+          uniqueTransID: refs.uniqueTransID,
+          itemCodeRef: refs.itemCodeRef,
+          priceCodeRef: refs.priceCodeRef,
+          bookingCodeRef: refs.bookingCodeRef,
+          isPartialPayment: false,
+        });
+      } catch (issueErr) {
+        issueResult = { success: false, error: issueErr.message };
+      }
+
+      if (!issueResult?.success) {
+        // Void the reservation so no unpaid hold is left with the airline
+        try {
+          await tlCancelBooking({
+            pnr: gdsPnr,
+            uniqueTransID: refs.uniqueTransID,
+            itemCodeRef: refs.itemCodeRef,
+            priceCodeRef: refs.priceCodeRef,
+            bookingCodeRef: refs.bookingCodeRef,
+          });
+        } catch (_) {}
+        return res.status(422).json({
+          message: `Instant ticketing failed: ${issueResult?.error || 'the airline rejected the ticket request'}`,
+          instantIssue: true,
+          ticketed: false,
+          gdsPnr,
+        });
+      }
+
+      instantTicketNumbers = issueResult.ticketNumbers || [];
+      status = 'confirmed';
+      payStatus = 'paid';
+      ticketStatus = 'issued';
+      normalizedPaymentMethod = 'wallet';
+      details.instantIssue = {
+        airline: airlineCode,
+        ticketNumbers: instantTicketNumbers,
+        issuedAt: new Date().toISOString(),
+      };
+      console.log('[Booking] ✓ Instant ticket issued:', instantTicketNumbers.join(', ') || '(no numbers returned)');
+    }
+
     // Airline PNR is best-effort (often only available after ticketing for Sabre)
     if (isGdsFlight && !gdsPnr) {
       return res.status(422).json({
@@ -2276,12 +2362,29 @@ router.post('/book', authenticate, async (req, res) => {
 
     await db.query(
       `INSERT INTO bookings (id, user_id, booking_type, booking_ref, pnr, status, ticket_status, provider, route, total_amount, payment_method, payment_status, details, passenger_info, contact_info, payment_deadline)
-       VALUES (?, ?, 'flight', ?, ?, ?, 'not_issued', ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [bookingId, req.user.sub, bookingRef, gdsPnr || null, status, flightProvider, flightRoute, totalAmount || 0, normalizedPaymentMethod, payStatus,
+       VALUES (?, ?, 'flight', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [bookingId, req.user.sub, bookingRef, gdsPnr || null, status, ticketStatus, flightProvider, flightRoute, totalAmount || 0, normalizedPaymentMethod, payStatus,
        JSON.stringify({ ...details, gdsPnr, airlinePnr, gdsBookingId, gdsBookingResult: gdsBookingResult || null }),
        JSON.stringify(passengers || []), JSON.stringify(contactInfo || {}),
        paymentDeadline]
     );
+
+    // Instant-issue: charge the wallet immediately (ticket is already issued)
+    if (isInstantIssue && instantTicketNumbers !== undefined && status === 'confirmed') {
+      try {
+        await db.query(
+          `INSERT INTO transactions (id, user_id, booking_id, type, amount, description, status, created_at)
+           VALUES (?, ?, ?, 'payment', ?, ?, 'completed', NOW())`,
+          [uuidv4(), req.user.sub, bookingId, -Math.abs(Number(totalAmount || 0)),
+           `Instant ticket issue (${airlineCode}) for booking ${bookingRef}`]
+        );
+        try {
+          await db.query('UPDATE wallet SET balance = GREATEST(balance - ?, 0) WHERE user_id = ?', [Number(totalAmount || 0), req.user.sub]);
+        } catch (_) {}
+      } catch (txnErr) {
+        console.error('[Booking] Instant-issue wallet debit failed:', txnErr.message);
+      }
+    }
 
     // No transaction and no ticket are created here. The reservation is held with
     // payment_status = 'pending'; the ticket is issued only after the payment gateway
@@ -2297,7 +2400,9 @@ router.post('/book', authenticate, async (req, res) => {
       id: bookingId,
       bookingRef,
       status,
-      payLater: true,
+      instantIssue: isInstantIssue,
+      ticketNumbers: instantTicketNumbers,
+      payLater: !isInstantIssue,
       paymentStatus: payStatus,
       paymentMethod: normalizedPaymentMethod,
       requiresPayment: true,

@@ -2183,4 +2183,5 @@ router.get('/bookings/:id/time-limit', async (req, res) => {
 });
 
 module.exports = router;
+module.exports.getEffectiveWalletState = getEffectiveWalletState;
 
