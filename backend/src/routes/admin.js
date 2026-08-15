@@ -1649,11 +1649,14 @@ async function ensureServiceRequestsTable() {
     ['airline_fee', 'DECIMAL(12,2) NULL'],
     ['service_charge', 'DECIMAL(12,2) NULL'],
     ['no_show_charge', 'DECIMAL(12,2) NULL'],
+    ['fare_difference', 'DECIMAL(12,2) NULL'],
     ['refund_amount', 'DECIMAL(12,2) NULL'],
     ['refund_txn_id', 'CHAR(36) NULL'],
     ['quoted_at', 'DATETIME NULL'],
     ['customer_accepted_at', 'DATETIME NULL'],
     ['quote_expires_at', 'DATETIME NULL'],
+    ['new_ticket_number', 'VARCHAR(60) NULL'],
+    ['new_pnr', 'VARCHAR(20) NULL'],
   ];
   for (const [col, def] of extra) {
     try {
