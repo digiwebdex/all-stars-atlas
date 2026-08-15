@@ -22,10 +22,14 @@ async function getTripLoverConfig() {
     if (cfg.enabled !== 'true' && cfg.enabled !== true) return null;
 
     // UAT defaults (TripLover sandbox)
-    const baseUrl = (cfg.base_url || 'https://userapi-uat.triplover.com').replace(/\/$/, '');
-    const searchBaseUrl = (cfg.search_base_url || 'https://searchapi-uat.triplover.com').replace(/\/$/, '');
-    const email = cfg.email || 'testapi@mail.com';
-    const password = cfg.password || 'VTBkV2MySkhPVE5pTTBweldrVkJlQT09';
+    const baseUrl = (cfg.base_url || process.env.TRIPLOVER_BASE_URL || 'https://api.triplover.com').replace(/\/$/, '');
+    const searchBaseUrl = (cfg.search_base_url || process.env.TRIPLOVER_SEARCH_BASE_URL || 'https://apiv2.triplover.com').replace(/\/$/, '');
+    const email = cfg.email || process.env.TRIPLOVER_EMAIL || '';
+    const password = cfg.password || process.env.TRIPLOVER_PASSWORD || '';
+    if (!email || !password) {
+      console.warn('[TripLover] Credentials missing — configure Admin → Settings → API Integrations → TripLover');
+      return null;
+    }
 
     cachedConfig = { baseUrl, searchBaseUrl, email, password };
     cacheTime = Date.now();
@@ -876,7 +880,35 @@ async function testConnection() {
   return token ? { success: true, message: 'Authenticated with TripLover' } : { success: false, error: 'Login failed' };
 }
 
+// ── Instant-issue (LCC) carriers served through TripLover ──
+// These airlines do NOT support hold/reservation: the ticket must be issued
+// immediately at booking time, wallet balance is mandatory, partial payment
+// is never allowed.
+const INSTANT_ISSUE_AIRLINES = {
+  G9: 'Air Arabia',
+  '3O': 'Air Arabia Maroc',
+  E5: 'Air Arabia Abu Dhabi',
+  OV: 'Salam Air',
+  '6E': 'IndiGo',
+  J9: 'Jazeera Airways',
+  FZ: 'Flydubai',
+  XY: 'Flynas',
+  '8D': 'FitsAir',
+  AK: 'AirAsia',
+  FD: 'Thai AirAsia',
+  D7: 'AirAsia X',
+  I5: 'AirAsia India',
+  Z2: 'Philippines AirAsia',
+  QZ: 'Indonesia AirAsia',
+};
+
+function isInstantIssueAirline(code) {
+  return !!INSTANT_ISSUE_AIRLINES[String(code || '').toUpperCase().trim()];
+}
+
 module.exports = {
+  INSTANT_ISSUE_AIRLINES,
+  isInstantIssueAirline,
   searchFlights,
   revalidatePrice,
   createBooking,

@@ -803,8 +803,16 @@ const FlightBooking = () => {
     }).catch(() => {});
   }, []);
 
+  // Instant-issue LCC carriers (no hold, no partial payment — ticket issued immediately)
+  const INSTANT_ISSUE_AIRLINES = ["G9", "3O", "E5", "OV", "6E", "J9", "FZ", "XY", "8D", "AK", "FD", "D7", "I5", "Z2", "QZ"];
+  const isInstantIssueFlight = useMemo(() => {
+    const code = String(bookingFlightData?.airlineCode || "").toUpperCase().trim();
+    return INSTANT_ISSUE_AIRLINES.includes(code);
+  }, [bookingFlightData]);
+
   const partialEligible = useMemo(() => {
     if (!partialRules.enabled) return false;
+    if (isInstantIssueFlight) return false; // instant-issue airlines require full payment
     const origin = (bookingFlightData?.origin || '').toUpperCase();
     const dest = (bookingFlightData?.destination || '').toUpperCase();
     if (BD_AIRPORTS.includes(origin) && BD_AIRPORTS.includes(dest)) return false; // domestic
@@ -813,7 +821,8 @@ const FlightBooking = () => {
     if (!depRaw) return false;
     const hoursToDep = (new Date(depRaw).getTime() - Date.now()) / 3600000;
     return hoursToDep >= partialRules.minHours;
-  }, [partialRules, bookingFlightData]);
+  }, [partialRules, bookingFlightData, isInstantIssueFlight]);
+
 
   // Always 4 steps: Flight Details → Passenger Info → Seat & Extras → Review & Pay
   const STEPS = [
