@@ -255,6 +255,19 @@ const AdminServiceRequests = () => {
                         Passenger did not fly and did not cancel before departure (no-show penalty).
                       </p>
                     </div>
+                    {isReissue && (
+                      <div className="col-span-2">
+                        <Label className="text-xs">Difference of Fare (৳)</Label>
+                        <Input
+                          type="number" min={0} value={fareDifference}
+                          onChange={(e) => setFareDifference(e.target.value)}
+                          placeholder="0"
+                        />
+                        <p className="text-[11px] text-muted-foreground mt-1">
+                          New fare minus original fare (fare increase payable by the customer).
+                        </p>
+                      </div>
+                    )}
                     {isRefundable && (
                       <div className="col-span-2">
                         <Label className="text-xs">Refundable Amount (৳)</Label>
@@ -266,14 +279,8 @@ const AdminServiceRequests = () => {
                       </div>
                     )}
                     <div className="col-span-2">
-                      <Label className="text-xs">Quotation Validity (minutes)</Label>
-                      <Input
-                        type="number" min={1} max={43200} value={quoteValidHours}
-                        onChange={(e) => setQuoteValidHours(e.target.value)}
-                        placeholder="15"
-                      />
-                      <p className="text-[11px] text-muted-foreground mt-1">
-                        Customer must press "Agree &amp; Submit" within this many minutes. Otherwise the request auto-cancels and they must send a new one.
+                      <p className="text-[11px] text-muted-foreground">
+                        Quotation validity is fixed at <strong>{validMinutes} minutes</strong> for {isReissue ? "reissue" : "refund/void"} requests. If the customer does not press "Agree &amp; Submit" in time, it auto-cancels.
                         {selected?.quote_expires_at && String(selected?.status) === "quoted" && (
                           <> Current quote expires: <strong>{fmt(selected.quote_expires_at)}</strong></>
                         )}
@@ -287,9 +294,24 @@ const AdminServiceRequests = () => {
                         <strong>৳{computedRefund.toLocaleString()}</strong>
                       </>
                     ) : (
-                      <>Total payable charges: <strong>৳{deductions.toLocaleString()}</strong></>
+                      <>Total payable charges: <strong>৳{reissueTotal.toLocaleString()}</strong> (airline fee + fare difference + no-show + service)</>
                     )}
                   </p>
+                  {isReissue && (
+                    <div className="grid grid-cols-2 gap-3 pt-2 border-t border-emerald-500/20">
+                      <div>
+                        <Label className="text-xs">New Ticket Number</Label>
+                        <Input value={newTicketNumber} onChange={(e) => setNewTicketNumber(e.target.value)} placeholder="e.g. 0972412345678" />
+                      </div>
+                      <div>
+                        <Label className="text-xs">New Airlines PNR</Label>
+                        <Input value={newPnr} onChange={(e) => setNewPnr(e.target.value.toUpperCase())} placeholder="e.g. 8XCXDA" className="font-mono" />
+                      </div>
+                      <p className="col-span-2 text-[11px] text-muted-foreground">
+                        Enter these before "Mark Completed" — the customer's e-ticket will show the new ticket number & PNR.
+                      </p>
+                    </div>
+                  )}
                   <p className={`text-xs font-semibold ${customerAccepted ? "text-emerald-600" : "text-warning"}`}>
                     {customerAccepted
                       ? `Customer accepted on ${fmt(selected.customer_accepted_at)} — you can approve now.`
