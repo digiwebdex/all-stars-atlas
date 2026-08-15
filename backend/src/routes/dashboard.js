@@ -180,6 +180,15 @@ function computeWalletTotalsFromTransactions(rows = []) {
   }, { totalCredited: 0, totalDebited: 0 });
 }
 
+async function readCreditLimit(userId) {
+  try {
+    const [rows] = await db.query('SELECT amount, note FROM user_credit_limit WHERE user_id = ?', [userId]);
+    return { creditLimit: Number(rows[0]?.amount || 0), creditNote: rows[0]?.note || null };
+  } catch (_) {
+    return { creditLimit: 0, creditNote: null };
+  }
+}
+
 async function getEffectiveWalletState(userId) {
   const walletInfo = await readWalletAggregate(userId);
   const walletBalance = walletInfo.balance;
@@ -196,6 +205,8 @@ async function getEffectiveWalletState(userId) {
 
   const { totalCredited, totalDebited } = computeWalletTotalsFromTransactions(approvedTransactions);
   const derivedBalance = Math.max(0, totalCredited - totalDebited);
+  const { creditLimit, creditNote } = await readCreditLimit(userId);
+  const effectiveBalance = walletBalance > 0 ? walletBalance : derivedBalance;
 
   return {
     hasWalletTable: walletInfo.tableExists,
@@ -204,9 +215,13 @@ async function getEffectiveWalletState(userId) {
     totalCredited,
     totalDebited,
     derivedBalance,
-    effectiveBalance: walletBalance > 0 ? walletBalance : derivedBalance,
+    effectiveBalance,
+    creditLimit,
+    creditNote,
+    availableBalance: effectiveBalance + creditLimit,
   };
 }
+
 
 async function syncWalletFromDerivedBalance(userId, walletState) {
   if (!walletState.hasWalletTable || (walletState.hasWalletRow && walletState.walletBalance > 0) || walletState.derivedBalance <= 0) {
