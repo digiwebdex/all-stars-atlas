@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, MoreHorizontal, Eye, Ban, CheckCircle2, UserPlus, Download, Loader2, Users, UserCheck, UserX, UserCog, FileText, ExternalLink, Shield } from "lucide-react";
+import { Search, MoreHorizontal, Eye, Ban, CheckCircle2, UserPlus, Download, Loader2, Users, UserCheck, UserX, UserCog, FileText, ExternalLink, Shield, Wallet, MinusCircle, PlusCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAdminUsers } from "@/hooks/useApiData";
 import { api } from "@/lib/api";
@@ -28,6 +28,11 @@ const AdminUsers = () => {
   const [actionLoading, setActionLoading] = useState(false);
   const [permForm, setPermForm] = useState({ partial: true, canManageBookings: false, canTogglePartial: false });
   const [permSaving, setPermSaving] = useState(false);
+  const [wallet, setWallet] = useState<any>(null);
+  const [walletLoading, setWalletLoading] = useState(false);
+  const [adjustForm, setAdjustForm] = useState({ amount: "", note: "" });
+  const [creditForm, setCreditForm] = useState({ amount: "", note: "" });
+  const [adjustLoading, setAdjustLoading] = useState(false);
   const { toast } = useToast();
   const qc = useQueryClient();
 
@@ -157,6 +162,47 @@ const AdminUsers = () => {
       const res = await api.get<any>(`/admin/users/${u.id}/partial-permission`);
       setPermForm(p => ({ ...p, partial: !!res?.enabled }));
     } catch {}
+    loadWallet(u.id);
+  };
+
+  const loadWallet = async (userId: string) => {
+    setWallet(null);
+    setAdjustForm({ amount: "", note: "" });
+    setWalletLoading(true);
+    try {
+      const res = await api.get<any>(`/admin/users/${userId}/wallet`);
+      setWallet(res);
+      setCreditForm({ amount: res?.creditLimit ? String(res.creditLimit) : "", note: res?.creditNote || "" });
+    } catch (err: any) {
+      toast({ title: "Balance load failed", description: err?.message, variant: "destructive" });
+    } finally { setWalletLoading(false); }
+  };
+
+  const submitAdjust = async (action: "debit" | "credit") => {
+    if (!showViewUser) return;
+    const amount = Number(adjustForm.amount);
+    if (!amount || amount <= 0) { toast({ title: "Enter a valid amount", variant: "destructive" }); return; }
+    if (!adjustForm.note.trim()) { toast({ title: "User note is required", description: "Explain why the balance is being adjusted", variant: "destructive" }); return; }
+    setAdjustLoading(true);
+    try {
+      await api.post(`/admin/users/${showViewUser.id}/wallet-adjust`, { action, amount, note: adjustForm.note.trim() });
+      toast({ title: action === "debit" ? "Balance debited" : "Balance credited", description: `৳${amount.toLocaleString()} — ${showViewUser.name}` });
+      await loadWallet(showViewUser.id);
+    } catch (err: any) {
+      toast({ title: "Adjustment failed", description: err?.message, variant: "destructive" });
+    } finally { setAdjustLoading(false); }
+  };
+
+  const saveCreditLimit = async () => {
+    if (!showViewUser) return;
+    setAdjustLoading(true);
+    try {
+      await api.put(`/admin/users/${showViewUser.id}/credit-limit`, { amount: Number(creditForm.amount || 0), note: creditForm.note });
+      toast({ title: "Credit limit saved", description: `৳${Number(creditForm.amount || 0).toLocaleString()} for ${showViewUser.name}` });
+      await loadWallet(showViewUser.id);
+    } catch (err: any) {
+      toast({ title: "Failed", description: err?.message, variant: "destructive" });
+    } finally { setAdjustLoading(false); }
   };
 
   const savePermissions = async () => {
