@@ -252,7 +252,12 @@ async function ensureResetColumns() {
     ['reset_token', 'VARCHAR(100) NULL'],
     ['reset_expires', 'DATETIME NULL'],
   ];
-  try { await db.query('ALTER TABLE users MODIFY COLUMN password_hash VARCHAR(255) NULL'); } catch {}
+  // Widen legacy narrow columns (older DBs had otp_code VARCHAR(6) which truncates bcrypt hashes)
+  for (const sql of [
+    'ALTER TABLE users MODIFY COLUMN password_hash VARCHAR(255) NULL',
+    'ALTER TABLE users MODIFY COLUMN otp_code VARCHAR(255) NULL',
+    'ALTER TABLE users MODIFY COLUMN reset_token VARCHAR(100) NULL',
+  ]) { try { await db.query(sql); } catch {} }
   for (const [name, type] of cols) {
     try { await db.query(`ALTER TABLE users ADD COLUMN ${name} ${type}`); } catch {}
   }
@@ -274,7 +279,14 @@ router.post('/forgot-password', async (req, res) => {
       const user = rows[0];
       const otp = String(Math.floor(100000 + Math.random() * 900000));
       const hash = await bcrypt.hash(otp, 10);
-      await db.query('UPDATE users SET otp_code = ?, otp_expires = DATE_ADD(NOW(), INTERVAL 10 MINUTE) WHERE id = ?', [hash, user.id]);
+      try {
+        await db.query('UPDATE users SET otp_code = ?, otp_expires = DATE_ADD(NOW(), INTERVAL 10 MINUTE) WHERE id = ?', [hash, user.id]);
+      } catch (e) {
+        // Self-heal narrow/missing columns then retry once
+        resetColumnsChecked = false;
+        await ensureResetColumns();
+        await db.query('UPDATE users SET otp_code = ?, otp_expires = DATE_ADD(NOW(), INTERVAL 10 MINUTE) WHERE id = ?', [hash, user.id]);
+      }
 
       const name = `${user.first_name || ''} ${user.last_name || ''}`.trim();
       try {
