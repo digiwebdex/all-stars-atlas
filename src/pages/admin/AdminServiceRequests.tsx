@@ -204,9 +204,9 @@ const AdminServiceRequests = () => {
                 <div><span className="text-xs text-muted-foreground">Requested</span><p>{fmt(selected.created_at)}</p></div>
               </div>
               {selected.notes && (
-                <div className="bg-muted/40 rounded-lg p-3">
-                  <p className="text-xs font-bold uppercase text-muted-foreground mb-1">Customer Note</p>
-                  <p>{selected.notes}</p>
+                <div className="rounded-lg border-2 border-destructive/40 bg-destructive/10 p-3">
+                  <p className="text-xs font-bold uppercase text-destructive mb-1">Customer Note / Reason</p>
+                  <p className="text-destructive font-bold whitespace-pre-wrap">{selected.notes}</p>
                 </div>
               )}
 
