@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, MoreHorizontal, Eye, Ban, CheckCircle2, UserPlus, Download, Loader2, Users, UserCheck, UserX, UserCog, FileText, ExternalLink, Shield } from "lucide-react";
+import { Search, MoreHorizontal, Eye, Ban, CheckCircle2, UserPlus, Download, Loader2, Users, UserCheck, UserX, UserCog, FileText, ExternalLink, Shield, Wallet, MinusCircle, PlusCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAdminUsers } from "@/hooks/useApiData";
 import { api } from "@/lib/api";
@@ -28,6 +28,11 @@ const AdminUsers = () => {
   const [actionLoading, setActionLoading] = useState(false);
   const [permForm, setPermForm] = useState({ partial: true, canManageBookings: false, canTogglePartial: false });
   const [permSaving, setPermSaving] = useState(false);
+  const [wallet, setWallet] = useState<any>(null);
+  const [walletLoading, setWalletLoading] = useState(false);
+  const [adjustForm, setAdjustForm] = useState({ amount: "", note: "" });
+  const [creditForm, setCreditForm] = useState({ amount: "", note: "" });
+  const [adjustLoading, setAdjustLoading] = useState(false);
   const { toast } = useToast();
   const qc = useQueryClient();
 
@@ -157,6 +162,47 @@ const AdminUsers = () => {
       const res = await api.get<any>(`/admin/users/${u.id}/partial-permission`);
       setPermForm(p => ({ ...p, partial: !!res?.enabled }));
     } catch {}
+    loadWallet(u.id);
+  };
+
+  const loadWallet = async (userId: string) => {
+    setWallet(null);
+    setAdjustForm({ amount: "", note: "" });
+    setWalletLoading(true);
+    try {
+      const res = await api.get<any>(`/admin/users/${userId}/wallet`);
+      setWallet(res);
+      setCreditForm({ amount: res?.creditLimit ? String(res.creditLimit) : "", note: res?.creditNote || "" });
+    } catch (err: any) {
+      toast({ title: "Balance load failed", description: err?.message, variant: "destructive" });
+    } finally { setWalletLoading(false); }
+  };
+
+  const submitAdjust = async (action: "debit" | "credit") => {
+    if (!showViewUser) return;
+    const amount = Number(adjustForm.amount);
+    if (!amount || amount <= 0) { toast({ title: "Enter a valid amount", variant: "destructive" }); return; }
+    if (!adjustForm.note.trim()) { toast({ title: "User note is required", description: "Explain why the balance is being adjusted", variant: "destructive" }); return; }
+    setAdjustLoading(true);
+    try {
+      await api.post(`/admin/users/${showViewUser.id}/wallet-adjust`, { action, amount, note: adjustForm.note.trim() });
+      toast({ title: action === "debit" ? "Balance debited" : "Balance credited", description: `৳${amount.toLocaleString()} — ${showViewUser.name}` });
+      await loadWallet(showViewUser.id);
+    } catch (err: any) {
+      toast({ title: "Adjustment failed", description: err?.message, variant: "destructive" });
+    } finally { setAdjustLoading(false); }
+  };
+
+  const saveCreditLimit = async () => {
+    if (!showViewUser) return;
+    setAdjustLoading(true);
+    try {
+      await api.put(`/admin/users/${showViewUser.id}/credit-limit`, { amount: Number(creditForm.amount || 0), note: creditForm.note });
+      toast({ title: "Credit limit saved", description: `৳${Number(creditForm.amount || 0).toLocaleString()} for ${showViewUser.name}` });
+      await loadWallet(showViewUser.id);
+    } catch (err: any) {
+      toast({ title: "Failed", description: err?.message, variant: "destructive" });
+    } finally { setAdjustLoading(false); }
   };
 
   const savePermissions = async () => {
@@ -365,6 +411,80 @@ const AdminUsers = () => {
                   {permSaving ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : null} Save Permissions
                 </Button>
               </div>
+
+              {/* Balance Controls */}
+              <div className="border rounded-lg p-3 space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                    <Wallet className="w-3.5 h-3.5" /> Balance & Credit
+                  </p>
+                  {walletLoading && <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground" />}
+                </div>
+
+                <div className="grid grid-cols-3 gap-2 text-center">
+                  <div className="rounded-lg bg-muted/50 p-2">
+                    <p className="text-[10px] text-muted-foreground">Current Balance</p>
+                    <p className="text-sm font-bold">৳{Number(wallet?.balance || 0).toLocaleString()}</p>
+                  </div>
+                  <div className="rounded-lg bg-muted/50 p-2">
+                    <p className="text-[10px] text-muted-foreground">Credit Limit</p>
+                    <p className="text-sm font-bold text-primary">৳{Number(wallet?.creditLimit || 0).toLocaleString()}</p>
+                  </div>
+                  <div className="rounded-lg bg-success/10 p-2">
+                    <p className="text-[10px] text-muted-foreground">Available</p>
+                    <p className="text-sm font-bold text-success">৳{Number(wallet?.availableBalance || 0).toLocaleString()}</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Amount (BDT)</Label>
+                    <Input type="number" min="0" value={adjustForm.amount} onChange={e => setAdjustForm(p => ({ ...p, amount: e.target.value }))} placeholder="5000" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">User Note (required)</Label>
+                    <Input value={adjustForm.note} onChange={e => setAdjustForm(p => ({ ...p, note: e.target.value }))} placeholder="ADM / fare difference reason" />
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Button size="sm" variant="destructive" className="flex-1" disabled={adjustLoading} onClick={() => submitAdjust('debit')}>
+                    <MinusCircle className="w-3.5 h-3.5 mr-1" /> Debit Balance
+                  </Button>
+                  <Button size="sm" className="flex-1 bg-success hover:bg-success/90 text-white" disabled={adjustLoading} onClick={() => submitAdjust('credit')}>
+                    <PlusCircle className="w-3.5 h-3.5 mr-1" /> Credit Balance
+                  </Button>
+                </div>
+
+                <div className="border-t pt-3 space-y-2">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Credit Limit (BDT)</Label>
+                      <Input type="number" min="0" value={creditForm.amount} onChange={e => setCreditForm(p => ({ ...p, amount: e.target.value }))} placeholder="150000" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Credit Note</Label>
+                      <Input value={creditForm.note} onChange={e => setCreditForm(p => ({ ...p, note: e.target.value }))} placeholder="2-day credit facility" />
+                    </div>
+                  </div>
+                  <Button size="sm" variant="outline" disabled={adjustLoading} onClick={saveCreditLimit}>Save Credit Limit</Button>
+                  <p className="text-[10px] text-muted-foreground">Credit limit lets the agent issue tickets beyond their deposited balance (no partial payment needed).</p>
+                </div>
+
+                {wallet?.transactions?.length > 0 && (
+                  <div className="border-t pt-2 space-y-1">
+                    <p className="text-[10px] font-semibold text-muted-foreground uppercase">Recent Activity</p>
+                    {wallet.transactions.slice(0, 5).map((t: any) => (
+                      <div key={t.id} className="flex items-center justify-between text-[11px]">
+                        <span className="truncate max-w-[70%] text-muted-foreground">{t.description || t.type}</span>
+                        <span className={['credit', 'deposit', 'refund', 'transfer_in'].includes(t.type) ? 'text-success font-semibold' : 'text-destructive font-semibold'}>
+                          {['credit', 'deposit', 'refund', 'transfer_in'].includes(t.type) ? '+' : '-'}৳{Number(t.amount || 0).toLocaleString()}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
             </div>
           )}
         </DialogContent>

@@ -137,11 +137,27 @@ router.put('/users/:id', async (req, res) => {
     if (emailVerified !== undefined) { sets.push('email_verified = ?'); params.push(emailVerified ? 1 : 0); }
     if (phoneVerified !== undefined) { sets.push('phone_verified = ?'); params.push(phoneVerified ? 1 : 0); }
     if (idVerified !== undefined) { sets.push('id_verified = ?'); params.push(idVerified ? 1 : 0); }
-    if (sets.length > 0) { params.push(req.params.id); await db.query(`UPDATE users SET ${sets.join(', ')} WHERE id = ?`, params); }
+    if (sets.length > 0) {
+      params.push(req.params.id);
+      const sql = `UPDATE users SET ${sets.join(', ')} WHERE id = ?`;
+      try {
+        await db.query(sql, params);
+      } catch (e) {
+        // Self-heal: legacy installs define `role` as a narrow ENUM which rejects
+        // newer roles like 'agent' / 'secondary_admin'. Widen the column and retry.
+        const code = String(e?.code || '');
+        const truncated = code === 'WARN_DATA_TRUNCATED' || code === 'ER_WARN_DATA_TRUNCATED'
+          || code === 'ER_DATA_TOO_LONG' || /truncated|incorrect .*value/i.test(String(e?.message || ''));
+        if (!truncated) throw e;
+        await db.query("ALTER TABLE users MODIFY COLUMN role VARCHAR(32) NOT NULL DEFAULT 'customer'");
+        await db.query(sql, params);
+      }
+    }
     const [rows] = await db.query('SELECT * FROM users WHERE id = ?', [req.params.id]);
     res.json(formatUser(rows[0]));
-  } catch (err) { console.error(err); res.status(500).json({ message: 'Something went wrong', status: 500 }); }
+  } catch (err) { console.error('Admin update user error:', err); res.status(500).json({ message: err?.sqlMessage || err?.message || 'Something went wrong', status: 500 }); }
 });
+
 
 // DELETE /admin/users/:id
 router.delete('/users/:id', async (req, res) => {
@@ -1624,6 +1640,154 @@ router.put('/users/:id/admin-flags', async (req, res) => {
     res.status(500).json({ message: 'Failed to save flags' });
   }
 });
+
+// ═══════════ USER WALLET CONTROLS (debit / credit / credit-limit) ═══════════
+async function ensureCreditLimitTable() {
+  try {
+    await db.query(`CREATE TABLE IF NOT EXISTS user_credit_limit (
+      user_id CHAR(36) PRIMARY KEY,
+      amount DECIMAL(12,2) DEFAULT 0,
+      note TEXT NULL,
+      updated_by CHAR(36) NULL,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    )`);
+  } catch (_) {}
+}
+
+async function readUserWalletSnapshot(userId) {
+  let balance = 0;
+  try {
+    const [w] = await db.query('SELECT COALESCE(SUM(balance),0) AS balance FROM wallet WHERE user_id = ?', [userId]);
+    balance = Number(w[0]?.balance || 0);
+  } catch (_) {}
+
+  let totalCredited = 0, totalDebited = 0;
+  try {
+    const [rows] = await db.query(
+      `SELECT t.type, t.amount, t.booking_id, b.payment_status AS booking_payment_status
+       FROM transactions t LEFT JOIN bookings b ON b.id = t.booking_id
+       WHERE t.user_id = ? AND t.status IN ('completed','approved')`,
+      [userId]
+    );
+    for (const t of rows) {
+      const amt = Math.abs(Number(t.amount || 0));
+      const isCredit = ['credit', 'deposit', 'refund', 'transfer_in'].includes(t.type);
+      if (isCredit) totalCredited += amt;
+      else {
+        const paid = String(t.booking_payment_status || '').toLowerCase();
+        if (!t.booking_id || ['paid', 'partial', 'refunded'].includes(paid)) totalDebited += amt;
+      }
+    }
+  } catch (_) {}
+
+  await ensureCreditLimitTable();
+  let creditLimit = 0, creditNote = null;
+  try {
+    const [cl] = await db.query('SELECT amount, note FROM user_credit_limit WHERE user_id = ?', [userId]);
+    if (cl.length) { creditLimit = Number(cl[0].amount || 0); creditNote = cl[0].note || null; }
+  } catch (_) {}
+
+  const derived = Math.max(0, totalCredited - totalDebited);
+  const currentBalance = balance > 0 ? balance : derived;
+  return {
+    balance: currentBalance,
+    totalCredited,
+    totalDebited,
+    creditLimit,
+    creditNote,
+    availableBalance: currentBalance + creditLimit,
+  };
+}
+
+// GET /admin/users/:id/wallet — balance status + credit limit
+router.get('/users/:id/wallet', async (req, res) => {
+  try {
+    const snap = await readUserWalletSnapshot(req.params.id);
+    let transactions = [];
+    try {
+      const [rows] = await db.query(
+        `SELECT id, type, amount, status, description, created_at FROM transactions
+         WHERE user_id = ? ORDER BY created_at DESC LIMIT 10`,
+        [req.params.id]
+      );
+      transactions = rows.map(t => ({
+        id: t.id, type: t.type, amount: Number(t.amount || 0), status: t.status,
+        description: t.description, createdAt: t.created_at,
+      }));
+    } catch (_) {}
+    res.json({ ...snap, transactions });
+  } catch (err) {
+    console.error('User wallet read error:', err);
+    res.status(500).json({ message: 'Failed to load wallet' });
+  }
+});
+
+// POST /admin/users/:id/wallet-adjust — manual debit (ADM / fare change) or credit with note
+router.post('/users/:id/wallet-adjust', async (req, res) => {
+  try {
+    const userId = req.params.id;
+    const action = String(req.body?.action || '').toLowerCase();
+    const amount = Math.abs(Number(req.body?.amount || 0));
+    const note = String(req.body?.note || '').trim();
+
+    if (!['debit', 'credit'].includes(action)) return res.status(400).json({ message: 'action must be debit or credit' });
+    if (!amount || !Number.isFinite(amount)) return res.status(400).json({ message: 'Valid amount is required' });
+    if (!note) return res.status(400).json({ message: 'A user note is required' });
+
+    const before = await readUserWalletSnapshot(userId);
+    if (action === 'debit' && before.balance < amount) {
+      return res.status(400).json({ message: `Insufficient balance. Current: ৳${before.balance.toLocaleString()}` });
+    }
+
+    const txnId = uuidv4();
+    await db.query(
+      `INSERT INTO transactions (id, user_id, booking_id, type, amount, status, payment_method, reference, description, created_at)
+       VALUES (?, ?, NULL, ?, ?, 'completed', 'admin_credit', ?, ?, NOW())`,
+      [
+        txnId,
+        userId,
+        action === 'credit' ? 'credit' : 'payment',
+        amount,
+        `${action === 'credit' ? 'ADJC' : 'ADJD'}-${txnId.slice(0, 8).toUpperCase()}`,
+        `Admin ${action === 'credit' ? 'credit' : 'debit'} adjustment — ${note}`,
+      ]
+    );
+
+    try {
+      const delta = action === 'credit' ? amount : -amount;
+      const [upd] = await db.query('UPDATE wallet SET balance = GREATEST(balance + ?, 0) WHERE user_id = ?', [delta, userId]);
+      if (!upd?.affectedRows) {
+        await db.query('INSERT INTO wallet (user_id, balance) VALUES (?, ?)', [userId, Math.max(before.balance + delta, 0)]);
+      }
+    } catch (e) { console.warn('[Admin] wallet adjust sync skipped:', e?.message || e); }
+
+    const after = await readUserWalletSnapshot(userId);
+    res.json({ success: true, transactionId: txnId, balance: after.balance, availableBalance: after.availableBalance });
+  } catch (err) {
+    console.error('Wallet adjust error:', err);
+    res.status(500).json({ message: 'Failed to adjust balance' });
+  }
+});
+
+// PUT /admin/users/:id/credit-limit — temporary credit facility for agents
+router.put('/users/:id/credit-limit', async (req, res) => {
+  try {
+    await ensureCreditLimitTable();
+    const amount = Math.max(0, Number(req.body?.amount || 0));
+    const note = String(req.body?.note || '').trim() || null;
+    await db.query(
+      `INSERT INTO user_credit_limit (user_id, amount, note, updated_by) VALUES (?, ?, ?, ?)
+       ON DUPLICATE KEY UPDATE amount = VALUES(amount), note = VALUES(note), updated_by = VALUES(updated_by)`,
+      [req.params.id, amount, note, req.user?.sub || null]
+    );
+    res.json({ success: true, amount, note });
+  } catch (err) {
+    console.error('Credit limit error:', err);
+    res.status(500).json({ message: 'Failed to save credit limit' });
+  }
+});
+
+
 
 // ═══════════ POST-TICKET SERVICE REQUESTS (void / reissue / refund / cancel) ═══════════
 async function ensureServiceRequestsTable() {
