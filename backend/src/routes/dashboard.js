@@ -448,7 +448,7 @@ router.get('/stats', async (req, res) => {
     const s = sched[0] || {};
 
     const walletState = await getEffectiveWalletState(userId).catch(() => null);
-    const availableLimit = walletState ? Number(walletState.effectiveBalance || 0) : 0;
+    const availableLimit = walletState ? Number(walletState.availableBalance || 0) : 0;
 
     const num = v => Number(v || 0);
     const scheduledPayment = {
@@ -1522,7 +1522,7 @@ router.post('/wallet/pay', async (req, res) => {
 
     const walletState = await getEffectiveWalletState(userId);
     await syncWalletFromDerivedBalance(userId, walletState);
-    const balance = walletState.effectiveBalance;
+    const balance = Number(walletState.availableBalance || walletState.effectiveBalance);
 
     if (balance < amount) {
       return res.status(400).json({ message: `Insufficient balance. Available: ৳${balance.toLocaleString()}, Required: ৳${amount.toLocaleString()}` });
