@@ -1795,10 +1795,30 @@ router.put('/service-requests/:id', async (req, res) => {
       } catch (e) { /* non-fatal */ }
     }
 
+    // Reissue completion: store the NEW ticket number / NEW airline PNR and sync the booking
+    const reissueTicket = isReissue
+      ? (String(newTicketNumber || '').trim() || request.new_ticket_number || null)
+      : (request.new_ticket_number || null);
+    const reissuePnr = isReissue
+      ? (String(newPnr || '').trim().toUpperCase() || request.new_pnr || null)
+      : (request.new_pnr || null);
+
+    if (isReissue && nextStatus === 'completed') {
+      try {
+        const sets = []; const vals = [];
+        if (reissuePnr) { sets.push('pnr = ?'); vals.push(reissuePnr); }
+        if (reissueTicket) { sets.push('ticket_number = ?', "ticket_status = 'issued'"); vals.push(reissueTicket); }
+        if (sets.length) {
+          vals.push(request.booking_id);
+          await db.query(`UPDATE bookings SET ${sets.join(', ')} WHERE id = ?`, vals);
+        }
+      } catch (e) { console.warn('[Admin] Reissue booking sync skipped:', e?.message || e); }
+    }
+
     await db.query(
       `UPDATE booking_service_requests
-       SET status = ?, admin_notes = ?, airline_fee = ?, service_charge = ?, no_show_charge = ?, refund_amount = ?, refund_txn_id = ?,
-           quoted_at = ?, quote_expires_at = ?, customer_accepted_at = ?, processed_by = ?, processed_at = NOW()
+       SET status = ?, admin_notes = ?, airline_fee = ?, service_charge = ?, no_show_charge = ?, fare_difference = ?, refund_amount = ?, refund_txn_id = ?,
+           quoted_at = ?, quote_expires_at = ?, customer_accepted_at = ?, new_ticket_number = ?, new_pnr = ?, processed_by = ?, processed_at = NOW()
        WHERE id = ?`,
       [
         nextStatus,
@@ -1806,12 +1826,15 @@ router.put('/service-requests/:id', async (req, res) => {
         isQuotable ? airline : null,
         isQuotable ? fee : null,
         isQuotable ? noShow : null,
+        isReissue ? fareDiff : null,
         isRefundable ? credit : null,
         refundTxnId,
         nextStatus === 'quoted' ? new Date() : (request.quoted_at || null),
         expiresAt,
         // Re-quoting resets the customer's acceptance
         nextStatus === 'quoted' ? null : (request.customer_accepted_at || null),
+        reissueTicket,
+        reissuePnr,
         req.user.sub,
         req.params.id,
       ]
@@ -1823,10 +1846,15 @@ router.put('/service-requests/:id', async (req, res) => {
       airlineFee: airline,
       serviceCharge: fee,
       noShowCharge: noShow,
+      fareDifference: fareDiff,
       refundAmount: credit,
       quoteExpiresAt: expiresAt,
+      quoteValidMinutes: validMinutes,
+      newTicketNumber: reissueTicket,
+      newPnr: reissuePnr,
       credited: shouldCredit,
     });
+
 
   } catch (err) {
     console.error('[Admin] Service request update error:', err);
