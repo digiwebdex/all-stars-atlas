@@ -137,11 +137,27 @@ router.put('/users/:id', async (req, res) => {
     if (emailVerified !== undefined) { sets.push('email_verified = ?'); params.push(emailVerified ? 1 : 0); }
     if (phoneVerified !== undefined) { sets.push('phone_verified = ?'); params.push(phoneVerified ? 1 : 0); }
     if (idVerified !== undefined) { sets.push('id_verified = ?'); params.push(idVerified ? 1 : 0); }
-    if (sets.length > 0) { params.push(req.params.id); await db.query(`UPDATE users SET ${sets.join(', ')} WHERE id = ?`, params); }
+    if (sets.length > 0) {
+      params.push(req.params.id);
+      const sql = `UPDATE users SET ${sets.join(', ')} WHERE id = ?`;
+      try {
+        await db.query(sql, params);
+      } catch (e) {
+        // Self-heal: legacy installs define `role` as a narrow ENUM which rejects
+        // newer roles like 'agent' / 'secondary_admin'. Widen the column and retry.
+        const code = String(e?.code || '');
+        const truncated = code === 'WARN_DATA_TRUNCATED' || code === 'ER_WARN_DATA_TRUNCATED'
+          || code === 'ER_DATA_TOO_LONG' || /truncated|incorrect .*value/i.test(String(e?.message || ''));
+        if (!truncated) throw e;
+        await db.query("ALTER TABLE users MODIFY COLUMN role VARCHAR(32) NOT NULL DEFAULT 'customer'");
+        await db.query(sql, params);
+      }
+    }
     const [rows] = await db.query('SELECT * FROM users WHERE id = ?', [req.params.id]);
     res.json(formatUser(rows[0]));
-  } catch (err) { console.error(err); res.status(500).json({ message: 'Something went wrong', status: 500 }); }
+  } catch (err) { console.error('Admin update user error:', err); res.status(500).json({ message: err?.sqlMessage || err?.message || 'Something went wrong', status: 500 }); }
 });
+
 
 // DELETE /admin/users/:id
 router.delete('/users/:id', async (req, res) => {
