@@ -1706,7 +1706,7 @@ router.get('/service-requests', async (req, res) => {
 router.put('/service-requests/:id', async (req, res) => {
   try {
     await ensureServiceRequestsTable();
-    const { action, adminNotes, airlineFee, serviceCharge, noShowCharge, refundAmount, quoteValidHours } = req.body || {};
+    const { action, adminNotes, airlineFee, serviceCharge, noShowCharge, fareDifference, refundAmount, newTicketNumber, newPnr } = req.body || {};
     const allowed = { quote: 'quoted', processing: 'processing', completed: 'completed', rejected: 'rejected' };
     const nextStatus = allowed[action];
     if (!nextStatus) return res.status(400).json({ message: 'action must be quote, processing, completed or rejected' });
@@ -1721,19 +1721,16 @@ router.put('/service-requests/:id', async (req, res) => {
 
     const refundableTypes = ['void', 'refund', 'cancel'];
     const isRefundable = refundableTypes.includes(String(request.type));
-    // Reissue also gets a quotation (airline fee + service charge + no-show charge),
+    const isReissue = String(request.type) === 'reissue';
+    // Reissue also gets a quotation (airline fee + fare difference + no-show + service charge),
     // but never credits the wallet.
-    const isQuotable = isRefundable || String(request.type) === 'reissue';
+    const isQuotable = isRefundable || isReissue;
     const ticketAmount = Number(request.total_amount || 0);
-    const airline = airlineFee === undefined || airlineFee === null || airlineFee === ''
-      ? Number(request.airline_fee || 0)
-      : Math.max(0, Number(airlineFee));
-    const fee = serviceCharge === undefined || serviceCharge === null || serviceCharge === ''
-      ? Number(request.service_charge || 0)
-      : Math.max(0, Number(serviceCharge));
-    const noShow = noShowCharge === undefined || noShowCharge === null || noShowCharge === ''
-      ? Number(request.no_show_charge || 0)
-      : Math.max(0, Number(noShowCharge));
+    const num = (v, fallback) => (v === undefined || v === null || v === '' ? Number(fallback || 0) : Math.max(0, Number(v) || 0));
+    const airline = num(airlineFee, request.airline_fee);
+    const fee = num(serviceCharge, request.service_charge);
+    const noShow = num(noShowCharge, request.no_show_charge);
+    const fareDiff = isReissue ? num(fareDifference, request.fare_difference) : 0;
     let credit = refundAmount === undefined || refundAmount === null || refundAmount === ''
       ? (Number(request.refund_amount) || Math.max(0, ticketAmount - airline - fee - noShow))
       : Math.max(0, Number(refundAmount));
@@ -1743,12 +1740,8 @@ router.put('/service-requests/:id', async (req, res) => {
       return res.status(400).json({ message: `Refund cannot exceed the ticket amount (৳${ticketAmount.toLocaleString()})` });
     }
 
-    // Quotation validity window — the customer must accept before it expires,
-    // otherwise the request auto-cancels and a fresh request is required.
-    const rawMinutes = Number(req.body?.quoteValidMinutes);
-    const validMinutes = Number.isFinite(rawMinutes) && rawMinutes > 0
-      ? Math.min(43200, Math.max(1, Math.round(rawMinutes)))
-      : Math.min(43200, Math.max(1, Math.round((Number(quoteValidHours) || 24) * 60)));
+    // Fixed quotation validity: reissue = 10 minutes, refund/void/cancel = 15 minutes
+    const validMinutes = isReissue ? 10 : 15;
     const expiresAt = nextStatus === 'quoted'
       ? new Date(Date.now() + validMinutes * 60 * 1000)
       : (request.quote_expires_at || null);
