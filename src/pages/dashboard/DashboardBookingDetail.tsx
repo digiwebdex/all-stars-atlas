@@ -937,11 +937,14 @@ const DashboardBookingDetail = () => {
                         <div className="space-y-1.5 text-sm">
                           <div className="flex justify-between"><span className="text-muted-foreground">Ticket Amount</span><span className="font-semibold">৳{Number(booking.rawAmount || quoted.total_amount || 0).toLocaleString()}</span></div>
                           <div className="flex justify-between"><span className="text-muted-foreground">{String(quoted.type) === "reissue" ? "Airlines Reissue Fee" : "Airlines Refund Fee"}</span><span className="font-semibold text-destructive">− ৳{Number(quoted.airline_fee || 0).toLocaleString()}</span></div>
-                          <div className="flex justify-between"><span className="text-muted-foreground">Service Charge</span><span className="font-semibold text-destructive">− ৳{Number(quoted.service_charge || 0).toLocaleString()}</span></div>
+                          {String(quoted.type) === "reissue" && (
+                            <div className="flex justify-between"><span className="text-muted-foreground">Difference of Fare</span><span className="font-semibold text-destructive">− ৳{Number(quoted.fare_difference || 0).toLocaleString()}</span></div>
+                          )}
                           <div className="flex justify-between"><span className="text-muted-foreground">No-Show Charge</span><span className="font-semibold text-destructive">− ৳{Number(quoted.no_show_charge || 0).toLocaleString()}</span></div>
+                          <div className="flex justify-between"><span className="text-muted-foreground">Service Charge</span><span className="font-semibold text-destructive">− ৳{Number(quoted.service_charge || 0).toLocaleString()}</span></div>
                           <Separator className="my-1" />
                           {String(quoted.type) === "reissue" ? (
-                            <div className="flex justify-between text-base"><span className="font-bold">Total Payable Charges</span><span className="font-extrabold text-destructive">৳{(Number(quoted.airline_fee || 0) + Number(quoted.service_charge || 0) + Number(quoted.no_show_charge || 0)).toLocaleString()}</span></div>
+                            <div className="flex justify-between text-base"><span className="font-bold">Total Payable Charges</span><span className="font-extrabold text-destructive">৳{(Number(quoted.airline_fee || 0) + Number(quoted.fare_difference || 0) + Number(quoted.service_charge || 0) + Number(quoted.no_show_charge || 0)).toLocaleString()}</span></div>
                           ) : (
                             <div className="flex justify-between text-base"><span className="font-bold">You Will Receive</span><span className="font-extrabold text-emerald-600">৳{Number(quoted.refund_amount || 0).toLocaleString()}</span></div>
                           )}
