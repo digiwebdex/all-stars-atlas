@@ -1649,11 +1649,14 @@ async function ensureServiceRequestsTable() {
     ['airline_fee', 'DECIMAL(12,2) NULL'],
     ['service_charge', 'DECIMAL(12,2) NULL'],
     ['no_show_charge', 'DECIMAL(12,2) NULL'],
+    ['fare_difference', 'DECIMAL(12,2) NULL'],
     ['refund_amount', 'DECIMAL(12,2) NULL'],
     ['refund_txn_id', 'CHAR(36) NULL'],
     ['quoted_at', 'DATETIME NULL'],
     ['customer_accepted_at', 'DATETIME NULL'],
     ['quote_expires_at', 'DATETIME NULL'],
+    ['new_ticket_number', 'VARCHAR(60) NULL'],
+    ['new_pnr', 'VARCHAR(20) NULL'],
   ];
   for (const [col, def] of extra) {
     try {
@@ -1703,7 +1706,7 @@ router.get('/service-requests', async (req, res) => {
 router.put('/service-requests/:id', async (req, res) => {
   try {
     await ensureServiceRequestsTable();
-    const { action, adminNotes, airlineFee, serviceCharge, noShowCharge, refundAmount, quoteValidHours } = req.body || {};
+    const { action, adminNotes, airlineFee, serviceCharge, noShowCharge, fareDifference, refundAmount, newTicketNumber, newPnr } = req.body || {};
     const allowed = { quote: 'quoted', processing: 'processing', completed: 'completed', rejected: 'rejected' };
     const nextStatus = allowed[action];
     if (!nextStatus) return res.status(400).json({ message: 'action must be quote, processing, completed or rejected' });
@@ -1718,19 +1721,16 @@ router.put('/service-requests/:id', async (req, res) => {
 
     const refundableTypes = ['void', 'refund', 'cancel'];
     const isRefundable = refundableTypes.includes(String(request.type));
-    // Reissue also gets a quotation (airline fee + service charge + no-show charge),
+    const isReissue = String(request.type) === 'reissue';
+    // Reissue also gets a quotation (airline fee + fare difference + no-show + service charge),
     // but never credits the wallet.
-    const isQuotable = isRefundable || String(request.type) === 'reissue';
+    const isQuotable = isRefundable || isReissue;
     const ticketAmount = Number(request.total_amount || 0);
-    const airline = airlineFee === undefined || airlineFee === null || airlineFee === ''
-      ? Number(request.airline_fee || 0)
-      : Math.max(0, Number(airlineFee));
-    const fee = serviceCharge === undefined || serviceCharge === null || serviceCharge === ''
-      ? Number(request.service_charge || 0)
-      : Math.max(0, Number(serviceCharge));
-    const noShow = noShowCharge === undefined || noShowCharge === null || noShowCharge === ''
-      ? Number(request.no_show_charge || 0)
-      : Math.max(0, Number(noShowCharge));
+    const num = (v, fallback) => (v === undefined || v === null || v === '' ? Number(fallback || 0) : Math.max(0, Number(v) || 0));
+    const airline = num(airlineFee, request.airline_fee);
+    const fee = num(serviceCharge, request.service_charge);
+    const noShow = num(noShowCharge, request.no_show_charge);
+    const fareDiff = isReissue ? num(fareDifference, request.fare_difference) : 0;
     let credit = refundAmount === undefined || refundAmount === null || refundAmount === ''
       ? (Number(request.refund_amount) || Math.max(0, ticketAmount - airline - fee - noShow))
       : Math.max(0, Number(refundAmount));
@@ -1740,12 +1740,8 @@ router.put('/service-requests/:id', async (req, res) => {
       return res.status(400).json({ message: `Refund cannot exceed the ticket amount (৳${ticketAmount.toLocaleString()})` });
     }
 
-    // Quotation validity window — the customer must accept before it expires,
-    // otherwise the request auto-cancels and a fresh request is required.
-    const rawMinutes = Number(req.body?.quoteValidMinutes);
-    const validMinutes = Number.isFinite(rawMinutes) && rawMinutes > 0
-      ? Math.min(43200, Math.max(1, Math.round(rawMinutes)))
-      : Math.min(43200, Math.max(1, Math.round((Number(quoteValidHours) || 24) * 60)));
+    // Fixed quotation validity: reissue = 10 minutes, refund/void/cancel = 15 minutes
+    const validMinutes = isReissue ? 10 : 15;
     const expiresAt = nextStatus === 'quoted'
       ? new Date(Date.now() + validMinutes * 60 * 1000)
       : (request.quote_expires_at || null);
@@ -1799,10 +1795,30 @@ router.put('/service-requests/:id', async (req, res) => {
       } catch (e) { /* non-fatal */ }
     }
 
+    // Reissue completion: store the NEW ticket number / NEW airline PNR and sync the booking
+    const reissueTicket = isReissue
+      ? (String(newTicketNumber || '').trim() || request.new_ticket_number || null)
+      : (request.new_ticket_number || null);
+    const reissuePnr = isReissue
+      ? (String(newPnr || '').trim().toUpperCase() || request.new_pnr || null)
+      : (request.new_pnr || null);
+
+    if (isReissue && nextStatus === 'completed') {
+      try {
+        const sets = []; const vals = [];
+        if (reissuePnr) { sets.push('pnr = ?'); vals.push(reissuePnr); }
+        if (reissueTicket) { sets.push('ticket_number = ?', "ticket_status = 'issued'"); vals.push(reissueTicket); }
+        if (sets.length) {
+          vals.push(request.booking_id);
+          await db.query(`UPDATE bookings SET ${sets.join(', ')} WHERE id = ?`, vals);
+        }
+      } catch (e) { console.warn('[Admin] Reissue booking sync skipped:', e?.message || e); }
+    }
+
     await db.query(
       `UPDATE booking_service_requests
-       SET status = ?, admin_notes = ?, airline_fee = ?, service_charge = ?, no_show_charge = ?, refund_amount = ?, refund_txn_id = ?,
-           quoted_at = ?, quote_expires_at = ?, customer_accepted_at = ?, processed_by = ?, processed_at = NOW()
+       SET status = ?, admin_notes = ?, airline_fee = ?, service_charge = ?, no_show_charge = ?, fare_difference = ?, refund_amount = ?, refund_txn_id = ?,
+           quoted_at = ?, quote_expires_at = ?, customer_accepted_at = ?, new_ticket_number = ?, new_pnr = ?, processed_by = ?, processed_at = NOW()
        WHERE id = ?`,
       [
         nextStatus,
@@ -1810,12 +1826,15 @@ router.put('/service-requests/:id', async (req, res) => {
         isQuotable ? airline : null,
         isQuotable ? fee : null,
         isQuotable ? noShow : null,
+        isReissue ? fareDiff : null,
         isRefundable ? credit : null,
         refundTxnId,
         nextStatus === 'quoted' ? new Date() : (request.quoted_at || null),
         expiresAt,
         // Re-quoting resets the customer's acceptance
         nextStatus === 'quoted' ? null : (request.customer_accepted_at || null),
+        reissueTicket,
+        reissuePnr,
         req.user.sub,
         req.params.id,
       ]
@@ -1827,10 +1846,15 @@ router.put('/service-requests/:id', async (req, res) => {
       airlineFee: airline,
       serviceCharge: fee,
       noShowCharge: noShow,
+      fareDifference: fareDiff,
       refundAmount: credit,
       quoteExpiresAt: expiresAt,
+      quoteValidMinutes: validMinutes,
+      newTicketNumber: reissueTicket,
+      newPnr: reissuePnr,
       credited: shouldCredit,
     });
+
 
   } catch (err) {
     console.error('[Admin] Service request update error:', err);

@@ -937,11 +937,14 @@ const DashboardBookingDetail = () => {
                         <div className="space-y-1.5 text-sm">
                           <div className="flex justify-between"><span className="text-muted-foreground">Ticket Amount</span><span className="font-semibold">৳{Number(booking.rawAmount || quoted.total_amount || 0).toLocaleString()}</span></div>
                           <div className="flex justify-between"><span className="text-muted-foreground">{String(quoted.type) === "reissue" ? "Airlines Reissue Fee" : "Airlines Refund Fee"}</span><span className="font-semibold text-destructive">− ৳{Number(quoted.airline_fee || 0).toLocaleString()}</span></div>
-                          <div className="flex justify-between"><span className="text-muted-foreground">Service Charge</span><span className="font-semibold text-destructive">− ৳{Number(quoted.service_charge || 0).toLocaleString()}</span></div>
+                          {String(quoted.type) === "reissue" && (
+                            <div className="flex justify-between"><span className="text-muted-foreground">Difference of Fare</span><span className="font-semibold text-destructive">− ৳{Number(quoted.fare_difference || 0).toLocaleString()}</span></div>
+                          )}
                           <div className="flex justify-between"><span className="text-muted-foreground">No-Show Charge</span><span className="font-semibold text-destructive">− ৳{Number(quoted.no_show_charge || 0).toLocaleString()}</span></div>
+                          <div className="flex justify-between"><span className="text-muted-foreground">Service Charge</span><span className="font-semibold text-destructive">− ৳{Number(quoted.service_charge || 0).toLocaleString()}</span></div>
                           <Separator className="my-1" />
                           {String(quoted.type) === "reissue" ? (
-                            <div className="flex justify-between text-base"><span className="font-bold">Total Payable Charges</span><span className="font-extrabold text-destructive">৳{(Number(quoted.airline_fee || 0) + Number(quoted.service_charge || 0) + Number(quoted.no_show_charge || 0)).toLocaleString()}</span></div>
+                            <div className="flex justify-between text-base"><span className="font-bold">Total Payable Charges</span><span className="font-extrabold text-destructive">৳{(Number(quoted.airline_fee || 0) + Number(quoted.fare_difference || 0) + Number(quoted.service_charge || 0) + Number(quoted.no_show_charge || 0)).toLocaleString()}</span></div>
                           ) : (
                             <div className="flex justify-between text-base"><span className="font-bold">You Will Receive</span><span className="font-extrabold text-emerald-600">৳{Number(quoted.refund_amount || 0).toLocaleString()}</span></div>
                           )}
@@ -983,10 +986,37 @@ const DashboardBookingDetail = () => {
                       <div className="mt-4 rounded-xl border-2 border-indigo-500/30 bg-indigo-500/5 p-4 text-sm">
                         <p className="font-bold text-indigo-700">Quotation accepted — awaiting admin approval</p>
                         <p className="text-xs text-muted-foreground mt-1">
-                          ৳{Number(accepted.refund_amount || 0).toLocaleString()} will be credited to your balance once approved.
+                          {String(accepted.type) === "reissue"
+                            ? "Once approved, your new ticket number and new airlines PNR will appear here with the reissued e-ticket."
+                            : `৳${Number(accepted.refund_amount || 0).toLocaleString()} will be credited to your balance once approved.`}
                         </p>
                       </div>
                     )}
+
+                    {(() => {
+                      const doneReissue = serviceRequests
+                        .filter((r: any) => String(r.type) === "reissue" && String(r.status).toLowerCase() === "completed" && (r.new_ticket_number || r.new_pnr))
+                        .sort((a: any, b: any) => new Date(b.processed_at || b.created_at || 0).getTime() - new Date(a.processed_at || a.created_at || 0).getTime())[0];
+                      if (!doneReissue) return null;
+                      return (
+                        <div className="mt-4 rounded-xl border-2 border-emerald-500/30 bg-emerald-500/5 p-4">
+                          <p className="text-xs font-bold uppercase text-emerald-700 mb-2">Reissued Ticket — New Details</p>
+                          <div className="grid grid-cols-2 gap-3 text-sm">
+                            <div>
+                              <p className="text-xs text-muted-foreground">New Ticket Number</p>
+                              <p className="font-mono font-bold">{doneReissue.new_ticket_number || "—"}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-muted-foreground">New Airlines PNR</p>
+                              <p className="font-mono font-bold">{doneReissue.new_pnr || "—"}</p>
+                            </div>
+                          </div>
+                          <Button size="sm" className="mt-3 bg-emerald-500 hover:bg-emerald-600 text-white font-bold" onClick={handleDownload}>
+                            <Download className="w-4 h-4 mr-1.5" /> Download Reissued E-Ticket
+                          </Button>
+                        </div>
+                      );
+                    })()}
                     </>
                   );
 
